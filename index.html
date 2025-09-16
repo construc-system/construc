@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Construc</title>
+  <style>
+    body { font-family: Arial, sans-serif; position: relative; min-height: 100vh; }
+
+    /* Tab navigation */
+    .tab {
+      display: flex;
+      border-bottom: 2px solid #ccc;
+    }
+    .tab button {
+      flex: 1;
+      padding: 10px;
+      cursor: pointer;
+      border: none;
+      outline: none;
+      background: #f1f1f1;
+      transition: background 0.3s;
+    }
+    .tab button:hover {
+      background: #ddd;
+    }
+    .tab button.active {
+      background: #fff;
+      border-bottom: 2px solid dodgerblue;
+      font-weight: bold;
+    }
+
+    /* Tab content */
+    .tabcontent {
+      display: none;
+      padding: 0;
+      border: 1px solid #ccc;
+      border-top: none;
+    }
+    .tabcontent.active {
+      display: block;
+    }
+
+    .tabcontent h3 {
+      margin-top: 0;
+      margin-bottom: 5px;
+    }
+
+    /* Input styling */
+    label {
+      display: inline-block;
+      width: 40px;
+      margin-right: 10px;
+    }
+    label sub {
+      font-size: 0.7em;
+      vertical-align: sub;
+    }
+    input {
+      margin-bottom: 10px;
+      width: 150px;
+      border: 2px solid #a6a6a6;
+    }
+    input::placeholder,
+    input::-webkit-input-placeholder,
+    input::-moz-placeholder {
+      font-size: 12px !important;
+    }
+    select {
+      width: 156px;
+      margin-bottom: 10px;
+      border: 2px solid #a6a6a6;
+    }
+    /* Subtab navigation */
+    .subtab {
+      display: flex;
+      border-bottom: 2px solid #aaa;
+      margin-top: 0;
+    }
+    .subtab button {
+      flex: 1;
+      padding: 8px;
+      cursor: pointer;
+      border: none;
+      outline: none;
+      background: #fff;
+      transition: background 0.3s;
+      color: rgb(0, 0, 0);
+      border-bottom: 2px solid dodgerblue;
+    }
+    .subtab button:hover {
+      background: #f0f0f0;
+    }
+    .subtab button.active {
+      background: dodgerblue;
+      color: white;
+      border-bottom: none;
+      font-weight: bold;
+    }
+    .subtabcontent {
+      display: none;
+      padding: 15px;
+      border: 1px solid #aaa;
+      border-top: none;
+    }
+    .subtabcontent.active {
+      display: block;
+    }
+
+    /* Flexible data sections */
+    .data-sections {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    .data-section {
+      min-width: 200px;
+      max-width: 300px;
+      flex: 1 1 auto;
+    }
+  </style>
+</head>
+<body>
+
+  <div style="display: flex; justify-content: space-between; align-items: center;">
+    <img src="construc logo.png" alt="Construc Logo" style="max-width: 250px; height: auto;">
+    <img src="ums logo.png" alt="UMS Logo" style="max-width: auto; height: 55px;">
+  </div>
+
+  <div class="tab">
+    <button class="tablinks active" onclick="openTab(event, 'Tab1')">Balok</button>
+    <button class="tablinks" onclick="openTab(event, 'Tab2')">Kolom</button>
+    <button class="tablinks" onclick="openTab(event, 'Tab3')">Pelat</button>
+    <button class="tablinks" onclick="openTab(event, 'Tab4')">Fondasi</button>
+  </div>
+
+  <div id="Tab1" class="tabcontent active subtab-container">
+    <div class="subtab">
+      <button class="subtablinks active" onclick="openSubTab(event, 'Desain')">Desain</button>
+      <button class="subtablinks" onclick="openSubTab(event, 'Evaluasi')">Evaluasi</button>
+    </div>
+<div id="Desain" class="subtabcontent active">
+      <div class="data-sections">
+        <div class="data-section">
+          <h3>Data Dimensi</h3>
+          <label for="l_balok_desain">L</label>:<input type="text" id="l_balok_desain" name="l_balok_desain" placeholder="Panjang Balok"> m<br>
+          <label for="b_balok_desain">b</label>:<input type="text" id="b_balok_desain" name="b_balok_desain" placeholder="Lebar Balok"> m<br>
+          <label for="h_balok_desain">h</label>:<input type="text" id="h_balok_desain" name="h_balok_desain" placeholder="Tinggi Balok"> m<br>
+        </div>
+        <div class="data-section">
+          <h3>Data Bahan</h3>
+          <label for="fc_balok_desain">f'<sub>c</sub></label>:<input type="text" id="fc_balok_desain" name="fc_balok_desain" placeholder="Kuat Tekan Balok"> MPa<br>
+          <label for="fy_balok_desain">f<sub>y</sub></label>:<input type="text" id="fy_balok_desain" name="fy_balok_desain" placeholder="Kuat Leleh Baja"> MPa<br>
+        </div>
+        <div class="data-section">
+          <h3>Data Beban</h3>
+          <label for="mu_balok_desain">M<sub>u</sub></label>:<input type="text" id="mu_balok_desain" name="mu_balok_desain" placeholder="Momen Ultimit"> kNm<br>
+          <label for="pu_balok_desain">P<sub>u</sub></label>:<input type="text" id="pu_balok_desain" name="pu_balok_desain" placeholder="Beban Aksial Ultimit"> kNm<br>
+          <label for="vu_balok_desain">V<sub>u</sub></label>:<input type="text" id="vu_balok_desain" name="vu_balok_desain" placeholder="Gaya Geser Ultimit"> kNm<br>
+          <label for="srpm_balok_desain">SRPM</label>:<select id="srpm_balok_desain" name="srpm_balok_desain">
+            <option value="Biasa">Biasa</option>
+            <option value="Menengah">Menengah</option>
+            <option value="Khusus">Khusus</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div id="Evaluasi" class="subtabcontent">
+      <div class="data-sections">
+        <div class="data-section">
+          <h3>Data Dimensi</h3>
+          <label for="l_balok_evaluasi">L</label>:<input type="text" id="l_balok_evaluasi" name="l_balok_evaluasi" placeholder="Panjang Balok"> m<br>
+          <label for="b_balok_evaluasi">b</label>:<input type="text" id="b_balok_evaluasi" name="b_balok_evaluasi" placeholder="Lebar Balok"> m<br>
+          <label for="h_balok_evaluasi">h</label>:<input type="text" id="h_balok_evaluasi" name="h_balok_evaluasi" placeholder="Tinggi Balok"> m<br>
+        </div>
+        <div class="data-section">
+          <h3>Data Bahan</h3>
+          <label for="fc_balok_evaluasi">f'<sub>c</sub></label>:<input type="text" id="fc_balok_evaluasi" name="fc_balok_evaluasi" placeholder="Kuat Tekan Balok"> MPa<br>
+          <label for="fy_balok_evaluasi">f<sub>y</sub></label>:<input type="text" id="fy_balok_evaluasi" name="fy_balok_evaluasi" placeholder="Kuat Leleh Baja"> MPa<br>
+        </div>
+        <div class="data-section">
+          <h3>Data Beban</h3>
+          <label for="mu_balok_evaluasi">M<sub>u</sub></label>:<input type="text" id="mu_balok_evaluasi" name="mu_balok_evaluasi" placeholder="Momen Ultimit"> kNm<br>
+          <label for="pu_balok_evaluasi">P<sub>u</sub></label>:<input type="text" id="pu_balok_evaluasi" name="pu_balok_evaluasi" placeholder="Beban Aksial Ultimit"> kNm<br>
+          <label for="vu_balok_evaluasi">V<sub>u</sub></label>:<input type="text" id="vu_balok_evaluasi" name="vu_balok_evaluasi" placeholder="Gaya Geser Ultimit"> kNm<br>
+          <label for="srpm_balok_evaluasi">SRPM</label>:<select id="srpm_balok_evaluasi" name="srpm_balok_evaluasi">
+            <option value="Biasa">Biasa</option>
+            <option value="Menengah">Menengah</option>
+            <option value="Khusus">Khusus</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="Tab2" class="tabcontent subtab-container">
+    <div class="subtab">
+      <button class="subtablinks active" onclick="openSubTab(event, 'KolomDesain')">Desain</button>
+      <button class="subtablinks" onclick="openSubTab(event, 'KolomEvaluasi')">Evaluasi</button>
+    </div>
+    <div id="KolomDesain" class="subtabcontent active">
+      <p>Konten Desain Kolom di sini...</p>
+    </div>
+    <div id="KolomEvaluasi" class="subtabcontent">
+      <p>Konten Evaluasi Kolom di sini...</p>
+    </div>
+  </div>
+
+  <div id="Tab3" class="tabcontent subtab-container">
+    <div class="subtab">
+      <button class="subtablinks active" onclick="openSubTab(event, 'PelatDesain')">Desain</button>
+      <button class="subtablinks" onclick="openSubTab(event, 'PelatEvaluasi')">Evaluasi</button>
+    </div>
+    <div id="PelatDesain" class="subtabcontent active">
+      <p>Konten Desain Pelat di sini...</p>
+    </div>
+    <div id="PelatEvaluasi" class="subtabcontent">
+      <p>Konten Evaluasi Pelat di sini...</p>
+    </div>
+  </div>
+
+  <div id="Tab4" class="tabcontent subtab-container">
+    <div class="subtab">
+      <button class="subtablinks active" onclick="openSubTab(event, 'FondasiDesain')">Desain</button>
+      <button class="subtablinks" onclick="openSubTab(event, 'FondasiEvaluasi')">Evaluasi</button>
+    </div>
+    <div id="FondasiDesain" class="subtabcontent active">
+      <p>Konten Desain Fondasi di sini...</p>
+    </div>
+    <div id="FondasiEvaluasi" class="subtabcontent">
+      <p>Konten Evaluasi Fondasi di sini...</p>
+    </div>
+  </div>
+
+  <script>
+    function openTab(evt, tabName) {
+      const tabcontent = document.querySelectorAll(".tabcontent");
+      const tablinks = document.querySelectorAll(".tablinks");
+
+      // sembunyikan semua isi tab
+      tabcontent.forEach(el => el.classList.remove("active"));
+
+      // hapus status aktif dari semua tombol
+      tablinks.forEach(el => el.classList.remove("active"));
+
+      // tampilkan tab yg diklik
+      document.getElementById(tabName).classList.add("active");
+      evt.currentTarget.classList.add("active");
+    }
+
+    function openSubTab(evt, subTabName) {
+      const subtabcontent = document.querySelectorAll(".subtabcontent");
+      const subtablinks = document.querySelectorAll(".subtablinks");
+
+      // sembunyikan semua isi subtab
+      subtabcontent.forEach(el => el.classList.remove("active"));
+
+      // hapus status aktif dari semua tombol subtab
+      subtablinks.forEach(el => el.classList.remove("active"));
+
+      // tampilkan subtab yg diklik
+      document.getElementById(subTabName).classList.add("active");
+      evt.currentTarget.classList.add("active");
+    }
+  </script>
+
+  <p style="position: absolute; bottom: 0; right: 0; font-size: 8px; color: #666; margin: 0px;">
+    Created by Rizqika A'la [D100200270]
+  </p>
+
+</body>
+</html>
