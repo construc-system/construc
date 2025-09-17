@@ -60,7 +60,9 @@
     input::placeholder,
     input::-webkit-input-placeholder,
     input::-moz-placeholder {
-      font-size: 12px !important;
+      font-size: 11px !important;
+      vertical-align: sub;
+      display: inline-block;
     }
     select {
       width: 156px;
@@ -115,6 +117,7 @@
       flex: 1 1 auto;
     }
   </style>
+  <link rel="icon" type="image/png" href="logo.png">
 </head>
 <body>
 
@@ -242,8 +245,18 @@
       // tampilkan tab yg diklik
       document.getElementById(tabName).classList.add("active");
       evt.currentTarget.classList.add("active");
-    }
 
+      // Reset sub-tabs to default "Desain"
+      const tabElement = document.getElementById(tabName);
+      const subtablinks = tabElement.querySelectorAll('.subtablinks');
+      const subtabcontent = tabElement.querySelectorAll('.subtabcontent');
+      subtablinks.forEach(el => el.classList.remove('active'));
+      subtabcontent.forEach(el => el.classList.remove('active'));
+      if (subtablinks.length > 0) {
+        subtablinks[0].classList.add('active');
+        subtabcontent[0].classList.add('active');
+      }
+    }
     function openSubTab(evt, subTabName) {
       const subtabcontent = document.querySelectorAll(".subtabcontent");
       const subtablinks = document.querySelectorAll(".subtablinks");
