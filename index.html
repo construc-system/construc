@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Construc</title>
   <style>
-    body { font-family: Arial, sans-serif; position: relative; min-height: 100vh; }
+    body { font-family: Arial, sans-serif; position: relative; height: auto; overflow-y: hidden; }
 
     /* Tab navigation */
     .tab {
@@ -233,6 +233,10 @@
     </div>
   </div>
 
+  <p style="font-size: 12px; color: #666; margin: 0px; text-align: right; padding-right: 10px;">
+    Created by Rizqika A'la [D100200270]
+  </p>
+
   <script>
     function openTab(evt, tabName) {
       const tabcontent = document.querySelectorAll(".tabcontent");
@@ -273,11 +277,20 @@
       document.getElementById(subTabName).classList.add("active");
       evt.currentTarget.classList.add("active");
     }
-  </script>
 
-  <p style="position: absolute; bottom: 0; right: 0; font-size: 12px; color: #666; margin: 0px; transform: scale(0.7); transform-origin: bottom right;">
-    Created by Rizqika A'la [D100200270]
-  </p>
+    // Function to adjust overflow based on content height
+    function adjustOverflow() {
+      if (document.body.scrollHeight > window.innerHeight) {
+        document.body.style.overflowY = 'auto';
+      } else {
+        document.body.style.overflowY = 'hidden';
+      }
+    }
+
+    // Adjust overflow on load and resize
+    window.addEventListener('load', adjustOverflow);
+    window.addEventListener('resize', adjustOverflow);
+  </script>
 
 </body>
 </html>
