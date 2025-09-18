@@ -189,18 +189,18 @@
     </div>
     <div id="Evaluasi" class="subtabcontent">
       <div class="data-sections">
-        <div class="data-section">
+        <div class="data-section" id="dimensi">
           <h3>Data Dimensi</h3>
           <label for="l_balok_evaluasi">L</label>:<div class="input-wrapper"><input type="text" class="ph-small" id="l_balok_evaluasi" name="l_balok_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Panjang Bentang Balok</text></svg></div> m<br>
           <label for="b_balok_evaluasi">b</label>:<div class="input-wrapper"><input type="text" id="b_balok_evaluasi" name="b_balok_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Lebar Balok</text></svg></div> m<br>
           <label for="h_balok_evaluasi">h</label>:<div class="input-wrapper"><input type="text" id="h_balok_evaluasi" name="h_balok_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Tinggi Balok</text></svg></div> m<br>
         </div>
-        <div class="data-section">
+        <div class="data-section" id="bahan">
           <h3>Data Bahan</h3>
           <label for="fc_balok_evaluasi">f'<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">c</text></svg></label>:<div class="input-wrapper"><input type="text" id="fc_balok_evaluasi" name="fc_balok_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Kuat Tekan Balok</text></svg></div> MPa<br>
           <label for="fy_balok_evaluasi">f<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">y</text></svg></label>:<div class="input-wrapper"><input type="text" id="fy_balok_evaluasi" name="fy_balok_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Kuat Leleh Baja</text></svg></div> MPa<br>
         </div>
-        <div class="data-section">
+        <div class="data-section" id="Beban">
           <h3>Data Beban</h3>
           <label for="mu_balok_evaluasi">M<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<div class="input-wrapper"><input type="text" id="mu_balok_evaluasi" name="mu_balok_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Momen Ultimit</text></svg></div> kNm<br>
           <label for="pu_balok_evaluasi">P<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<div class="input-wrapper"><input type="text" id="pu_balok_evaluasi" name="pu_balok_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Beban Aksial Ultimit</text></svg></div> kNm<br>
@@ -211,7 +211,7 @@
             <option value="Khusus">Khusus</option>
           </select>
         </div>
-        <div class="data-section tulangan" id="tulangan">
+        <div class="data-section" id="tulangan">
           <h3>Data Tulangan</h3>
           <label for="d_balok_evaluasi">D</label>:<div class="input-wrapper"><input type="text" id="d_balok_evaluasi" name="d_balok_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Diameter Tulangan</text></svg></div> mm<br>
           <label for="phi_balok_evaluasi">ɸ</label>:<div class="input-wrapper"><input type="text" id="phi_balok_evaluasi" name="phi_balok_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Diameter Begel</text></svg></div> mm<br>
@@ -319,31 +319,49 @@
     }
 
     // Function to adjust order of data sections based on screen width
-  function adjustOrder() {
-    const width = window.innerWidth;
+    function adjustOrder() {
+      const allSubtabs = document.querySelectorAll(".subtabcontent");
 
-    const dimensi = document.getElementById("dimensi");
-    const bahan   = document.getElementById("bahan");
-    const beban   = document.getElementById("beban");
-    const tulangan= document.getElementById("tulangan"); // bisa jadi null
+      allSubtabs.forEach(subtab => {
+        const sections = subtab.querySelectorAll(".data-section");
+        if (sections.length === 0) return;
 
-    if (width > 1000) {
-      if (dimensi) dimensi.style.order = 1;
-      if (bahan)   bahan.style.order   = 2;
-      if (beban)   beban.style.order   = 3;
-      if (tulangan) tulangan.style.order= 4;
-    } else if (width > 700) {
-      if (dimensi) dimensi.style.order = 1;
-      if (beban)   beban.style.order   = 2;
-      if (bahan)   bahan.style.order   = 3;
-      if (tulangan) tulangan.style.order= 4;
-    } else {
-      if (beban)   beban.style.order   = 1;
-      if (tulangan) tulangan.style.order= 2;
-      if (dimensi) dimensi.style.order = 3;
-      if (bahan)   bahan.style.order   = 4;
+        const containerWidth = subtab.clientWidth;
+        const sectionWidth = sections[0].getBoundingClientRect().width;
+        const perRow = Math.floor(containerWidth / sectionWidth);
+
+        const dimensi  = subtab.querySelector("#dimensi");
+        const bahan    = subtab.querySelector("#bahan");
+        const beban    = subtab.querySelector("#beban, #Beban");
+        const tulangan = subtab.querySelector("#tulangan");
+
+        if (perRow === 1) {
+          // urutan kalau 1 per baris
+          if (dimensi) dimensi.style.order = 1;
+          if (bahan)   bahan.style.order   = 2;
+          if (tulangan)   tulangan.style.order   = 3;
+          if (beban) beban.style.order = 4;
+        } else if (perRow === 2) {
+          // urutan kalau 2 per baris
+          if (dimensi) dimensi.style.order = 1;
+          if (bahan)   bahan.style.order   = 2;
+          if (tulangan)   tulangan.style.order   = 3;
+          if (beban) beban.style.order = 4;
+        } else if (perRow === 3) {
+          // urutan kalau 3 per baris
+          if (dimensi) dimensi.style.order = 1;
+          if (bahan)   bahan.style.order   = 2;
+          if (beban)   beban.style.order   = 3;
+          if (tulangan) tulangan.style.order = 4;
+        } else {
+          // default (misal 4 atau lebih per baris)
+          if (dimensi) dimensi.style.order = 1;
+          if (bahan)   bahan.style.order   = 2;
+          if (tulangan)   tulangan.style.order   = 3;
+          if (beban) beban.style.order = 4;
+        }
+      });
     }
-  }
 
 
     // Function to hide/show fake placeholder based on input value
@@ -377,6 +395,15 @@
       adjustOverflow();
       adjustOrder();
     });
+    // Observer untuk pantau perubahan layout
+    const observer = new ResizeObserver(() => {
+      adjustOrder();
+      adjustOverflow();
+    });
+
+    // Observe body agar kalau tinggi/width berubah, fungsi dipanggil lagi
+    observer.observe(document.body);
+
     window.addEventListener('resize', function() {
       adjustOverflow();
       adjustOrder();
