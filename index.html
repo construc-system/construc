@@ -53,17 +53,35 @@
       margin-right: 10px;
     }
     input {
+      font-size: 12px;   /* ukuran teks saat user mengetik */
       margin-bottom: 10px;
       width: 150px;
       border: 2px solid #a6a6a6;
     }
-    input::placeholder,
-    input::-webkit-input-placeholder,
-    input::-moz-placeholder {
-      font-size: 11px !important;
-      vertical-align: sub;
+    .ph-small {
+    font-size: 14px; /* teks user normal */
+    }
+
+    .ph-small::placeholder {
+      font-size: 10px !important; /* paksa lebih kecil */
+      color: #888;
+    }
+
+    /* Fake placeholder styling */
+    .input-wrapper {
+      position: relative;
       display: inline-block;
     }
+
+    .fake-placeholder {
+      position: absolute;
+      left: 4px;
+      top: 43%;
+      transform: translateY(-50%);
+      pointer-events: none;
+      fill: #888;
+    }
+
     select {
       width: 156px;
       margin-bottom: 10px;
@@ -116,6 +134,9 @@
       max-width: 300px;
       flex: 1 1 auto;
     }
+    .tulangan {
+      order: 1;
+    }
   </style>
   <link rel="icon" type="image/png" href="logo.png">
   <link rel="apple-touch-icon" href="logo.png">
@@ -142,22 +163,22 @@
     </div>
 <div id="Desain" class="subtabcontent active">
       <div class="data-sections">
-        <div class="data-section">
+        <div class="data-section" id="dimensi">
           <h3>Data Dimensi</h3>
-          <label for="l_balok_desain">L</label>:<input type="text" id="l_balok_desain" name="l_balok_desain" placeholder="Panjang Balok"> m<br>
-          <label for="b_balok_desain">b</label>:<input type="text" id="b_balok_desain" name="b_balok_desain" placeholder="Lebar Balok"> m<br>
-          <label for="h_balok_desain">h</label>:<input type="text" id="h_balok_desain" name="h_balok_desain" placeholder="Tinggi Balok"> m<br>
+          <label for="l_balok_desain">L</label>:<div class="input-wrapper"><input type="text" class="ph-small" id="l_balok_desain" name="l_balok_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Panjang Bentang Balok</text></svg></div> m<br>
+          <label for="b_balok_desain">b</label>:<div class="input-wrapper"><input type="text" id="b_balok_desain" name="b_balok_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Lebar Balok</text></svg></div> m<br>
+          <label for="h_balok_desain">h</label>:<div class="input-wrapper"><input type="text" id="h_balok_desain" name="h_balok_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Tinggi Balok</text></svg></div> m<br>
         </div>
-        <div class="data-section">
+        <div class="data-section" id="bahan">
           <h3>Data Bahan</h3>
-          <label for="fc_balok_desain">f'<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">c</text></svg></label>:<input type="text" id="fc_balok_desain" name="fc_balok_desain" placeholder="Kuat Tekan Balok"> MPa<br>
-          <label for="fy_balok_desain">f<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">y</text></svg></label>:<input type="text" id="fy_balok_desain" name="fy_balok_desain" placeholder="Kuat Leleh Baja"> MPa<br>
+          <label for="fc_balok_desain">f'<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">c</text></svg></label>:<div class="input-wrapper"><input type="text" id="fc_balok_desain" name="fc_balok_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Kuat Tekan Balok</text></svg></div> MPa<br>
+          <label for="fy_balok_desain">f<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">y</text></svg></label>:<div class="input-wrapper"><input type="text" id="fy_balok_desain" name="fy_balok_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Kuat Leleh Baja</text></svg></div> MPa<br>
         </div>
-        <div class="data-section">
+        <div class="data-section" id="beban">
           <h3>Data Beban</h3>
-          <label for="mu_balok_desain">M<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<input type="text" id="mu_balok_desain" name="mu_balok_desain" placeholder="Momen Ultimit"> kNm<br>
-          <label for="pu_balok_desain">P<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<input type="text" id="pu_balok_desain" name="pu_balok_desain" placeholder="Beban Aksial Ultimit"> kNm<br>
-          <label for="vu_balok_desain">V<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<input type="text" id="vu_balok_desain" name="vu_balok_desain" placeholder="Gaya Geser Ultimit"> kNm<br>
+          <label for="mu_balok_desain">M<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<div class="input-wrapper"><input type="text" id="mu_balok_desain" name="mu_balok_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Momen Ultimit</text></svg></div> kNm<br>
+          <label for="pu_balok_desain">P<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<div class="input-wrapper"><input type="text" id="pu_balok_desain" name="pu_balok_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Beban Aksial Ultimit</text></svg></div> kNm<br>
+          <label for="vu_balok_desain">V<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<div class="input-wrapper"><input type="text" id="vu_balok_desain" name="vu_balok_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Gaya Geser Ultimit</text></svg></div> kNm<br>
           <label for="srpm_balok_desain">SRPM</label>:<select id="srpm_balok_desain" name="srpm_balok_desain">
             <option value="Biasa">Biasa</option>
             <option value="Menengah">Menengah</option>
@@ -170,35 +191,35 @@
       <div class="data-sections">
         <div class="data-section">
           <h3>Data Dimensi</h3>
-          <label for="l_balok_evaluasi">L</label>:<input type="text" id="l_balok_evaluasi" name="l_balok_evaluasi" placeholder="Panjang Balok"> m<br>
-          <label for="b_balok_evaluasi">b</label>:<input type="text" id="b_balok_evaluasi" name="b_balok_evaluasi" placeholder="Lebar Balok"> m<br>
-          <label for="h_balok_evaluasi">h</label>:<input type="text" id="h_balok_evaluasi" name="h_balok_evaluasi" placeholder="Tinggi Balok"> m<br>
+          <label for="l_balok_evaluasi">L</label>:<div class="input-wrapper"><input type="text" class="ph-small" id="l_balok_evaluasi" name="l_balok_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Panjang Bentang Balok</text></svg></div> m<br>
+          <label for="b_balok_evaluasi">b</label>:<div class="input-wrapper"><input type="text" id="b_balok_evaluasi" name="b_balok_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Lebar Balok</text></svg></div> m<br>
+          <label for="h_balok_evaluasi">h</label>:<div class="input-wrapper"><input type="text" id="h_balok_evaluasi" name="h_balok_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Tinggi Balok</text></svg></div> m<br>
         </div>
         <div class="data-section">
           <h3>Data Bahan</h3>
-          <label for="fc_balok_evaluasi">f'<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">c</text></svg></label>:<input type="text" id="fc_balok_evaluasi" name="fc_balok_evaluasi" placeholder="Kuat Tekan Balok"> MPa<br>
-          <label for="fy_balok_evaluasi">f<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">y</text></svg></label>:<input type="text" id="fy_balok_evaluasi" name="fy_balok_evaluasi" placeholder="Kuat Leleh Baja"> MPa<br>
-        </div>
-        <div class="data-section">
-          <h3>Data Tulangan</h3>
-          <label for="d_balok_evaluasi">D</label>:<input type="text" id="d_balok_evaluasi" name="d_balok_evaluasi" placeholder="Diameter Tulangan"> mm<br>
-          <label for="phi_balok_evaluasi">ɸ</label>:<input type="text" id="phi_balok_evaluasi" name="phi_balok_evaluasi" placeholder="Diameter Begel"> mm<br>
-          <label for="s_balok_evaluasi">s</label>:<input type="text" id="s_balok_evaluasi" name="s_balok_evaluasi" placeholder="Jarak Begel"> mm<br>
-          <label for="ns_balok_evaluasi">n<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">s</text></svg></label>:<input type="text" id="ns_balok_evaluasi" name="ns_balok_evaluasi" placeholder="Jumlah Tulangan Tarik"><br>
-          <label for="ns_prime_balok_evaluasi">n'<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">s</text></svg></label>:<input type="text" id="ns_prime_balok_evaluasi" name="ns_prime_balok_evaluasi" placeholder="Jumlah Tulangan Tekan"><br>
-          <label for="ms_balok_evaluasi">m<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">s</text></svg></label>:<input type="text" id="ms_balok_evaluasi" name="ms_balok_evaluasi" placeholder="Jumlah Lapis Tulangan Tarik"><br>
-          <label for="ms_prime_balok_evaluasi">m'<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">s</text></svg></label>:<input type="text" id="ms_prime_balok_evaluasi" name="ms_prime_balok_evaluasi" placeholder="Jumlah Lapis Tulangan Tekan"><br>
+          <label for="fc_balok_evaluasi">f'<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">c</text></svg></label>:<div class="input-wrapper"><input type="text" id="fc_balok_evaluasi" name="fc_balok_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Kuat Tekan Balok</text></svg></div> MPa<br>
+          <label for="fy_balok_evaluasi">f<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">y</text></svg></label>:<div class="input-wrapper"><input type="text" id="fy_balok_evaluasi" name="fy_balok_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Kuat Leleh Baja</text></svg></div> MPa<br>
         </div>
         <div class="data-section">
           <h3>Data Beban</h3>
-          <label for="mu_balok_evaluasi">M<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<input type="text" id="mu_balok_evaluasi" name="mu_balok_evaluasi" placeholder="Momen Ultimit"> kNm<br>
-          <label for="pu_balok_evaluasi">P<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<input type="text" id="pu_balok_evaluasi" name="pu_balok_evaluasi" placeholder="Beban Aksial Ultimit"> kNm<br>
-          <label for="vu_balok_evaluasi">V<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<input type="text" id="vu_balok_evaluasi" name="vu_balok_evaluasi" placeholder="Gaya Geser Ultimit"> kNm<br>
+          <label for="mu_balok_evaluasi">M<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<div class="input-wrapper"><input type="text" id="mu_balok_evaluasi" name="mu_balok_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Momen Ultimit</text></svg></div> kNm<br>
+          <label for="pu_balok_evaluasi">P<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<div class="input-wrapper"><input type="text" id="pu_balok_evaluasi" name="pu_balok_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Beban Aksial Ultimit</text></svg></div> kNm<br>
+          <label for="vu_balok_evaluasi">V<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<div class="input-wrapper"><input type="text" id="vu_balok_evaluasi" name="vu_balok_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Gaya Geser Ultimit</text></svg></div> kNm<br>
           <label for="srpm_balok_evaluasi">SRPM</label>:<select id="srpm_balok_evaluasi" name="srpm_balok_evaluasi">
             <option value="Biasa">Biasa</option>
             <option value="Menengah">Menengah</option>
             <option value="Khusus">Khusus</option>
           </select>
+        </div>
+        <div class="data-section tulangan" id="tulangan">
+          <h3>Data Tulangan</h3>
+          <label for="d_balok_evaluasi">D</label>:<div class="input-wrapper"><input type="text" id="d_balok_evaluasi" name="d_balok_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Diameter Tulangan</text></svg></div> mm<br>
+          <label for="phi_balok_evaluasi">ɸ</label>:<div class="input-wrapper"><input type="text" id="phi_balok_evaluasi" name="phi_balok_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Diameter Begel</text></svg></div> mm<br>
+          <label for="s_balok_evaluasi">s</label>:<div class="input-wrapper"><input type="text" id="s_balok_evaluasi" name="s_balok_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Jarak Begel</text></svg></div> mm<br>
+          <label for="ns_balok_evaluasi">n<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">s</text></svg></label>:<div class="input-wrapper"><input type="text" id="ns_balok_evaluasi" name="ns_balok_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Jumlah Tulangan Tarik</text></svg></div><br>
+          <label for="ns_prime_balok_evaluasi">n'<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">s</text></svg></label>:<div class="input-wrapper"><input type="text" id="ns_prime_balok_evaluasi" name="ns_prime_balok_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Jumlah Tulangan Tekan</text></svg></div><br>
+          <label for="ms_balok_evaluasi">m<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">s</text></svg></label>:<div class="input-wrapper"><input type="text" id="ms_balok_evaluasi" name="ms_balok_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Jumlah Lapis Tulangan Tarik</text></svg></div><br>
+          <label for="ms_prime_balok_evaluasi">m'<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">s</text></svg></label>:<div class="input-wrapper"><input type="text" id="ms_prime_balok_evaluasi" name="ms_prime_balok_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Jumlah Lapis Tulangan Tekan</text></svg></div><br>
         </div>
       </div>
     </div>
@@ -297,9 +318,69 @@
       }
     }
 
-    // Adjust overflow on load and resize
-    window.addEventListener('load', adjustOverflow);
-    window.addEventListener('resize', adjustOverflow);
+    // Function to adjust order of data sections based on screen width
+  function adjustOrder() {
+    const width = window.innerWidth;
+
+    const dimensi = document.getElementById("dimensi");
+    const bahan   = document.getElementById("bahan");
+    const beban   = document.getElementById("beban");
+    const tulangan= document.getElementById("tulangan"); // bisa jadi null
+
+    if (width > 1000) {
+      if (dimensi) dimensi.style.order = 1;
+      if (bahan)   bahan.style.order   = 2;
+      if (beban)   beban.style.order   = 3;
+      if (tulangan) tulangan.style.order= 4;
+    } else if (width > 700) {
+      if (dimensi) dimensi.style.order = 1;
+      if (beban)   beban.style.order   = 2;
+      if (bahan)   bahan.style.order   = 3;
+      if (tulangan) tulangan.style.order= 4;
+    } else {
+      if (beban)   beban.style.order   = 1;
+      if (tulangan) tulangan.style.order= 2;
+      if (dimensi) dimensi.style.order = 3;
+      if (bahan)   bahan.style.order   = 4;
+    }
+  }
+
+
+    // Function to hide/show fake placeholder based on input value
+    function updatePlaceholder(input) {
+      const wrapper = input.parentElement;
+      const placeholder = wrapper.querySelector('.fake-placeholder');
+      if (input.value.trim() !== '') {
+        placeholder.style.display = 'none';
+      } else {
+        placeholder.style.display = 'block';
+      }
+    }
+
+    // Add event listeners to all inputs with fake placeholders
+    document.querySelectorAll('.input-wrapper input').forEach(input => {
+      updatePlaceholder(input); // Initial check
+      input.addEventListener('input', function() {
+        updatePlaceholder(this);
+      });
+      input.addEventListener('focus', function() {
+        const placeholder = this.parentElement.querySelector('.fake-placeholder');
+        placeholder.style.display = 'none';
+      });
+      input.addEventListener('blur', function() {
+        updatePlaceholder(this);
+      });
+    });
+
+    // Adjust overflow and order on load and resize
+    window.addEventListener('load', function() {
+      adjustOverflow();
+      adjustOrder();
+    });
+    window.addEventListener('resize', function() {
+      adjustOverflow();
+      adjustOrder();
+    });
   </script>
 
 </body>
