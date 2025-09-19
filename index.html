@@ -330,7 +330,7 @@
         </div>
         <div class="data-section" id="bahan">
           <h3>Data Bahan</h3>
-          <label for="fc_kolom_evaluasi">f'<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">c</text></svg></label>:<div class="input-wrapper"><input type="text" id="fc_kolom_evaluasi" name="fc_kolom_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Kuat Tekan Kolom</text></svg></div> MPa<br>
+          <label for="fc_kolom_evaluasi">f'<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">c</text></svg></label>:<div class="input-wrapper"><input type="text" id="fc_kolom_evaluasi" name="fc_kolom_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Kuat Tekan Beton</text></svg></div> MPa<br>
           <label for="fy_kolom_evaluasi">f<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">y</text></svg></label>:<div class="input-wrapper"><input type="text" id="fy_kolom_evaluasi" name="fy_kolom_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Kuat Leleh Baja</text></svg></div> MPa<br>
         </div>
         <div class="data-section" id="Beban">
@@ -367,7 +367,7 @@
           <h3>Data Dimensi</h3>
           <label for="l_pelat_desain">L</label>:<div class="input-wrapper"><input type="text" class="ph-small" id="l_pelat_desain" name="l_pelat_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Panjang Bentang Pelat</text></svg></div> m<br>
           <label for="b_pelat_desain">b</label>:<div class="input-wrapper"><input type="text" id="b_pelat_desain" name="b_pelat_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Lebar Pelat</text></svg></div> m<br>
-          <label for="h_pelat_desain">h</label>:<div class="input-wrapper"><input type="text" id="h_pelat_desain" name="h_pelat_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Tinggi Pelat</text></svg></div> m<br>
+          <label for="sb_pelat_desain">S<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">b</text></svg></label>:<div class="input-wrapper"><input type="text" id="sb_pelat_desain" name="sb_pelat_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Tebal Selimut Beton</text></svg></div> m<br>
         </div>
         <div class="data-section" id="bahan">
           <h3>Data Bahan</h3>
@@ -382,14 +382,27 @@
             <input type="radio" id="auto_pelat_desain" name="beban_mode_pelat_desain" value="Auto">
             <label for="auto_pelat_desain">Auto</label>
           </div>
-          <label for="mu_pelat_desain">M<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<div class="input-wrapper"><input type="text" id="mu_pelat_desain" name="mu_pelat_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Momen Ultimit</text></svg></div> kNm<br>
-          <label for="pu_pelat_desain">P<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<div class="input-wrapper"><input type="text" id="pu_pelat_desain" name="pu_pelat_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Beban Aksial Ultimit</text></svg></div> kNm<br>
-          <label for="vu_pelat_desain">V<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<div class="input-wrapper"><input type="text" id="vu_pelat_desain" name="vu_pelat_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Gaya Geser Ultimit</text></svg></div> kNm<br>
-          <label for="srpm_pelat_desain">SRPM</label>:<select id="srpm_pelat_desain" name="srpm_pelat_desain">
-            <option value="Biasa">Biasa</option>
-            <option value="Menengah">Menengah</option>
-            <option value="Khusus">Khusus</option>
-          </select>
+          <div id="manual_beban_pelat_desain">
+            <label for="mu_pelat_desain">M<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<div class="input-wrapper"><input type="text" id="mu_pelat_desain" name="mu_pelat_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Momen Ultimit</text></svg></div> kNm<br>
+            <label for="srpm_pelat_desain">SRPM</label>:<select id="srpm_pelat_desain" name="srpm_pelat_desain">
+              <option value="Biasa">Biasa</option>
+              <option value="Menengah">Menengah</option>
+              <option value="Khusus">Khusus</option>
+            </select>
+          </div>
+          <div id="auto_beban_pelat_desain" style="display: none;">
+            <label for="dl_pelat_desain">DL</label>:<div class="input-wrapper"><input type="text" id="dl_pelat_desain" name="dl_pelat_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Total Beban Mati</text></svg></div> kN/m²<br>
+            <label for="ll_pelat_desain">LL</label>:<div class="input-wrapper"><input type="text" id="ll_pelat_desain" name="ll_pelat_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Total Beban Hidup</text></svg></div> kN/m²<br>
+            <label for="sendi_pelat_desain">Sendi</label>:<select id="sendi_pelat_desain" name="sendi_pelat_desain">
+              <option value="Terjepit Penuh">Terjepit Penuh</option>
+              <option value="Terjepit Elastis/Menerus">Terjepit Elastis/Menerus</option>
+            </select><br>
+            <label for="srpm_pelat_desain_auto">SRPM</label>:<select id="srpm_pelat_desain_auto" name="srpm_pelat_desain_auto">
+              <option value="Biasa">Biasa</option>
+              <option value="Menengah">Menengah</option>
+              <option value="Khusus">Khusus</option>
+            </select>
+          </div>
         </div>
       </div>
       <button class="calculate-btn" onclick="calculateDesain()">Hitung Desain</button>
@@ -400,7 +413,6 @@
           <h3>Data Dimensi</h3>
           <label for="l_pelat_evaluasi">L</label>:<div class="input-wrapper"><input type="text" class="ph-small" id="l_pelat_evaluasi" name="l_pelat_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Panjang Bentang Pelat</text></svg></div> m<br>
           <label for="b_pelat_evaluasi">b</label>:<div class="input-wrapper"><input type="text" id="b_pelat_evaluasi" name="b_pelat_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Lebar Penampang Pelat</text></svg></div> m<br>
-          <label for="h_pelat_evaluasi">h</label>:<div class="input-wrapper"><input type="text" id="h_pelat_evaluasi" name="h_pelat_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Tinggi Penampang Pelat</text></svg></div> m<br>
         </div>
         <div class="data-section" id="bahan">
           <h3>Data Bahan</h3>
@@ -415,24 +427,32 @@
             <input type="radio" id="auto_pelat_evaluasi" name="beban_mode_pelat_evaluasi" value="Auto">
             <label for="auto_pelat_evaluasi">Auto</label>
           </div>
-          <label for="mu_pelat_evaluasi">M<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<div class="input-wrapper"><input type="text" id="mu_pelat_evaluasi" name="mu_pelat_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Momen Ultimit</text></svg></div> kNm<br>
-          <label for="pu_pelat_evaluasi">P<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<div class="input-wrapper"><input type="text" id="pu_pelat_evaluasi" name="pu_pelat_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Beban Aksial Ultimit</text></svg></div> kNm<br>
-          <label for="vu_pelat_evaluasi">V<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<div class="input-wrapper"><input type="text" id="vu_pelat_evaluasi" name="vu_pelat_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Gaya Geser Ultimit</text></svg></div> kNm<br>
-          <label for="srpm_pelat_evaluasi">SRPM</label>:<select id="srpm_pelat_evaluasi" name="srpm_pelat_evaluasi">
-            <option value="Biasa">Biasa</option>
-            <option value="Menengah">Menengah</option>
-            <option value="Khusus">Khusus</option>
-          </select>
+          <div id="manual_beban_pelat_evaluasi">
+            <label for="mu_pelat_evaluasi">M<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<div class="input-wrapper"><input type="text" id="mu_pelat_evaluasi" name="mu_pelat_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Momen Ultimit</text></svg></div> kNm<br>
+            <label for="srpm_pelat_evaluasi">SRPM</label>:<select id="srpm_pelat_evaluasi" name="srpm_pelat_evaluasi">
+              <option value="Biasa">Biasa</option>
+              <option value="Menengah">Menengah</option>
+              <option value="Khusus">Khusus</option>
+            </select>
+          </div>
+          <div id="auto_beban_pelat_evaluasi" style="display: none;">
+            <label for="dl_pelat_evaluasi">DL</label>:<div class="input-wrapper"><input type="text" id="dl_pelat_evaluasi" name="dl_pelat_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Total Beban Mati</text></svg></div> kN/m²<br>
+            <label for="ll_pelat_evaluasi">LL</label>:<div class="input-wrapper"><input type="text" id="ll_pelat_evaluasi" name="ll_pelat_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Total Beban Hidup</text></svg></div> kN/m²<br>
+            <label for="sendi_pelat_evaluasi">Sendi</label>:<select id="sendi_pelat_evaluasi" name="sendi_pelat_evaluasi">
+              <option value="Terjepit Penuh">Terjepit Penuh</option>
+              <option value="Terjepit Elastis/Menerus">Terjepit Elastis/Menerus</option>
+            </select><br>
+            <label for="srpm_pelat_evaluasi_auto">SRPM</label>:<select id="srpm_pelat_evaluasi_auto" name="srpm_pelat_evaluasi_auto">
+              <option value="Biasa">Biasa</option>
+              <option value="Menengah">Menengah</option>
+              <option value="Khusus">Khusus</option>
+            </select>
+          </div>
         </div>
         <div class="data-section" id="tulangan">
           <h3>Data Tulangan</h3>
           <label for="d_pelat_evaluasi">D</label>:<div class="input-wrapper"><input type="text" id="d_pelat_evaluasi" name="d_pelat_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Diameter Tulangan</text></svg></div> mm<br>
-          <label for="phi_pelat_evaluasi">ɸ</label>:<div class="input-wrapper"><input type="text" id="phi_pelat_evaluasi" name="phi_pelat_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Diameter Begel</text></svg></div> mm<br>
           <label for="s_pelat_evaluasi">s</label>:<div class="input-wrapper"><input type="text" id="s_pelat_evaluasi" name="s_pelat_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Jarak Begel</text></svg></div> mm<br>
-          <label for="ns_pelat_evaluasi">n<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">s</text></svg></label>:<div class="input-wrapper"><input type="text" id="ns_pelat_evaluasi" name="ns_pelat_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Jumlah Tulangan Tarik</text></svg></div><br>
-          <label for="ns_prime_pelat_evaluasi">n'<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">s</text></svg></label>:<div class="input-wrapper"><input type="text" id="ns_prime_pelat_evaluasi" name="ns_prime_pelat_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Jumlah Tulangan Tekan</text></svg></div><br>
-          <label for="ms_pelat_evaluasi">m<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">s</text></svg></label>:<div class="input-wrapper"><input type="text" id="ms_pelat_evaluasi" name="ms_pelat_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Jumlah Lapis Tulangan Tarik</text></svg></div><br>
-          <label for="ms_prime_pelat_evaluasi">m'<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">s</text></svg></label>:<div class="input-wrapper"><input type="text" id="ms_prime_pelat_evaluasi" name="ms_prime_pelat_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Jumlah Lapis Tulangan Tekan</text></svg></div><br>
         </div>
       </div>
       <button class="calculate-btn" onclick="calculateEvaluasi()">Hitung Evaluasi</button>
@@ -572,14 +592,36 @@
         const sections = subtab.querySelectorAll(".data-section");
         if (sections.length === 0) return;
 
-        const containerWidth = subtab.clientWidth;
-        const sectionWidth = sections[0].getBoundingClientRect().width;
-        const perRow = Math.floor(containerWidth / sectionWidth);
-
         const dimensi  = subtab.querySelector("#dimensi");
         const bahan    = subtab.querySelector("#bahan");
         const beban    = subtab.querySelector("#beban, #Beban");
         const tulangan = subtab.querySelector("#tulangan");
+
+        // Urutan khusus untuk PelatEvaluasi
+        if (subtab.id === 'PelatEvaluasi') {
+          const containerWidth = subtab.clientWidth;
+          const sectionWidth = sections[0].getBoundingClientRect().width;
+          const perRow = Math.floor(containerWidth / sectionWidth);
+
+          if (perRow === 2) {
+            // Urutan: dimensi, bahan, beban, tulangan
+            if (dimensi) dimensi.style.order = 1;
+            if (bahan)   bahan.style.order   = 2;
+            if (beban)   beban.style.order   = 3;
+            if (tulangan) tulangan.style.order = 4;
+          } else {
+            // Urutan default: dimensi, bahan, tulangan, beban
+            if (dimensi) dimensi.style.order = 1;
+            if (bahan)   bahan.style.order   = 2;
+            if (tulangan) tulangan.style.order = 3;
+            if (beban) beban.style.order = 4;
+          }
+          return; // Keluar dari fungsi untuk subtab ini
+        }
+
+        const containerWidth = subtab.clientWidth;
+        const sectionWidth = sections[0].getBoundingClientRect().width;
+        const perRow = Math.floor(containerWidth / sectionWidth);
 
         if (perRow === 1) {
           // urutan kalau 1 per baris
@@ -666,6 +708,34 @@
       alert('Fungsi sementara dimatikan karena file report.html belum dibuat.');
       // window.open('report.html');
     }
+
+    // Toggle for PelatDesain
+    document.getElementById('manual_pelat_desain').addEventListener('change', function() {
+      if (this.checked) {
+        document.getElementById('manual_beban_pelat_desain').style.display = 'block';
+        document.getElementById('auto_beban_pelat_desain').style.display = 'none';
+      }
+    });
+    document.getElementById('auto_pelat_desain').addEventListener('change', function() {
+      if (this.checked) {
+        document.getElementById('manual_beban_pelat_desain').style.display = 'none';
+        document.getElementById('auto_beban_pelat_desain').style.display = 'block';
+      }
+    });
+
+    // Toggle for PelatEvaluasi
+    document.getElementById('manual_pelat_evaluasi').addEventListener('change', function() {
+      if (this.checked) {
+        document.getElementById('manual_beban_pelat_evaluasi').style.display = 'block';
+        document.getElementById('auto_beban_pelat_evaluasi').style.display = 'none';
+      }
+    });
+    document.getElementById('auto_pelat_evaluasi').addEventListener('change', function() {
+      if (this.checked) {
+        document.getElementById('manual_beban_pelat_evaluasi').style.display = 'none';
+        document.getElementById('auto_beban_pelat_evaluasi').style.display = 'block';
+      }
+    });
   </script>
 
 </body>
