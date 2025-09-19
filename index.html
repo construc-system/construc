@@ -49,9 +49,16 @@
     /* Input styling */
     label {
       display: inline-block;
-      width: 40px;
+      width: 40px;   /* Ini akan tetap berlaku untuk label input teks */
       margin-right: 10px;
     }
+
+    /* Override untuk label radio button */
+    .radio-group label { /* Menargetkan label di dalam radio-group */
+      width: auto; /* Biarkan lebar menyesuaikan konten */
+      margin-right: 5px; /* Kurangi jarak ke elemen berikutnya */
+    }
+
     input {
       font-size: 12px;   /* ukuran teks saat user mengetik */
       margin-bottom: 10px;
@@ -154,6 +161,39 @@
     .calculate-btn:hover {
       background: #0056b3;
     }
+.radio-group {
+  display: flex;
+  margin-bottom: 6px; /* kasih jarak 4px ke elemen di bawah */
+}
+    /* Radio button horizontal alignment */
+.radio-group input[type="radio"] {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  width: 18px;
+  height: 18px;
+  border: 2px solid #555;   /* lingkaran luar */
+  margin:  0.5px 4px -2px 0;
+  border-radius: 50%;
+  background-color: #fff;   /* isi putih */
+  cursor: pointer;
+  position: relative;
+}
+
+/* pas dicheck, munculin lingkaran kecil di dalam */
+.radio-group input[type="radio"]:checked::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 10px;               /* diameter titik */
+  height: 10px;
+  background-color: #555;    /* warna titik */
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
   </style>
   <link rel="icon" type="image/png" href="logo.png">
   <link rel="apple-touch-icon" href="logo.png">
@@ -183,12 +223,13 @@
         <div class="data-section" id="dimensi">
           <h3>Data Dimensi</h3>
           <label for="l_balok_desain">L</label>:<div class="input-wrapper"><input type="text" class="ph-small" id="l_balok_desain" name="l_balok_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Panjang Bentang Balok</text></svg></div> m<br>
-          <label for="b_balok_desain">b</label>:<div class="input-wrapper"><input type="text" id="b_balok_desain" name="b_balok_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Lebar Balok</text></svg></div> m<br>
-          <label for="h_balok_desain">h</label>:<div class="input-wrapper"><input type="text" id="h_balok_desain" name="h_balok_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Tinggi Balok</text></svg></div> m<br>
+          <label for="b_balok_desain">b</label>:<div class="input-wrapper"><input type="text" id="b_balok_desain" name="b_balok_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Lebar Penampang Balok</text></svg></div> m<br>
+          <label for="h_balok_desain">h</label>:<div class="input-wrapper"><input type="text" id="h_balok_desain" name="h_balok_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Tinggi Penampang Balok</text></svg></div> m<br>
+          <label for="sb_balok_desain">S<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">b</text></svg></label>:<div class="input-wrapper"><input type="text" id="sb_balok_desain" name="sb_balok_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Tebal Selimut Beton</text></svg></div> m<br>
         </div>
         <div class="data-section" id="bahan">
           <h3>Data Bahan</h3>
-          <label for="fc_balok_desain">f'<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">c</text></svg></label>:<div class="input-wrapper"><input type="text" id="fc_balok_desain" name="fc_balok_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Kuat Tekan Balok</text></svg></div> MPa<br>
+          <label for="fc_balok_desain">f'<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">c</text></svg></label>:<div class="input-wrapper"><input type="text" id="fc_balok_desain" name="fc_balok_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Kuat Tekan Baja</text></svg></div> MPa<br>
           <label for="fy_balok_desain">f<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">y</text></svg></label>:<div class="input-wrapper"><input type="text" id="fy_balok_desain" name="fy_balok_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Kuat Leleh Baja</text></svg></div> MPa<br>
         </div>
         <div class="data-section" id="beban">
@@ -210,12 +251,13 @@
         <div class="data-section" id="dimensi">
           <h3>Data Dimensi</h3>
           <label for="l_balok_evaluasi">L</label>:<div class="input-wrapper"><input type="text" class="ph-small" id="l_balok_evaluasi" name="l_balok_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Panjang Bentang Balok</text></svg></div> m<br>
-          <label for="b_balok_evaluasi">b</label>:<div class="input-wrapper"><input type="text" id="b_balok_evaluasi" name="b_balok_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Lebar Balok</text></svg></div> m<br>
-          <label for="h_balok_evaluasi">h</label>:<div class="input-wrapper"><input type="text" id="h_balok_evaluasi" name="h_balok_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Tinggi Balok</text></svg></div> m<br>
+          <label for="b_balok_evaluasi">b</label>:<div class="input-wrapper"><input type="text" id="b_balok_evaluasi" name="b_balok_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Lebar Penampang Balok</text></svg></div> m<br>
+          <label for="h_balok_evaluasi">h</label>:<div class="input-wrapper"><input type="text" id="h_balok_evaluasi" name="h_balok_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Tinggi Penampang Balok</text></svg></div> m<br>
+          <label for="sb_balok_evaluasi">S<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">b</text></svg></label>:<div class="input-wrapper"><input type="text" id="sb_balok_evaluasi" name="sb_balok_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Tebal Selimut Beton</text></svg></div> m<br>
         </div>
         <div class="data-section" id="bahan">
           <h3>Data Bahan</h3>
-          <label for="fc_balok_evaluasi">f'<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">c</text></svg></label>:<div class="input-wrapper"><input type="text" id="fc_balok_evaluasi" name="fc_balok_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Kuat Tekan Balok</text></svg></div> MPa<br>
+          <label for="fc_balok_evaluasi">f'<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">c</text></svg></label>:<div class="input-wrapper"><input type="text" id="fc_balok_evaluasi" name="fc_balok_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Kuat Tekan Baja</text></svg></div> MPa<br>
           <label for="fy_balok_evaluasi">f<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">y</text></svg></label>:<div class="input-wrapper"><input type="text" id="fy_balok_evaluasi" name="fy_balok_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Kuat Leleh Baja</text></svg></div> MPa<br>
         </div>
         <div class="data-section" id="Beban">
@@ -249,11 +291,70 @@
       <button class="subtablinks active" onclick="openSubTab(event, 'KolomDesain')">Desain</button>
       <button class="subtablinks" onclick="openSubTab(event, 'KolomEvaluasi')">Evaluasi</button>
     </div>
-    <div id="KolomDesain" class="subtabcontent active">
-      <p>Konten Desain Kolom di sini...</p>
+    <div id="KolomDesain" class="subtabcontent active" style="position: relative;">
+      <div class="data-sections">
+        <div class="data-section" id="dimensi">
+          <h3>Data Dimensi</h3>
+          <label for="l_kolom_desain">L</label>:<div class="input-wrapper"><input type="text" class="ph-small" id="l_kolom_desain" name="l_kolom_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Tinggi Kolom</text></svg></div> m<br>
+          <label for="b_kolom_desain">b</label>:<div class="input-wrapper"><input type="text" id="b_kolom_desain" name="b_kolom_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Lebar Penampang Kolom</text></svg></div> m<br>
+          <label for="h_kolom_desain">h</label>:<div class="input-wrapper"><input type="text" id="h_kolom_desain" name="h_kolom_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Tinggi Penampang Kolom</text></svg></div> m<br>
+          <label for="sb_kolom_desain">S<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">b</text></svg></label>:<div class="input-wrapper"><input type="text" id="sb_kolom_desain" name="sb_kolom_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Tebal Selimut Beton</text></svg></div> m<br>
+        </div>
+        <div class="data-section" id="bahan">
+          <h3>Data Bahan</h3>
+          <label for="fc_kolom_desain">f'<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">c</text></svg></label>:<div class="input-wrapper"><input type="text" id="fc_kolom_desain" name="fc_kolom_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Kuat Tekan Baja</text></svg></div> MPa<br>
+          <label for="fy_kolom_desain">f<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">y</text></svg></label>:<div class="input-wrapper"><input type="text" id="fy_kolom_desain" name="fy_kolom_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Kuat Leleh Baja</text></svg></div> MPa<br>
+        </div>
+        <div class="data-section" id="beban">
+          <h3>Data Beban</h3>
+
+          <label for="mu_kolom_desain">M<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<div class="input-wrapper"><input type="text" id="mu_kolom_desain" name="mu_kolom_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Momen Ultimit</text></svg></div> kNm<br>
+          <label for="pu_kolom_desain">P<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<div class="input-wrapper"><input type="text" id="pu_kolom_desain" name="pu_kolom_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Beban Aksial Ultimit</text></svg></div> kNm<br>
+          <label for="vu_kolom_desain">V<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<div class="input-wrapper"><input type="text" id="vu_kolom_desain" name="vu_kolom_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Gaya Geser Ultimit</text></svg></div> kNm<br>
+          <label for="srpm_kolom_desain">SRPM</label>:<select id="srpm_kolom_desain" name="srpm_kolom_desain">
+            <option value="Biasa">Biasa</option>
+            <option value="Menengah">Menengah</option>
+            <option value="Khusus">Khusus</option>
+          </select>
+        </div>
+      </div>
+      <button class="calculate-btn" onclick="calculateDesain()">Hitung Desain</button>
     </div>
-    <div id="KolomEvaluasi" class="subtabcontent">
-      <p>Konten Evaluasi Kolom di sini...</p>
+    <div id="KolomEvaluasi" class="subtabcontent" style="position: relative;">
+      <div class="data-sections">
+        <div class="data-section" id="dimensi">
+          <h3>Data Dimensi</h3>
+          <label for="l_kolom_evaluasi">L</label>:<div class="input-wrapper"><input type="text" class="ph-small" id="l_kolom_evaluasi" name="l_kolom_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Tinggi Kolom</text></svg></div> m<br>
+          <label for="b_kolom_evaluasi">b</label>:<div class="input-wrapper"><input type="text" id="b_kolom_evaluasi" name="b_kolom_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Lebar Penampang Kolom</text></svg></div> m<br>
+          <label for="h_kolom_evaluasi">h</label>:<div class="input-wrapper"><input type="text" id="h_kolom_evaluasi" name="h_kolom_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Tinggi Penampang Kolom</text></svg></div> m<br>
+          <label for="sb_kolom_evaluasi">S<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">b</text></svg></label>:<div class="input-wrapper"><input type="text" id="sb_kolom_evaluasi" name="sb_kolom_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Tebal Selimut Beton</text></svg></div> m<br>
+        </div>
+        <div class="data-section" id="bahan">
+          <h3>Data Bahan</h3>
+          <label for="fc_kolom_evaluasi">f'<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">c</text></svg></label>:<div class="input-wrapper"><input type="text" id="fc_kolom_evaluasi" name="fc_kolom_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Kuat Tekan Baja</text></svg></div> MPa<br>
+          <label for="fy_kolom_evaluasi">f<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">y</text></svg></label>:<div class="input-wrapper"><input type="text" id="fy_kolom_evaluasi" name="fy_kolom_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Kuat Leleh Baja</text></svg></div> MPa<br>
+        </div>
+        <div class="data-section" id="Beban">
+          <h3>Data Beban</h3>
+
+          <label for="mu_kolom_evaluasi">M<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<div class="input-wrapper"><input type="text" id="mu_kolom_evaluasi" name="mu_kolom_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Momen Ultimit</text></svg></div> kNm<br>
+          <label for="pu_kolom_evaluasi">P<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<div class="input-wrapper"><input type="text" id="pu_kolom_evaluasi" name="pu_kolom_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Beban Aksial Ultimit</text></svg></div> kNm<br>
+          <label for="vu_kolom_evaluasi">V<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<div class="input-wrapper"><input type="text" id="vu_kolom_evaluasi" name="vu_kolom_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Gaya Geser Ultimit</text></svg></div> kNm<br>
+          <label for="srpm_kolom_evaluasi">SRPM</label>:<select id="srpm_kolom_evaluasi" name="srpm_kolom_evaluasi">
+            <option value="Biasa">Biasa</option>
+            <option value="Menengah">Menengah</option>
+            <option value="Khusus">Khusus</option>
+          </select>
+        </div>
+        <div class="data-section" id="tulangan">
+          <h3>Data Tulangan</h3>
+          <label for="d_kolom_evaluasi">D</label>:<div class="input-wrapper"><input type="text" id="d_kolom_evaluasi" name="d_kolom_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Diameter Tulangan</text></svg></div> mm<br>
+          <label for="n_kolom_evaluasi">n</label>:<div class="input-wrapper"><input type="text" id="n_kolom_evaluasi" name="n_kolom_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Jumlah Tulangan</text></svg></div><br>
+          <label for="phi_kolom_evaluasi">ɸ</label>:<div class="input-wrapper"><input type="text" id="phi_kolom_evaluasi" name="phi_kolom_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Diameter Begel</text></svg></div> mm<br>
+          <label for="s_kolom_evaluasi">s</label>:<div class="input-wrapper"><input type="text" id="s_kolom_evaluasi" name="s_kolom_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Jarak Begel</text></svg></div> mm<br>
+        </div>
+      </div>
+      <button class="calculate-btn" onclick="calculateEvaluasi()">Hitung Evaluasi</button>
     </div>
   </div>
 
@@ -262,11 +363,79 @@
       <button class="subtablinks active" onclick="openSubTab(event, 'PelatDesain')">Desain</button>
       <button class="subtablinks" onclick="openSubTab(event, 'PelatEvaluasi')">Evaluasi</button>
     </div>
-    <div id="PelatDesain" class="subtabcontent active">
-      <p>Konten Desain Pelat di sini...</p>
+    <div id="PelatDesain" class="subtabcontent active" style="position: relative;">
+      <div class="data-sections">
+        <div class="data-section" id="dimensi">
+          <h3>Data Dimensi</h3>
+          <label for="l_pelat_desain">L</label>:<div class="input-wrapper"><input type="text" class="ph-small" id="l_pelat_desain" name="l_pelat_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Panjang Bentang Pelat</text></svg></div> m<br>
+          <label for="b_pelat_desain">b</label>:<div class="input-wrapper"><input type="text" id="b_pelat_desain" name="b_pelat_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Lebar Pelat</text></svg></div> m<br>
+          <label for="h_pelat_desain">h</label>:<div class="input-wrapper"><input type="text" id="h_pelat_desain" name="h_pelat_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Tinggi Pelat</text></svg></div> m<br>
+        </div>
+        <div class="data-section" id="bahan">
+          <h3>Data Bahan</h3>
+          <label for="fc_pelat_desain">f'<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">c</text></svg></label>:<div class="input-wrapper"><input type="text" id="fc_pelat_desain" name="fc_pelat_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Kuat Tekan Baja</text></svg></div> MPa<br>
+          <label for="fy_pelat_desain">f<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">y</text></svg></label>:<div class="input-wrapper"><input type="text" id="fy_pelat_desain" name="fy_pelat_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Kuat Leleh Baja</text></svg></div> MPa<br>
+        </div>
+        <div class="data-section" id="beban">
+          <h3>Data Beban</h3>
+          <div class="radio-group">
+            <input type="radio" id="manual" name="mode"><label for="manual">Manual</label>
+            <input type="radio" id="auto" name="mode"><label for="auto">Auto</label>
+          </div>
+          <label for="mu_pelat_desain">M<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<div class="input-wrapper"><input type="text" id="mu_pelat_desain" name="mu_pelat_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Momen Ultimit</text></svg></div> kNm<br>
+          <label for="pu_pelat_desain">P<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<div class="input-wrapper"><input type="text" id="pu_pelat_desain" name="pu_pelat_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Beban Aksial Ultimit</text></svg></div> kNm<br>
+          <label for="vu_pelat_desain">V<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<div class="input-wrapper"><input type="text" id="vu_pelat_desain" name="vu_pelat_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Gaya Geser Ultimit</text></svg></div> kNm<br>
+          <label for="srpm_pelat_desain">SRPM</label>:<select id="srpm_pelat_desain" name="srpm_pelat_desain">
+            <option value="Biasa">Biasa</option>
+            <option value="Menengah">Menengah</option>
+            <option value="Khusus">Khusus</option>
+          </select>
+        </div>
+      </div>
+      <button class="calculate-btn" onclick="calculateDesain()">Hitung Desain</button>
     </div>
-    <div id="PelatEvaluasi" class="subtabcontent">
-      <p>Konten Evaluasi Pelat di sini...</p>
+    <div id="PelatEvaluasi" class="subtabcontent" style="position: relative;">
+      <div class="data-sections">
+        <div class="data-section" id="dimensi">
+          <h3>Data Dimensi</h3>
+          <label for="l_pelat_evaluasi">L</label>:<div class="input-wrapper"><input type="text" class="ph-small" id="l_pelat_evaluasi" name="l_pelat_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Panjang Bentang Pelat</text></svg></div> m<br>
+          <label for="b_pelat_evaluasi">b</label>:<div class="input-wrapper"><input type="text" id="b_pelat_evaluasi" name="b_pelat_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Lebar Penampang Pelat</text></svg></div> m<br>
+          <label for="h_pelat_evaluasi">h</label>:<div class="input-wrapper"><input type="text" id="h_pelat_evaluasi" name="h_pelat_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Tinggi Penampang Pelat</text></svg></div> m<br>
+        </div>
+        <div class="data-section" id="bahan">
+          <h3>Data Bahan</h3>
+          <label for="fc_pelat_evaluasi">f'<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">c</text></svg></label>:<div class="input-wrapper"><input type="text" id="fc_pelat_evaluasi" name="fc_pelat_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Kuat Tekan Baja</text></svg></div> MPa<br>
+          <label for="fy_pelat_evaluasi">f<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">y</text></svg></label>:<div class="input-wrapper"><input type="text" id="fy_pelat_evaluasi" name="fy_pelat_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Kuat Leleh Baja</text></svg></div> MPa<br>
+        </div>
+        <div class="data-section" id="Beban">
+          <h3>Data Beban</h3>
+          <div class="radio-group">
+            <input type="radio" id="manual_pelat_evaluasi" name="beban_mode_pelat_evaluasi" value="Manual" checked>
+            <label for="manual_pelat_evaluasi">Manual</label>
+            <input type="radio" id="auto_pelat_evaluasi" name="beban_mode_pelat_evaluasi" value="Auto">
+            <label for="auto_pelat_evaluasi">Auto</label>
+          </div>
+          <label for="mu_pelat_evaluasi">M<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<div class="input-wrapper"><input type="text" id="mu_pelat_evaluasi" name="mu_pelat_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Momen Ultimit</text></svg></div> kNm<br>
+          <label for="pu_pelat_evaluasi">P<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<div class="input-wrapper"><input type="text" id="pu_pelat_evaluasi" name="pu_pelat_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Beban Aksial Ultimit</text></svg></div> kNm<br>
+          <label for="vu_pelat_evaluasi">V<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<div class="input-wrapper"><input type="text" id="vu_pelat_evaluasi" name="vu_pelat_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Gaya Geser Ultimit</text></svg></div> kNm<br>
+          <label for="srpm_pelat_evaluasi">SRPM</label>:<select id="srpm_pelat_evaluasi" name="srpm_pelat_evaluasi">
+            <option value="Biasa">Biasa</option>
+            <option value="Menengah">Menengah</option>
+            <option value="Khusus">Khusus</option>
+          </select>
+        </div>
+        <div class="data-section" id="tulangan">
+          <h3>Data Tulangan</h3>
+          <label for="d_pelat_evaluasi">D</label>:<div class="input-wrapper"><input type="text" id="d_pelat_evaluasi" name="d_pelat_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Diameter Tulangan</text></svg></div> mm<br>
+          <label for="phi_pelat_evaluasi">ɸ</label>:<div class="input-wrapper"><input type="text" id="phi_pelat_evaluasi" name="phi_pelat_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Diameter Begel</text></svg></div> mm<br>
+          <label for="s_pelat_evaluasi">s</label>:<div class="input-wrapper"><input type="text" id="s_pelat_evaluasi" name="s_pelat_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Jarak Begel</text></svg></div> mm<br>
+          <label for="ns_pelat_evaluasi">n<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">s</text></svg></label>:<div class="input-wrapper"><input type="text" id="ns_pelat_evaluasi" name="ns_pelat_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Jumlah Tulangan Tarik</text></svg></div><br>
+          <label for="ns_prime_pelat_evaluasi">n'<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">s</text></svg></label>:<div class="input-wrapper"><input type="text" id="ns_prime_pelat_evaluasi" name="ns_prime_pelat_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Jumlah Tulangan Tekan</text></svg></div><br>
+          <label for="ms_pelat_evaluasi">m<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">s</text></svg></label>:<div class="input-wrapper"><input type="text" id="ms_pelat_evaluasi" name="ms_pelat_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Jumlah Lapis Tulangan Tarik</text></svg></div><br>
+          <label for="ms_prime_pelat_evaluasi">m'<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">s</text></svg></label>:<div class="input-wrapper"><input type="text" id="ms_prime_pelat_evaluasi" name="ms_prime_pelat_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Jumlah Lapis Tulangan Tekan</text></svg></div><br>
+        </div>
+      </div>
+      <button class="calculate-btn" onclick="calculateEvaluasi()">Hitung Evaluasi</button>
     </div>
   </div>
 
@@ -275,11 +444,69 @@
       <button class="subtablinks active" onclick="openSubTab(event, 'FondasiDesain')">Desain</button>
       <button class="subtablinks" onclick="openSubTab(event, 'FondasiEvaluasi')">Evaluasi</button>
     </div>
-    <div id="FondasiDesain" class="subtabcontent active">
-      <p>Konten Desain Fondasi di sini...</p>
+    <div id="FondasiDesain" class="subtabcontent active" style="position: relative;">
+      <div class="data-sections">
+        <div class="data-section" id="dimensi">
+          <h3>Data Dimensi</h3>
+          <label for="l_fondasi_desain">L</label>:<div class="input-wrapper"><input type="text" class="ph-small" id="l_fondasi_desain" name="l_fondasi_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Panjang Fondasi</text></svg></div> m<br>
+          <label for="b_fondasi_desain">b</label>:<div class="input-wrapper"><input type="text" id="b_fondasi_desain" name="b_fondasi_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Lebar Fondasi</text></svg></div> m<br>
+          <label for="h_fondasi_desain">h</label>:<div class="input-wrapper"><input type="text" id="h_fondasi_desain" name="h_fondasi_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Tinggi Fondasi</text></svg></div> m<br>
+        </div>
+        <div class="data-section" id="bahan">
+          <h3>Data Bahan</h3>
+          <label for="fc_fondasi_desain">f'<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">c</text></svg></label>:<div class="input-wrapper"><input type="text" id="fc_fondasi_desain" name="fc_fondasi_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Kuat Tekan Beton</text></svg></div> MPa<br>
+          <label for="fy_fondasi_desain">f<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">y</text></svg></label>:<div class="input-wrapper"><input type="text" id="fy_fondasi_desain" name="fy_fondasi_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Kuat Leleh Baja</text></svg></div> MPa<br>
+        </div>
+        <div class="data-section" id="beban">
+          <h3>Data Beban</h3>
+          <label for="mu_fondasi_desain">M<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<div class="input-wrapper"><input type="text" id="mu_fondasi_desain" name="mu_fondasi_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Momen Ultimit</text></svg></div> kNm<br>
+          <label for="pu_fondasi_desain">P<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<div class="input-wrapper"><input type="text" id="pu_fondasi_desain" name="pu_fondasi_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Beban Aksial Ultimit</text></svg></div> kNm<br>
+          <label for="vu_fondasi_desain">V<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<div class="input-wrapper"><input type="text" id="vu_fondasi_desain" name="vu_fondasi_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Gaya Geser Ultimit</text></svg></div> kNm<br>
+          <label for="srpm_fondasi_desain">SRPM</label>:<select id="srpm_fondasi_desain" name="srpm_fondasi_desain">
+            <option value="Biasa">Biasa</option>
+            <option value="Menengah">Menengah</option>
+            <option value="Khusus">Khusus</option>
+          </select>
+        </div>
+      </div>
+      <button class="calculate-btn" onclick="calculateDesain()">Hitung Desain</button>
     </div>
-    <div id="FondasiEvaluasi" class="subtabcontent">
-      <p>Konten Evaluasi Fondasi di sini...</p>
+    <div id="FondasiEvaluasi" class="subtabcontent" style="position: relative;">
+      <div class="data-sections">
+        <div class="data-section" id="dimensi">
+          <h3>Data Dimensi</h3>
+          <label for="l_fondasi_evaluasi">L</label>:<div class="input-wrapper"><input type="text" class="ph-small" id="l_fondasi_evaluasi" name="l_fondasi_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Panjang Fondasi</text></svg></div> m<br>
+          <label for="b_fondasi_evaluasi">b</label>:<div class="input-wrapper"><input type="text" id="b_fondasi_evaluasi" name="b_fondasi_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Lebar Penampang Fondasi</text></svg></div> m<br>
+          <label for="h_fondasi_evaluasi">h</label>:<div class="input-wrapper"><input type="text" id="h_fondasi_evaluasi" name="h_fondasi_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Tinggi Penampang Fondasi</text></svg></div> m<br>
+        </div>
+        <div class="data-section" id="bahan">
+          <h3>Data Bahan</h3>
+          <label for="fc_fondasi_evaluasi">f'<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">c</text></svg></label>:<div class="input-wrapper"><input type="text" id="fc_fondasi_evaluasi" name="fc_fondasi_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Kuat Tekan Beton</text></svg></div> MPa<br>
+          <label for="fy_fondasi_evaluasi">f<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">y</text></svg></label>:<div class="input-wrapper"><input type="text" id="fy_fondasi_evaluasi" name="fy_fondasi_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Kuat Leleh Baja</text></svg></div> MPa<br>
+        </div>
+        <div class="data-section" id="Beban">
+          <h3>Data Beban</h3>
+          <label for="mu_fondasi_evaluasi">M<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<div class="input-wrapper"><input type="text" id="mu_fondasi_evaluasi" name="mu_fondasi_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Momen Ultimit</text></svg></div> kNm<br>
+          <label for="pu_fondasi_evaluasi">P<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<div class="input-wrapper"><input type="text" id="pu_fondasi_evaluasi" name="pu_fondasi_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Beban Aksial Ultimit</text></svg></div> kNm<br>
+          <label for="vu_fondasi_evaluasi">V<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<div class="input-wrapper"><input type="text" id="vu_fondasi_evaluasi" name="vu_fondasi_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Gaya Geser Ultimit</text></svg></div> kNm<br>
+          <label for="srpm_fondasi_evaluasi">SRPM</label>:<select id="srpm_fondasi_evaluasi" name="srpm_fondasi_evaluasi">
+            <option value="Biasa">Biasa</option>
+            <option value="Menengah">Menengah</option>
+            <option value="Khusus">Khusus</option>
+          </select>
+        </div>
+        <div class="data-section" id="tulangan">
+          <h3>Data Tulangan</h3>
+          <label for="d_fondasi_evaluasi">D</label>:<div class="input-wrapper"><input type="text" id="d_fondasi_evaluasi" name="d_fondasi_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Diameter Tulangan</text></svg></div> mm<br>
+          <label for="phi_fondasi_evaluasi">ɸ</label>:<div class="input-wrapper"><input type="text" id="phi_fondasi_evaluasi" name="phi_fondasi_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Diameter Begel</text></svg></div> mm<br>
+          <label for="s_fondasi_evaluasi">s</label>:<div class="input-wrapper"><input type="text" id="s_fondasi_evaluasi" name="s_fondasi_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Jarak Begel</text></svg></div> mm<br>
+          <label for="ns_fondasi_evaluasi">n<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">s</text></svg></label>:<div class="input-wrapper"><input type="text" id="ns_fondasi_evaluasi" name="ns_fondasi_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Jumlah Tulangan Tarik</text></svg></div><br>
+          <label for="ns_prime_fondasi_evaluasi">n'<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">s</text></svg></label>:<div class="input-wrapper"><input type="text" id="ns_prime_fondasi_evaluasi" name="ns_prime_fondasi_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Jumlah Tulangan Tekan</text></svg></div><br>
+          <label for="ms_fondasi_evaluasi">m<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">s</text></svg></label>:<div class="input-wrapper"><input type="text" id="ms_fondasi_evaluasi" name="ms_fondasi_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Jumlah Lapis Tulangan Tarik</text></svg></div><br>
+          <label for="ms_prime_fondasi_evaluasi">m'<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">s</text></svg></label>:<div class="input-wrapper"><input type="text" id="ms_prime_fondasi_evaluasi" name="ms_prime_fondasi_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Jumlah Lapis Tulangan Tekan</text></svg></div><br>
+        </div>
+      </div>
+      <button class="calculate-btn" onclick="calculateEvaluasi()">Hitung Evaluasi</button>
     </div>
   </div>
 
