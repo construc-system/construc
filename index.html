@@ -5,13 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Construc</title>
   <style>
-    body { font-family: Arial, sans-serif; position: relative; height: auto; overflow-y: hidden; }
+    /* General Styles */
+    body {
+      font-family: Arial, sans-serif;
+      position: relative;
+      height: auto;
+      overflow-y: hidden;
+    }
 
-    /* Tab navigation */
+    /* Tab Navigation */
     .tab {
       display: flex;
       border-bottom: 2px solid #ccc;
     }
+
     .tab button {
       flex: 1;
       padding: 10px;
@@ -21,22 +28,25 @@
       background: #f1f1f1;
       transition: background 0.3s;
     }
+
     .tab button:hover {
       background: #ddd;
     }
+
     .tab button.active {
       background: #fff;
       border-bottom: 2px solid dodgerblue;
       font-weight: bold;
     }
 
-    /* Tab content */
+    /* Tab Content */
     .tabcontent {
       display: none;
       padding: 0;
       border: 1px solid #ccc;
       border-top: none;
     }
+
     .tabcontent.active {
       display: block;
     }
@@ -46,35 +56,36 @@
       margin-bottom: 5px;
     }
 
-    /* Input styling */
+    /* Input Styling */
     label {
       display: inline-block;
-      width: 40px;   /* Ini akan tetap berlaku untuk label input teks */
+      width: 40px;
       margin-right: 10px;
     }
 
     /* Override untuk label radio button */
-    .radio-group label { /* Menargetkan label di dalam radio-group */
-      width: auto; /* Biarkan lebar menyesuaikan konten */
-      margin-right: 5px; /* Kurangi jarak ke elemen berikutnya */
+    .radio-group label {
+      width: auto;
+      margin-right: 5px;
     }
 
     input {
-      font-size: 12px;   /* ukuran teks saat user mengetik */
+      font-size: 12px;
       margin-bottom: 10px;
       width: 150px;
       border: 2px solid #a6a6a6;
     }
+
     .ph-small {
-    font-size: 14px; /* teks user normal */
+      font-size: 14px;
     }
 
     .ph-small::placeholder {
-      font-size: 10px !important; /* paksa lebih kecil */
+      font-size: 10px !important;
       color: #888;
     }
 
-    /* Fake placeholder styling */
+    /* Fake Placeholder Styling */
     .input-wrapper {
       position: relative;
       display: inline-block;
@@ -94,12 +105,14 @@
       margin-bottom: 10px;
       border: 2px solid #a6a6a6;
     }
-    /* Subtab navigation */
+
+    /* Subtab Navigation */
     .subtab {
       display: flex;
       border-bottom: 2px solid #aaa;
       margin-top: 0;
     }
+
     .subtab button {
       flex: 1;
       padding: 8px;
@@ -111,41 +124,47 @@
       color: rgb(0, 0, 0);
       border-bottom: 2px solid dodgerblue;
     }
+
     .subtab button:hover {
       background: #f0f0f0;
     }
+
     .subtab button.active {
       background: dodgerblue;
       color: white;
       border-bottom: none;
       font-weight: bold;
     }
+
     .subtabcontent {
       display: none;
       padding: 15px;
       border: 1px solid #aaa;
       border-top: none;
     }
+
     .subtabcontent.active {
       display: block;
     }
 
-    /* Flexible data sections */
+    /* Flexible Data Sections */
     .data-sections {
       display: flex;
       flex-wrap: wrap;
       gap: 20px;
     }
+
     .data-section {
       min-width: 200px;
       max-width: 300px;
       flex: 1 1 auto;
     }
+
     .tulangan {
       order: 1;
     }
 
-    /* Calculate button styling */
+    /* Calculate Button Styling */
     .calculate-btn {
       padding: 8px 8px;
       background: dodgerblue;
@@ -158,42 +177,42 @@
       margin-top: 0px;
       margin-left: auto;
     }
+
     .calculate-btn:hover {
       background: #0056b3;
     }
-.radio-group {
-  display: flex;
-  margin-bottom: 6px; /* kasih jarak 4px ke elemen di bawah */
-}
-    /* Radio button horizontal alignment */
-.radio-group input[type="radio"] {
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
 
-  width: 18px;
-  height: 18px;
-  border: 2px solid #555;   /* lingkaran luar */
-  margin:  0.5px 4px -2px 0;
-  border-radius: 50%;
-  background-color: #fff;   /* isi putih */
-  cursor: pointer;
-  position: relative;
-}
+    /* Radio Group */
+    .radio-group {
+      display: flex;
+      margin-bottom: 6px;
+    }
 
-/* pas dicheck, munculin lingkaran kecil di dalam */
-.radio-group input[type="radio"]:checked::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 10px;               /* diameter titik */
-  height: 10px;
-  background-color: #555;    /* warna titik */
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-}
+    .radio-group input[type="radio"] {
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      width: 18px;
+      height: 18px;
+      border: 2px solid #555;
+      margin: 0.5px 4px -2px 0;
+      border-radius: 50%;
+      background-color: #fff;
+      cursor: pointer;
+      position: relative;
+    }
 
+    .radio-group input[type="radio"]:checked::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 10px;
+      height: 10px;
+      background-color: #555;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+    }
   </style>
   <link rel="icon" type="image/png" href="logo.png">
   <link rel="apple-touch-icon" href="logo.png">
@@ -468,9 +487,15 @@
       <div class="data-sections">
         <div class="data-section" id="dimensi">
           <h3>Data Dimensi</h3>
-          <label for="l_fondasi_desain">L</label>:<div class="input-wrapper"><input type="text" class="ph-small" id="l_fondasi_desain" name="l_fondasi_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Panjang Fondasi</text></svg></div> m<br>
-          <label for="b_fondasi_desain">b</label>:<div class="input-wrapper"><input type="text" id="b_fondasi_desain" name="b_fondasi_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Lebar Fondasi</text></svg></div> m<br>
-          <label for="h_fondasi_desain">h</label>:<div class="input-wrapper"><input type="text" id="h_fondasi_desain" name="h_fondasi_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Tinggi Fondasi</text></svg></div> m<br>
+          <label for="l_fondasi_desain">L</label>:<div class="input-wrapper"><input type="text" id="l_fondasi_desain" name="l_fondasi_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Panjang Fondasi</text></svg></div> m<br>
+          <label for="b_fondasi_desain">B</label>:<div class="input-wrapper"><input type="text" id="b_fondasi_desain" name="b_fondasi_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Lebar Fondasi</text></svg></div> m<br>
+          <label for="lk_fondasi_desain">L<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">k</text></svg></label>:<div class="input-wrapper"><input type="text" id="lk_fondasi_desain" name="lk_fondasi_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Panjang Kolom</text></svg></div> m<br>
+          <label for="bk_fondasi_desain">B<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">k</text></svg></label>:<div class="input-wrapper"><input type="text" id="bk_fondasi_desain" name="bk_fondasi_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Lebar Kolom</text></svg></div> m<br>
+          <label for="as_fondasi_desain">α<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">s</text></svg></label>:<select id="as_fondasi_desain" name="as_fondasi_desain">
+            <option value="Dalam">Dalam</option>
+            <option value="Tepi">Tepi</option>
+            <option value="Sudut">Sudut</option>
+          </select><br>
         </div>
         <div class="data-section" id="bahan">
           <h3>Data Bahan</h3>
@@ -495,9 +520,47 @@
       <div class="data-sections">
         <div class="data-section" id="dimensi">
           <h3>Data Dimensi</h3>
-          <label for="l_fondasi_evaluasi">L</label>:<div class="input-wrapper"><input type="text" class="ph-small" id="l_fondasi_evaluasi" name="l_fondasi_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Panjang Fondasi</text></svg></div> m<br>
-          <label for="b_fondasi_evaluasi">b</label>:<div class="input-wrapper"><input type="text" id="b_fondasi_evaluasi" name="b_fondasi_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Lebar Penampang Fondasi</text></svg></div> m<br>
-          <label for="h_fondasi_evaluasi">h</label>:<div class="input-wrapper"><input type="text" id="h_fondasi_evaluasi" name="h_fondasi_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Tinggi Penampang Fondasi</text></svg></div> m<br>
+<label for="l_fondasi_evaluasi">L</label>:
+<div class="input-wrapper">
+  <input type="text" id="l_fondasi_evaluasi" name="l_fondasi_evaluasi">
+  <svg class="fake-placeholder" width="150" height="20">
+    <text x="0" y="11" font-size="11">Panjang Fondasi</text>
+  </svg>
+</div> m<br>
+
+<label for="b_fondasi_evaluasi">B</label>:
+<div class="input-wrapper">
+  <input type="text" id="b_fondasi_evaluasi" name="b_fondasi_evaluasi">
+  <svg class="fake-placeholder" width="150" height="20">
+    <text x="0" y="11" font-size="11">Lebar Fondasi</text>
+  </svg>
+</div> m<br>
+
+<label for="lk_fondasi_evaluasi">L<svg width="10" height="10" style="vertical-align: sub;">
+  <text x="0" y="8" font-size="10">k</text></svg></label>:
+<div class="input-wrapper">
+  <input type="text" id="lk_fondasi_evaluasi" name="lk_fondasi_evaluasi">
+  <svg class="fake-placeholder" width="150" height="20">
+    <text x="0" y="11" font-size="11">Panjang Kolom</text>
+  </svg>
+</div> m<br>
+
+<label for="bk_fondasi_evaluasi">B<svg width="10" height="10" style="vertical-align: sub;">
+  <text x="0" y="8" font-size="10">k</text></svg></label>:
+<div class="input-wrapper">
+  <input type="text" id="bk_fondasi_evaluasi" name="bk_fondasi_evaluasi">
+  <svg class="fake-placeholder" width="150" height="20">
+    <text x="0" y="11" font-size="11">Lebar Kolom</text>
+  </svg>
+</div> m<br>
+
+<label for="as_fondasi_evaluasi">α<svg width="10" height="10" style="vertical-align: sub;">
+  <text x="0" y="8" font-size="10">s</text></svg></label>:
+<select id="as_fondasi_evaluasi" name="as_fondasi_evaluasi">
+  <option value="Dalam">Dalam</option>
+  <option value="Tepi">Tepi</option>
+  <option value="Sudut">Sudut</option>
+</select><br>
         </div>
         <div class="data-section" id="bahan">
           <h3>Data Bahan</h3>
