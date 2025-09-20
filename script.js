@@ -88,35 +88,59 @@ function adjustOrder() {
     if (subtab.id === 'FondasiDesain') {
       // Urutan berdasarkan jumlah section per baris
       if (perRow === 1) {
-        // Urutan untuk 1 section per baris: tanah, dimensi, bahan, beban
-        if (tanah) tanah.style.order = 3;
-        if (dimensi) dimensi.style.order = 2;
+        // Urutan untuk 1 section per baris: bahan, dimensi, tanah, beban
         if (bahan) bahan.style.order = 1;
+        if (dimensi) dimensi.style.order = 2;
+        if (tanah) tanah.style.order = 3;
         if (beban) beban.style.order = 4;
       } else if (perRow === 2) {
-        // Urutan untuk 2 sections per baris: tanah, dimensi di baris 1; bahan, beban di baris 2
-        if (tanah) tanah.style.order = 2;
-        if (dimensi) dimensi.style.order = 3;
+        // Urutan untuk 2 sections per baris: bahan, dimensi di baris 1; tanah, beban di baris 2
         if (bahan) bahan.style.order = 1;
+        if (dimensi) dimensi.style.order = 2;
+        if (tanah) tanah.style.order = 3;
         if (beban) beban.style.order = 4;
       } else {
         // Urutan untuk 3 atau lebih sections per baris: bahan, dimensi, tanah, beban
         if (bahan) bahan.style.order = 1;
         if (dimensi) dimensi.style.order = 2;
-        if (tanah) tanah.style.order = 4;
-        if (beban) beban.style.order = 3;
+        if (tanah) tanah.style.order = 3;
+        if (beban) beban.style.order = 4;
       }
       return; // Keluar dari fungsi untuk subtab ini
     }
 
     // Urutan khusus untuk FondasiEvaluasi
     if (subtab.id === 'FondasiEvaluasi') {
-      // Urutan: bahan, dimensi, data tanah, beban, tulangan
-      if (bahan) bahan.style.order = 1;
-      if (dimensi) dimensi.style.order = 2;
-      if (tanah) tanah.style.order = 3;
-      if (beban) beban.style.order = 4;
-      if (tulangan) tulangan.style.order = 5;
+      // Urutan berdasarkan jumlah section per baris
+      if (perRow === 1) {
+        // Urutan untuk 1 section per baris: bahan, dimensi, tanah, beban
+        if (bahan) bahan.style.order = 1;
+        if (dimensi) dimensi.style.order = 2;
+        if (tanah) tanah.style.order = 4;
+        if (beban) beban.style.order = 5;
+        if (tulangan) tulangan.style.order = 3;
+      } else if (perRow === 2) {
+        // Urutan untuk 2 sections per baris: bahan, dimensi di baris 1; tanah, beban di baris 2
+        if (bahan) bahan.style.order = 1;
+        if (dimensi) dimensi.style.order = 2;
+        if (tanah) tanah.style.order = 3;
+        if (beban) beban.style.order = 5;
+        if (tulangan) tulangan.style.order = 4;
+      } else if (perRow === 3) {
+        // Urutan untuk 2 sections per baris: bahan, dimensi di baris 1; tanah, beban di baris 2
+        if (bahan) bahan.style.order = 1;
+        if (dimensi) dimensi.style.order = 2;
+        if (tanah) tanah.style.order = 4;
+        if (beban) beban.style.order = 3;
+        if (tulangan) tulangan.style.order = 5;
+      } else {
+        // Urutan untuk 3 atau lebih sections per baris: bahan, dimensi, tanah, beban
+        if (bahan) bahan.style.order = 1;
+        if (dimensi) dimensi.style.order = 2;
+        if (tanah) tanah.style.order = 3;
+        if (beban) beban.style.order = 5;
+        if (tulangan) tulangan.style.order = 4;
+      }
       return; // Keluar dari fungsi untuk subtab ini
     }
 
@@ -330,3 +354,108 @@ document.addEventListener('DOMContentLoaded', function() {
     initialFondasiType.dispatchEvent(new Event('change'));
   }
 });
+
+// --- START: Penambahan untuk FondasiEvaluasi ---
+
+// Toggle for FondasiEvaluasi - Data Tanah
+document.getElementById('manual_tanah_evaluasi').addEventListener('change', function() {
+  if (this.checked) {
+    document.getElementById('manual_tanah_evaluasi_section').style.display = 'block';
+    document.getElementById('auto_tanah_evaluasi_section').style.display = 'none';
+  }
+});
+document.getElementById('auto_tanah_evaluasi').addEventListener('change', function() {
+  if (this.checked) {
+    document.getElementById('manual_tanah_evaluasi_section').style.display = 'none';
+    document.getElementById('auto_tanah_evaluasi_section').style.display = 'block';
+  }
+});
+
+// Toggle for FondasiEvaluasi - Metode Terzaghi
+const checkboxterzaghiEvaluasi = document.getElementById("metode_terzaghi_evaluasi");
+const inputsEvaluasiTerzaghi = [
+  document.getElementById("y_tanah_evaluasi"),
+  document.getElementById("phi_tanah_evaluasi"),
+  document.getElementById("c_tanah_evaluasi")
+];
+
+checkboxterzaghiEvaluasi.addEventListener("change", function() {
+  inputsEvaluasiTerzaghi.forEach(input => {
+    input.disabled = !this.checked;
+  });
+});
+
+// Toggle for FondasiEvaluasi - Metode Mayerhof
+const checkboxmayerhofEvaluasi = document.getElementById("metode_mayerhof_evaluasi");
+const inputBoxEvaluasiMayerhof = document.getElementById("qc_tanah_evaluasi");
+
+checkboxmayerhofEvaluasi.addEventListener("change", function() {
+  inputBoxEvaluasiMayerhof.disabled = !this.checked;
+});
+
+// Toggle for FondasiEvaluasi Dimensi
+document.getElementById('manual_dimensi_fondasi_evaluasi').addEventListener('change', function() {
+  if (this.checked) {
+    document.getElementById('manual_dimensi_fondasi_evaluasi_section').style.display = 'block';
+    document.getElementById('auto_dimensi_fondasi_evaluasi_section').style.display = 'none';
+  }
+});
+document.getElementById('auto_dimensi_fondasi_evaluasi').addEventListener('change', function() {
+  if (this.checked) {
+    document.getElementById('manual_dimensi_fondasi_evaluasi_section').style.display = 'none';
+    document.getElementById('auto_dimensi_fondasi_evaluasi_section').style.display = 'block';
+  }
+});
+
+// Event listener untuk jenis fondasi di FondasiEvaluasi
+document.querySelectorAll('input[name="beban_mode_fondasi_evaluasi"]').forEach(radio => {
+  radio.addEventListener('change', function() {
+    const isMenerus = this.value === 'Menerus';
+
+    // Manual Dimensi Section
+    const labelLkManual = document.getElementById('label_lk_fondasi_evaluasi');
+    const placeholderLkManual = document.getElementById('placeholder_lk_fondasi_evaluasi').querySelector('text');
+    const labelBkManual = document.getElementById('label_bk_fondasi_evaluasi');
+    const placeholderBkManual = document.getElementById('placeholder_bk_fondasi_evaluasi').querySelector('text');
+
+    if (isMenerus) {
+      labelLkManual.innerHTML = 'L<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">s</text></svg>';
+      placeholderLkManual.textContent = 'Panjang Bentang Sloof';
+      labelBkManual.innerHTML = 'B<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">s</text></svg>';
+      placeholderBkManual.textContent = 'Lebar Sloof';
+    } else {
+      labelLkManual.innerHTML = 'L<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">k</text></svg>';
+      placeholderLkManual.textContent = 'Panjang Kolom';
+      labelBkManual.innerHTML = 'B<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">k</text></svg>';
+      placeholderBkManual.textContent = 'Lebar Kolom';
+    }
+
+    // Auto Dimensi Section
+    const labelLkAuto = document.getElementById('label_lk_fondasi_evaluasi_auto');
+    const placeholderLkAuto = document.getElementById('placeholder_lk_fondasi_evaluasi_auto').querySelector('text');
+    const labelBkAuto = document.getElementById('label_bk_fondasi_evaluasi_auto');
+    const placeholderBkAuto = document.getElementById('placeholder_bk_fondasi_evaluasi_auto').querySelector('text');
+
+    if (isMenerus) {
+      labelLkAuto.innerHTML = 'L<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">s</text></svg>';
+      placeholderLkAuto.textContent = 'Panjang Bentang Sloof';
+      labelBkAuto.innerHTML = 'B<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">s</text></svg>';
+      placeholderBkAuto.textContent = 'Lebar Sloof';
+    } else {
+      labelLkAuto.innerHTML = 'L<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">k</text></svg>';
+      placeholderLkAuto.textContent = 'Panjang Kolom';
+      labelBkAuto.innerHTML = 'B<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">k</text></svg>';
+      placeholderBkAuto.textContent = 'Lebar Kolom';
+    }
+  });
+});
+
+// Panggil saat halaman dimuat untuk memastikan status awal yang benar untuk FondasiEvaluasi
+document.addEventListener('DOMContentLoaded', function() {
+  const initialFondasiTypeEvaluasi = document.querySelector('input[name="beban_mode_fondasi_evaluasi"]:checked');
+  if (initialFondasiTypeEvaluasi) {
+    initialFondasiTypeEvaluasi.dispatchEvent(new Event('change'));
+  }
+});
+
+// --- END: Penambahan untuk FondasiEvaluasi ---
