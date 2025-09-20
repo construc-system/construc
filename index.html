@@ -5,20 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Construc</title>
   <style>
-    /* General Styles */
-    body {
-      font-family: Arial, sans-serif;
-      position: relative;
-      height: auto;
-      overflow-y: hidden;
-    }
+    body { font-family: Arial, sans-serif; position: relative; height: auto; overflow-y: hidden; }
 
-    /* Tab Navigation */
+    /* Tab navigation */
     .tab {
       display: flex;
       border-bottom: 2px solid #ccc;
     }
-
     .tab button {
       flex: 1;
       padding: 10px;
@@ -28,25 +21,22 @@
       background: #f1f1f1;
       transition: background 0.3s;
     }
-
     .tab button:hover {
       background: #ddd;
     }
-
     .tab button.active {
       background: #fff;
       border-bottom: 2px solid dodgerblue;
       font-weight: bold;
     }
 
-    /* Tab Content */
+    /* Tab content */
     .tabcontent {
       display: none;
       padding: 0;
       border: 1px solid #ccc;
       border-top: none;
     }
-
     .tabcontent.active {
       display: block;
     }
@@ -56,36 +46,41 @@
       margin-bottom: 5px;
     }
 
-    /* Input Styling */
+    /* Input styling */
     label {
       display: inline-block;
-      width: 40px;
+      width: 40px;   /* Ini akan tetap berlaku untuk label input teks */
       margin-right: 10px;
     }
 
     /* Override untuk label radio button */
-    .radio-group label {
-      width: auto;
-      margin-right: 5px;
+    .radio-group label { /* Menargetkan label di dalam radio-group */
+      width: auto; /* Biarkan lebar menyesuaikan konten */
+      margin-right: 5px; /* Kurangi jarak ke elemen berikutnya */
     }
 
     input {
-      font-size: 12px;
+      font-size: 12px;   /* ukuran teks saat user mengetik */
       margin-bottom: 10px;
       width: 150px;
       border: 2px solid #a6a6a6;
     }
-
+      /* styling pas disabled */
+  input:disabled {
+    background-color: #d5d5d5;   /* warna kotak */
+    color: #d5d5d5;              /* warna teks kalau ada value */
+    border: 2px solid #a6a6a6;
+  }
     .ph-small {
-      font-size: 14px;
+    font-size: 14px; /* teks user normal */
     }
 
     .ph-small::placeholder {
-      font-size: 10px !important;
+      font-size: 10px !important; /* paksa lebih kecil */
       color: #888;
     }
 
-    /* Fake Placeholder Styling */
+    /* Fake placeholder styling */
     .input-wrapper {
       position: relative;
       display: inline-block;
@@ -99,20 +94,21 @@
       pointer-events: none;
       fill: #888;
     }
-
+      /* placeholder hilang kalau disabled */
+  input:disabled + .fake-placeholder {
+    opacity: 0; /* ilang kalau disable */
+  }
     select {
       width: 156px;
       margin-bottom: 10px;
       border: 2px solid #a6a6a6;
     }
-
-    /* Subtab Navigation */
+    /* Subtab navigation */
     .subtab {
       display: flex;
       border-bottom: 2px solid #aaa;
       margin-top: 0;
     }
-
     .subtab button {
       flex: 1;
       padding: 8px;
@@ -124,47 +120,41 @@
       color: rgb(0, 0, 0);
       border-bottom: 2px solid dodgerblue;
     }
-
     .subtab button:hover {
       background: #f0f0f0;
     }
-
     .subtab button.active {
       background: dodgerblue;
       color: white;
       border-bottom: none;
       font-weight: bold;
     }
-
     .subtabcontent {
       display: none;
       padding: 15px;
       border: 1px solid #aaa;
       border-top: none;
     }
-
     .subtabcontent.active {
       display: block;
     }
 
-    /* Flexible Data Sections */
+    /* Flexible data sections */
     .data-sections {
       display: flex;
       flex-wrap: wrap;
       gap: 20px;
     }
-
     .data-section {
       min-width: 200px;
       max-width: 300px;
       flex: 1 1 auto;
     }
-
     .tulangan {
       order: 1;
     }
 
-    /* Calculate Button Styling */
+    /* Calculate button styling */
     .calculate-btn {
       padding: 8px 8px;
       background: dodgerblue;
@@ -177,42 +167,71 @@
       margin-top: 0px;
       margin-left: auto;
     }
-
     .calculate-btn:hover {
       background: #0056b3;
     }
+.radio-group {
+  display: flex;
+  margin-bottom: 6px; /* kasih jarak 4px ke elemen di bawah */
+}
+    /* Radio button horizontal alignment */
+.radio-group input[type="radio"] {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
 
-    /* Radio Group */
-    .radio-group {
-      display: flex;
-      margin-bottom: 6px;
-    }
+  width: 18px;
+  height: 18px;
+  border: 2px solid #555;   /* lingkaran luar */
+  margin:  0.5px 4px -2px 0;
+  border-radius: 50%;
+  background-color: #fff;   /* isi putih */
+  cursor: pointer;
+  position: relative;
+}
 
-    .radio-group input[type="radio"] {
-      appearance: none;
-      -webkit-appearance: none;
-      -moz-appearance: none;
-      width: 18px;
-      height: 18px;
-      border: 2px solid #555;
-      margin: 0.5px 4px -2px 0;
-      border-radius: 50%;
-      background-color: #fff;
-      cursor: pointer;
-      position: relative;
-    }
+/* pas dicheck, munculin lingkaran kecil di dalam */
+.radio-group input[type="radio"]:checked::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 10px;               /* diameter titik */
+  height: 10px;
+  background-color: #555;    /* warna titik */
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+/* Checkbox style */
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
 
-    .radio-group input[type="radio"]:checked::after {
-      content: "";
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 10px;
-      height: 10px;
-      background-color: #555;
-      border-radius: 50%;
-      transform: translate(-50%, -50%);
-    }
+  width: 18px;
+  height: 18px;
+  border: 2px solid #555;   /* kotak luar */
+  margin: 0 0 0 0; /* mirip radio */
+  border-radius: 4px;       /* sudut agak kotak */
+  background-color: #fff;   /* isi putih */
+  cursor: pointer;
+  position: relative;
+  margin-bottom: 3px;
+}
+
+/* pas dicentang, muncul centang */
+input[type="checkbox"]:checked::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 12px;
+  border: solid #555;
+  border-width: 0 2px 2px 0;
+  transform: translate(-50%, -60%) rotate(45deg);
+}
+
   </style>
   <link rel="icon" type="image/png" href="logo.png">
   <link rel="apple-touch-icon" href="logo.png">
@@ -485,19 +504,133 @@
     </div>
     <div id="FondasiDesain" class="subtabcontent active" style="position: relative;">
       <div class="data-sections">
+<div class="data-section" id="tanah">
+  <h3>Data Tanah</h3>
+  <div class="radio-group">
+    <input type="radio" id="manual_tanah_desain" name="tanah_mode_desain" value="Manual" checked>
+    <label for="manual_tanah_desain">Manual</label>
+    <input type="radio" id="auto_tanah_desain" name="tanah_mode_desain" value="Auto">
+    <label for="auto_tanah_desain">Auto</label>
+  </div>
+
+  <!-- Manual Input -->
+  <div id="manual_tanah_desain_section">
+    <label for="sigma_s_tanah_desain">σ<svg width="10" height="10" style="vertical-align: sub;">
+      <text x="0" y="8" font-size="10">c</text></svg></label>:
+    <div class="input-wrapper">
+      <input type="text" id="sigma_s_tanah_desain" name="sigma_s_tanah_desain">
+      <svg class="fake-placeholder" width="190" height="20">
+        <text x="0" y="11" font-size="11">Kapasitas Dukung Izin Tanah</text>
+      </svg>
+    </div> kN/m²<br>
+  </div>
+
+  <!-- Auto Input -->
+  <div id="auto_tanah_desain_section" style="display: none;">
+    <label for="df_tanah_desain">D<svg width="10" height="10" style="vertical-align: sub;">
+      <text x="0" y="8" font-size="10">f</text></svg></label>:
+    <div class="input-wrapper">
+      <input type="text" id="df_tanah_desain" name="df_tanah_desain">
+      <svg class="fake-placeholder" width="170" height="20">
+        <text x="0" y="11" font-size="11">Kedalaman Fondasi</text>
+      </svg>
+    </div> m<br>
+
+    <!-- Checkbox Terzaghi -->
+    <input type="checkbox" id="metode_terzaghi" name="metode_terzaghi">
+    <label for="metode_terzaghi" style="display:inline-block; width:200px;position:relative; top: -6px;">Gunakan Metode Terzaghi</label><br>
+
+    <label for="y_tanah_desain">ɣ</label>:
+    <div class="input-wrapper">
+      <input type="text" id="y_tanah_desain" name="y_tanah_desain" disabled>
+      <svg class="fake-placeholder" width="170" height="20">
+        <text x="0" y="11" font-size="11">Berat Volume Tanah</text>
+      </svg>
+    </div> kN/m³<br>
+
+    <label for="phi_tanah_desain">ɸ</label>:
+    <div class="input-wrapper">
+      <input type="text" id="phi_tanah_desain" name="phi_tanah_desain" disabled>
+      <svg class="fake-placeholder" width="170" height="20">
+        <text x="0" y="11" font-size="11">Sudut Gesek Dalam</text>
+      </svg>
+    </div> °<br>
+
+    <label for="c_tanah_desain">c</label>:
+    <div class="input-wrapper">
+      <input type="text" id="c_tanah_desain" name="c_tanah_desain" disabled>
+      <svg class="fake-placeholder" width="170" height="20">
+        <text x="0" y="11" font-size="11">Kohesi</text>
+      </svg>
+    </div> kN/m²<br>
+
+    <!-- Checkbox Mayerhof -->
+    <input type="checkbox" id="metode_mayerhof" name="metode_mayerhof">
+    <label for="metode_mayerhof" style="display:inline-block; width:250px; position:relative; top: -6px;">Gunakan Metode Mayerhof</label><br>
+
+    <label for="qc_tanah_desain">q<svg width="10" height="10" style="vertical-align: sub;">
+      <text x="0" y="8" font-size="10">c</text></svg></label>:
+    <div class="input-wrapper">
+      <input type="text" id="qc_tanah_desain" name="qc_tanah_desain" disabled>
+      <svg class="fake-placeholder" width="170" height="20">
+        <text x="0" y="11" font-size="11">Tahanan Konus Rata-rata</text>
+      </svg>
+    </div> kN/m²<br>
+  </div>
+</div>
+
         <div class="data-section" id="dimensi">
           <h3>Data Dimensi</h3>
-          <label for="l_fondasi_desain">L</label>:<div class="input-wrapper"><input type="text" id="l_fondasi_desain" name="l_fondasi_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Panjang Fondasi</text></svg></div> m<br>
-          <label for="b_fondasi_desain">B</label>:<div class="input-wrapper"><input type="text" id="b_fondasi_desain" name="b_fondasi_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Lebar Fondasi</text></svg></div> m<br>
-          <label for="lk_fondasi_desain">L<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">k</text></svg></label>:<div class="input-wrapper"><input type="text" id="lk_fondasi_desain" name="lk_fondasi_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Panjang Kolom</text></svg></div> m<br>
-          <label for="bk_fondasi_desain">B<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">k</text></svg></label>:<div class="input-wrapper"><input type="text" id="bk_fondasi_desain" name="bk_fondasi_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Lebar Kolom</text></svg></div> m<br>
-          <label for="as_fondasi_desain">α<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">s</text></svg></label>:<select id="as_fondasi_desain" name="as_fondasi_desain">
-            <option value="Dalam">Dalam</option>
-            <option value="Tepi">Tepi</option>
-            <option value="Sudut">Sudut</option>
-          </select><br>
+<label for="l_fondasi_desain">L</label>:
+<div class="input-wrapper">
+  <input type="text" id="l_fondasi_desain" name="l_fondasi_desain">
+  <svg class="fake-placeholder" width="150" height="20">
+    <text x="0" y="11" font-size="11">Panjang Fondasi</text>
+  </svg>
+</div> m<br>
+
+<label for="b_fondasi_desain">B</label>:
+<div class="input-wrapper">
+  <input type="text" id="b_fondasi_desain" name="b_fondasi_desain">
+  <svg class="fake-placeholder" width="150" height="20">
+    <text x="0" y="11" font-size="11">Lebar Fondasi</text>
+  </svg>
+</div> m<br>
+
+<label for="lk_fondasi_desain">L<svg width="10" height="10" style="vertical-align: sub;">
+  <text x="0" y="8" font-size="10">k</text></svg></label>:
+<div class="input-wrapper">
+  <input type="text" id="lk_fondasi_desain" name="lk_fondasi_desain">
+  <svg class="fake-placeholder" width="150" height="20">
+    <text x="0" y="11" font-size="11">Panjang Kolom</text>
+  </svg>
+</div> m<br>
+
+<label for="bk_fondasi_desain">B<svg width="10" height="10" style="vertical-align: sub;">
+  <text x="0" y="8" font-size="10">k</text></svg></label>:
+<div class="input-wrapper">
+  <input type="text" id="bk_fondasi_desain" name="bk_fondasi_desain">
+  <svg class="fake-placeholder" width="150" height="20">
+    <text x="0" y="11" font-size="11">Lebar Kolom</text>
+  </svg>
+</div> m<br>
+
+<label for="as_fondasi_desain">α<svg width="10" height="10" style="vertical-align: sub;">
+  <text x="0" y="8" font-size="10">s</text></svg></label>:
+<select id="as_fondasi_desain" name="as_fondasi_desain">
+  <option value="Dalam">Dalam</option>
+  <option value="Tepi">Tepi</option>
+  <option value="Sudut">Sudut</option>
+</select><br>
         </div>
         <div class="data-section" id="bahan">
+          <h3>Jenis Fondasi</h3>
+          <div class="radio-group">
+            <input type="radio" id="telapak_fondasi_desain" name="beban_mode_fondasi_desain" value="Telapak Tunggal" checked>
+            <label for="telapak_fondasi_desain">Telapak Tunggal</label>
+            <input type="radio" id="menerus_fondasi_desain" name="beban_mode_fondasi_desain" value="Menerus">
+            <label for="menerus_fondasi_desain">Menerus</label>
+            </div><br>
           <h3>Data Bahan</h3>
           <label for="fc_fondasi_desain">f'<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">c</text></svg></label>:<div class="input-wrapper"><input type="text" id="fc_fondasi_desain" name="fc_fondasi_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Kuat Tekan Beton</text></svg></div> MPa<br>
           <label for="fy_fondasi_desain">f<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">y</text></svg></label>:<div class="input-wrapper"><input type="text" id="fy_fondasi_desain" name="fy_fondasi_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Kuat Leleh Baja</text></svg></div> MPa<br>
@@ -567,6 +700,50 @@
           <label for="fc_fondasi_evaluasi">f'<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">c</text></svg></label>:<div class="input-wrapper"><input type="text" id="fc_fondasi_evaluasi" name="fc_fondasi_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Kuat Tekan Beton</text></svg></div> MPa<br>
           <label for="fy_fondasi_evaluasi">f<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">y</text></svg></label>:<div class="input-wrapper"><input type="text" id="fy_fondasi_evaluasi" name="fy_fondasi_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Kuat Leleh Baja</text></svg></div> MPa<br>
         </div>
+        <div class="data-section" id="tanah">
+  <h3>Data Tanah</h3>
+  <label for="df_tanah_evaluasi">D<svg width="10" height="10" style="vertical-align: sub;">
+    <text x="0" y="8" font-size="10">f</text></svg></label>:
+  <div class="input-wrapper">
+    <input type="text" id="df_tanah_evaluasi" name="df_tanah_evaluasi">
+    <svg class="fake-placeholder" width="170" height="20">
+      <text x="0" y="11" font-size="11">Kedalaman Fondasi</text>
+    </svg>
+  </div> m<br>
+
+  <label for="y_tanah_evaluasi">ɣ</label>:
+  <div class="input-wrapper">
+    <input type="text" id="y_tanah_evaluasi" name="y_tanah_evaluasi">
+    <svg class="fake-placeholder" width="170" height="20">
+      <text x="0" y="11" font-size="11">Berat Volume Tanah</text>
+    </svg>
+  </div> kN/m³<br>
+
+  <label for="phi_tanah_evaluasi">ɸ</label>:
+  <div class="input-wrapper">
+    <input type="text" id="phi_tanah_evaluasi" name="phi_tanah_evaluasi">
+    <svg class="fake-placeholder" width="170" height="20">
+      <text x="0" y="11" font-size="11">Sudut Gesek Dalam</text>
+    </svg>
+  </div> °<br>
+
+  <label for="c_tanah_evaluasi">c</label>:
+  <div class="input-wrapper">
+    <input type="text" id="c_tanah_evaluasi" name="c_tanah_evaluasi">
+    <svg class="fake-placeholder" width="170" height="20">
+      <text x="0" y="11" font-size="11">Kohesi</text>
+    </svg>
+  </div> kN/m²<br>
+
+  <label for="qc_tanah_evaluasi">q<svg width="10" height="10" style="vertical-align: sub;">
+    <text x="0" y="8" font-size="10">c</text></svg></label>:
+  <div class="input-wrapper">
+    <input type="text" id="qc_tanah_evaluasi" name="qc_tanah_evaluasi">
+    <svg class="fake-placeholder" width="170" height="20">
+      <text x="0" y="11" font-size="11">Tahanan Konus Rata-rata</text>
+    </svg>
+  </div> kN/m²<br>
+</div>
         <div class="data-section" id="Beban">
           <h3>Data Beban</h3>
           <label for="mu_fondasi_evaluasi">M<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<div class="input-wrapper"><input type="text" id="mu_fondasi_evaluasi" name="mu_fondasi_evaluasi"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Momen Ultimit</text></svg></div> kNm<br>
@@ -659,6 +836,7 @@
         const bahan    = subtab.querySelector("#bahan");
         const beban    = subtab.querySelector("#beban, #Beban");
         const tulangan = subtab.querySelector("#tulangan");
+        const tanah    = subtab.querySelector("#tanah");
 
         // Urutan khusus untuk PelatEvaluasi
         if (subtab.id === 'PelatEvaluasi') {
@@ -679,6 +857,27 @@
             if (tulangan) tulangan.style.order = 3;
             if (beban) beban.style.order = 4;
           }
+          return; // Keluar dari fungsi untuk subtab ini
+        }
+
+        // Urutan khusus untuk FondasiDesain
+        if (subtab.id === 'FondasiDesain') {
+          // Urutan: bahan, dimensi, data tanah, beban
+          if (bahan) bahan.style.order = 1;
+          if (dimensi) dimensi.style.order = 2;
+          if (tanah) tanah.style.order = 3;
+          if (beban) beban.style.order = 4;
+          return; // Keluar dari fungsi untuk subtab ini
+        }
+
+        // Urutan khusus untuk FondasiEvaluasi
+        if (subtab.id === 'FondasiEvaluasi') {
+          // Urutan: bahan, dimensi, data tanah, beban, tulangan
+          if (bahan) bahan.style.order = 1;
+          if (dimensi) dimensi.style.order = 2;
+          if (tanah) tanah.style.order = 3;
+          if (beban) beban.style.order = 4;
+          if (tulangan) tulangan.style.order = 5;
           return; // Keluar dari fungsi untuk subtab ini
         }
 
@@ -771,7 +970,6 @@
       alert('Fungsi sementara dimatikan karena file report.html belum dibuat.');
       // window.open('report.html');
     }
-
     // Toggle for PelatDesain
     document.getElementById('manual_pelat_desain').addEventListener('change', function() {
       if (this.checked) {
@@ -799,6 +997,39 @@
         document.getElementById('auto_beban_pelat_evaluasi').style.display = 'block';
       }
     });
+        // Toggle for FondasiDesain
+    document.getElementById('manual_tanah_desain').addEventListener('change', function() {
+      if (this.checked) {
+        document.getElementById('manual_tanah_desain_section').style.display = 'block';
+        document.getElementById('auto_tanah_desain_section').style.display = 'none';
+      }
+    });
+    document.getElementById('auto_tanah_desain').addEventListener('change', function() {
+      if (this.checked) {
+        document.getElementById('manual_tanah_desain_section').style.display = 'none';
+        document.getElementById('auto_tanah_desain_section').style.display = 'block';
+      }
+    });
+  const checkboxterzaghi = document.getElementById("metode_terzaghi");
+  const inputs = [
+    document.getElementById("y_tanah_desain"),
+    document.getElementById("phi_tanah_desain"),
+    document.getElementById("c_tanah_desain")
+  ];
+
+  checkboxterzaghi.addEventListener("change", function() {
+    inputs.forEach(input => {
+      input.disabled = !this.checked;
+    });
+  });
+
+  const checkboxmayerhof = document.getElementById("metode_mayerhof"); 
+  const inputBox = document.getElementById("qc_tanah_desain"); 
+  
+  checkboxmayerhof.addEventListener("change", function() { 
+    inputBox.disabled = !this.checked; 
+  });
+
   </script>
 
 </body>
