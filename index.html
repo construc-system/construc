@@ -207,7 +207,7 @@
               <option value="Terjepit Penuh">Terjepit Penuh</option>
               <option value="Terjepit Elastis/Menerus">Terjepit Elastis/Menerus</option>
             </select><br>
-            <label for="srpm_pelat_desain_auto">SRPM</label>:<select id="srpm_pelat_desain_auto" name="srpm_pelat_desain_auto">
+            <label for="srpm_pelat_desain_auto">SRPM</label>:<select id="srpm_pelat_desain" name="srpm_pelat_desain_auto">
               <option value="Biasa">Biasa</option>
               <option value="Menengah">Menengah</option>
               <option value="Khusus">Khusus</option>
@@ -300,7 +300,7 @@
           <div id="auto_tanah_desain_section" style="display: none;">
             <label for="df_tanah_desain">D<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">f</text></svg></label>:
             <div class="input-wrapper">
-              <input type="text" id="df_tanah_desain" name="df_tanah_desain">
+              <input type="text" id="df_tanah_desain" name="df_tanah_desain" >
               <svg class="fake-placeholder" width="170" height="20">
                 <text x="0" y="11" font-size="11">Kedalaman Fondasi</text>
               </svg>
@@ -342,52 +342,84 @@
             <div class="input-wrapper">
               <input type="text" id="qc_tanah_desain" name="qc_tanah_desain" disabled>
               <svg class="fake-placeholder" width="170" height="20">
-                <text x="0" y="11" font-size="11">Tahanan Konus Rata-rata</text>
-              </svg>
+                <text x="0" y="11" font-size="11">Tahanan Konus Rata-rata</text></svg>
             </div> kN/m²<br>
           </div>
         </div>
 
         <div class="data-section" id="dimensi">
           <h3>Data Dimensi</h3>
-          <label for="l_fondasi_desain">L</label>:
-          <div class="input-wrapper">
-            <input type="text" id="l_fondasi_desain" name="l_fondasi_desain">
-            <svg class="fake-placeholder" width="150" height="20">
-              <text x="0" y="11" font-size="11">Panjang Fondasi</text>
-            </svg>
-          </div> m<br>
+          <div class="radio-group">
+            <input type="radio" id="manual_dimensi_fondasi_desain" name="dimensi_mode_fondasi_desain" value="Manual" checked>
+            <label for="manual_dimensi_fondasi_desain">Manual</label>
+            <input type="radio" id="auto_dimensi_fondasi_desain" name="dimensi_mode_fondasi_desain" value="Auto">
+            <label for="auto_dimensi_fondasi_desain">Auto</label>
+          </div>
+          <div id="manual_dimensi_fondasi_desain_section">
+            <label for="l_fondasi_desain">L</label>:
+            <div class="input-wrapper">
+              <input type="text" id="l_fondasi_desain" name="l_fondasi_desain">
+              <svg class="fake-placeholder" width="150" height="20">
+                <text x="0" y="11" font-size="11">Panjang Fondasi</text>
+              </svg>
+            </div> m<br>
 
-          <label for="b_fondasi_desain">B</label>:
-          <div class="input-wrapper">
-            <input type="text" id="b_fondasi_desain" name="b_fondasi_desain">
-            <svg class="fake-placeholder" width="150" height="20">
-              <text x="0" y="11" font-size="11">Lebar Fondasi</text>
-            </svg>
-          </div> m<br>
+            <label for="b_fondasi_desain">B</label>:
+            <div class="input-wrapper">
+              <input type="text" id="b_fondasi_desain" name="b_fondasi_desain">
+              <svg class="fake-placeholder" width="150" height="20">
+                <text x="0" y="11" font-size="11">Lebar Fondasi</text>
+              </svg>
+            </div> m<br>
+            <label for="lk_fondasi_desain" id="label_lk_fondasi_desain">L<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">k</text></svg></label>:
+            <div class="input-wrapper">
+              <input type="text" id="lk_fondasi_desain" name="lk_fondasi_desain">
+              <svg class="fake-placeholder" width="150" height="20" id="placeholder_lk_fondasi_desain">
+                <text x="0" y="11" font-size="11">Panjang Kolom</text>
+              </svg>
+            </div> m<br>
 
-          <label for="lk_fondasi_desain">L<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">k</text></svg></label>:
-          <div class="input-wrapper">
-            <input type="text" id="lk_fondasi_desain" name="lk_fondasi_desain">
-            <svg class="fake-placeholder" width="150" height="20">
-              <text x="0" y="11" font-size="11">Panjang Kolom</text>
-            </svg>
-          </div> m<br>
+            <label for="bk_fondasi_desain" id="label_bk_fondasi_desain">B<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">k</text></svg></label>:
+            <div class="input-wrapper">
+              <input type="text" id="bk_fondasi_desain" name="bk_fondasi_desain">
+              <svg class="fake-placeholder" width="150" height="20" id="placeholder_bk_fondasi_desain">
+                <text x="0" y="11" font-size="11">Lebar Kolom</text>
+              </svg>
+            </div> m<br>
 
-          <label for="bk_fondasi_desain">B<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">k</text></svg></label>:
-          <div class="input-wrapper">
-            <input type="text" id="bk_fondasi_desain" name="bk_fondasi_desain">
-            <svg class="fake-placeholder" width="150" height="20">
-              <text x="0" y="11" font-size="11">Lebar Kolom</text>
-            </svg>
-          </div> m<br>
+            <label for="as_fondasi_desain">α<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">s</text></svg></label>:
+            <select id="as_fondasi_desain" name="as_fondasi_desain">
+              <option value="Dalam">Dalam</option>
+              <option value="Tepi">Tepi</option>
+              <option value="Sudut">Sudut</option>
+            </select><br>
 
-          <label for="as_fondasi_desain">α<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">s</text></svg></label>:
-          <select id="as_fondasi_desain" name="as_fondasi_desain">
-            <option value="Dalam">Dalam</option>
-            <option value="Tepi">Tepi</option>
-            <option value="Sudut">Sudut</option>
-          </select><br>
+          </div>
+          <div id="auto_dimensi_fondasi_desain_section" style="display: none;">
+            <!-- Hanya tampilkan Lk, Bk, dan αs -->
+            <label for="lk_fondasi_desain" id="label_lk_fondasi_desain_auto">L<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">k</text></svg></label>:
+            <div class="input-wrapper">
+              <input type="text" id="lk_fondasi_desain_auto" name="lk_fondasi_desain">
+              <svg class="fake-placeholder" width="150" height="20" id="placeholder_lk_fondasi_desain_auto">
+                <text x="0" y="11" font-size="11">Panjang Kolom</text>
+              </svg>
+            </div> m<br>
+
+            <label for="bk_fondasi_desain" id="label_bk_fondasi_desain_auto">B<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">k</text></svg></label>:
+            <div class="input-wrapper">
+              <input type="text" id="bk_fondasi_desain_auto" name="bk_fondasi_desain">
+              <svg class="fake-placeholder" width="150" height="20" id="placeholder_bk_fondasi_desain_auto">
+                <text x="0" y="11" font-size="11">Lebar Kolom</text>
+              </svg>
+            </div> m<br>
+
+            <label for="as_fondasi_desain_auto">α<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">s</text></svg></label>:
+            <select id="as_fondasi_desain_auto" name="as_fondasi_desain">
+              <option value="Dalam">Dalam</option>
+              <option value="Tepi">Tepi</option>
+              <option value="Sudut">Sudut</option>
+            </select><br>
+          </div>
         </div>
         <div class="data-section" id="bahan">
           <h3>Jenis Fondasi</h3>
@@ -403,9 +435,9 @@
         </div>
         <div class="data-section" id="beban">
           <h3>Data Beban</h3>
-          <label for="mu_fondasi_desain">M<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<div class="input-wrapper"><input type="text" id="mu_fondasi_desain" name="mu_fondasi_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Momen Ultimit</text></svg></div> kNm<br>
-          <label for="pu_fondasi_desain">P<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<div class="input-wrapper"><input type="text" id="pu_fondasi_desain" name="pu_fondasi_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Beban Aksial Ultimit</text></svg></div> kNm<br>
-          <label for="vu_fondasi_desain">V<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<div class="input-wrapper"><input type="text" id="vu_fondasi_desain" name="vu_fondasi_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Gaya Geser Ultimit</text></svg></div> kNm<br>
+          <label for="mu_fondasi_desain">M<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">ux</text></svg></label>:<div class="input-wrapper"><input type="text" id="mu_fondasi_desain" name="mu_fondasi_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Momen Ultimit Arah x</text></svg></div> kNm<br>
+          <label for="pu_fondasi_desain">M<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">uy</text></svg></label>:<div class="input-wrapper"><input type="text" id="pu_fondasi_desain" name="pu_fondasi_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Momen Ultimit Arah y</text></svg></div> kNm<br>
+          <label for="vu_fondasi_desain">P<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">u</text></svg></label>:<div class="input-wrapper"><input type="text" id="vu_fondasi_desain" name="vu_fondasi_desain"><svg class="fake-placeholder" width="150" height="20"><text x="0" y="11" font-size="11">Beban Aksial Ultimit</text></svg></div> kNm<br>
           <label for="srpm_fondasi_desain">SRPM</label>:<select id="srpm_fondasi_desain" name="srpm_fondasi_desain">
             <option value="Biasa">Biasa</option>
             <option value="Menengah">Menengah</option>

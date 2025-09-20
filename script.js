@@ -61,12 +61,13 @@ function adjustOrder() {
     const tulangan = subtab.querySelector("#tulangan");
     const tanah    = subtab.querySelector("#tanah");
 
+    // Hitung perRow untuk semua subtab
+    const containerWidth = subtab.clientWidth;
+    const sectionWidth = sections[0]?.getBoundingClientRect().width || 300;
+    const perRow = Math.floor(containerWidth / sectionWidth);
+
     // Urutan khusus untuk PelatEvaluasi
     if (subtab.id === 'PelatEvaluasi') {
-      const containerWidth = subtab.clientWidth;
-      const sectionWidth = sections[0].getBoundingClientRect().width;
-      const perRow = Math.floor(containerWidth / sectionWidth);
-
       if (perRow === 2) {
         // Urutan: dimensi, bahan, beban, tulangan
         if (dimensi) dimensi.style.order = 1;
@@ -85,11 +86,26 @@ function adjustOrder() {
 
     // Urutan khusus untuk FondasiDesain
     if (subtab.id === 'FondasiDesain') {
-      // Urutan: bahan, dimensi, data tanah, beban
-      if (bahan) bahan.style.order = 1;
-      if (dimensi) dimensi.style.order = 2;
-      if (tanah) tanah.style.order = 3;
-      if (beban) beban.style.order = 4;
+      // Urutan berdasarkan jumlah section per baris
+      if (perRow === 1) {
+        // Urutan untuk 1 section per baris: tanah, dimensi, bahan, beban
+        if (tanah) tanah.style.order = 3;
+        if (dimensi) dimensi.style.order = 2;
+        if (bahan) bahan.style.order = 1;
+        if (beban) beban.style.order = 4;
+      } else if (perRow === 2) {
+        // Urutan untuk 2 sections per baris: tanah, dimensi di baris 1; bahan, beban di baris 2
+        if (tanah) tanah.style.order = 2;
+        if (dimensi) dimensi.style.order = 3;
+        if (bahan) bahan.style.order = 1;
+        if (beban) beban.style.order = 4;
+      } else {
+        // Urutan untuk 3 atau lebih sections per baris: bahan, dimensi, tanah, beban
+        if (bahan) bahan.style.order = 1;
+        if (dimensi) dimensi.style.order = 2;
+        if (tanah) tanah.style.order = 4;
+        if (beban) beban.style.order = 3;
+      }
       return; // Keluar dari fungsi untuk subtab ini
     }
 
@@ -104,10 +120,7 @@ function adjustOrder() {
       return; // Keluar dari fungsi untuk subtab ini
     }
 
-    const containerWidth = subtab.clientWidth;
-    const sectionWidth = sections[0].getBoundingClientRect().width;
-    const perRow = Math.floor(containerWidth / sectionWidth);
-
+    // Urutan default untuk subtab lainnya
     if (perRow === 1) {
       // urutan kalau 1 per baris
       if (dimensi) dimensi.style.order = 1;
@@ -246,9 +259,74 @@ inputs.forEach(input => {
 });
 });
 
-const checkboxmayerhof = document.getElementById("metode_mayerhof"); 
-const inputBox = document.getElementById("qc_tanah_desain"); 
+const checkboxmayerhof = document.getElementById("metode_mayerhof");
+const inputBox = document.getElementById("qc_tanah_desain");
 
-checkboxmayerhof.addEventListener("change", function() { 
-inputBox.disabled = !this.checked; 
+checkboxmayerhof.addEventListener("change", function() {
+inputBox.disabled = !this.checked;
+});
+
+// Toggle for FondasiDesain Dimensi
+document.getElementById('manual_dimensi_fondasi_desain').addEventListener('change', function() {
+  if (this.checked) {
+    document.getElementById('manual_dimensi_fondasi_desain_section').style.display = 'block';
+    document.getElementById('auto_dimensi_fondasi_desain_section').style.display = 'none';
+  }
+});
+document.getElementById('auto_dimensi_fondasi_desain').addEventListener('change', function() {
+  if (this.checked) {
+    document.getElementById('manual_dimensi_fondasi_desain_section').style.display = 'none';
+    document.getElementById('auto_dimensi_fondasi_desain_section').style.display = 'block';
+  }
+});
+
+// Event listener untuk jenis fondasi di FondasiDesain
+document.querySelectorAll('input[name="beban_mode_fondasi_desain"]').forEach(radio => {
+  radio.addEventListener('change', function() {
+    const isMenerus = this.value === 'Menerus';
+
+    // Manual Dimensi Section
+    const labelLkManual = document.getElementById('label_lk_fondasi_desain');
+    const placeholderLkManual = document.getElementById('placeholder_lk_fondasi_desain').querySelector('text');
+    const labelBkManual = document.getElementById('label_bk_fondasi_desain');
+    const placeholderBkManual = document.getElementById('placeholder_bk_fondasi_desain').querySelector('text');
+
+    if (isMenerus) {
+      labelLkManual.innerHTML = 'L<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">s</text></svg>';
+      placeholderLkManual.textContent = 'Panjang Bentang Sloof';
+      labelBkManual.innerHTML = 'B<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">s</text></svg>';
+      placeholderBkManual.textContent = 'Lebar Sloof';
+    } else {
+      labelLkManual.innerHTML = 'L<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">k</text></svg>';
+      placeholderLkManual.textContent = 'Panjang Kolom';
+      labelBkManual.innerHTML = 'B<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">k</text></svg>';
+      placeholderBkManual.textContent = 'Lebar Kolom';
+    }
+
+    // Auto Dimensi Section
+    const labelLkAuto = document.getElementById('label_lk_fondasi_desain_auto');
+    const placeholderLkAuto = document.getElementById('placeholder_lk_fondasi_desain_auto').querySelector('text');
+    const labelBkAuto = document.getElementById('label_bk_fondasi_desain_auto');
+    const placeholderBkAuto = document.getElementById('placeholder_bk_fondasi_desain_auto').querySelector('text');
+
+    if (isMenerus) {
+      labelLkAuto.innerHTML = 'L<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">s</text></svg>';
+      placeholderLkAuto.textContent = 'Panjang Bentang Sloof';
+      labelBkAuto.innerHTML = 'B<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">s</text></svg>';
+      placeholderBkAuto.textContent = 'Lebar Sloof';
+    } else {
+      labelLkAuto.innerHTML = 'L<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">k</text></svg>';
+      placeholderLkAuto.textContent = 'Panjang Kolom';
+      labelBkAuto.innerHTML = 'B<svg width="10" height="10" style="vertical-align: sub;"><text x="0" y="8" font-size="10">k</text></svg>';
+      placeholderBkAuto.textContent = 'Lebar Kolom';
+    }
+  });
+});
+
+// Panggil saat halaman dimuat untuk memastikan status awal yang benar
+document.addEventListener('DOMContentLoaded', function() {
+  const initialFondasiType = document.querySelector('input[name="beban_mode_fondasi_desain"]:checked');
+  if (initialFondasiType) {
+    initialFondasiType.dispatchEvent(new Event('change'));
+  }
 });
