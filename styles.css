@@ -1,0 +1,231 @@
+body { 
+  font-family: Arial, sans-serif; 
+  position: relative; 
+  height: auto; 
+  overflow-y: hidden; 
+}
+
+/* Tab navigation */
+.tab {
+  display: flex;
+  border-bottom: 2px solid #ccc;
+}
+.tab button {
+  flex: 1;
+  padding: 10px;
+  cursor: pointer;
+  border: none;
+  outline: none;
+  background: #f1f1f1;
+  transition: background 0.3s;
+}
+.tab button:hover {
+  background: #ddd;
+}
+.tab button.active {
+  background: #fff;
+  border-bottom: 2px solid dodgerblue;
+  font-weight: bold;
+}
+
+/* Tab content */
+.tabcontent {
+  display: none;
+  padding: 0;
+  border: 1px solid #ccc;
+  border-top: none;
+}
+.tabcontent.active {
+  display: block;
+}
+
+.tabcontent h3 {
+  margin-top: 0;
+  margin-bottom: 5px;
+}
+
+/* Input styling */
+label {
+  display: inline-block;
+  width: 40px;   /* Ini akan tetap berlaku untuk label input teks */
+  margin-right: 10px;
+}
+
+/* Override untuk label radio button */
+.radio-group label { /* Menargetkan label di dalam radio-group */
+  width: auto; /* Biarkan lebar menyesuaikan konten */
+  margin-right: 5px; /* Kurangi jarak ke elemen berikutnya */
+}
+
+input {
+  font-size: 12px;   /* ukuran teks saat user mengetik */
+  margin-bottom: 10px;
+  width: 150px;
+  border: 2px solid #a6a6a6;
+}
+  /* styling pas disabled */
+input:disabled {
+  background-color: #d5d5d5;   /* warna kotak */
+  color: #d5d5d5;              /* warna teks kalau ada value */
+  border: 2px solid #a6a6a6;
+}
+.ph-small {
+font-size: 14px; /* teks user normal */
+}
+
+.ph-small::placeholder {
+  font-size: 10px !important; /* paksa lebih kecil */
+  color: #888;
+}
+
+/* Fake placeholder styling */
+.input-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.fake-placeholder {
+  position: absolute;
+  left: 4px;
+  top: 43%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  fill: #888;
+}
+  /* placeholder hilang kalau disabled */
+input:disabled + .fake-placeholder {
+  opacity: 0; /* ilang kalau disable */
+}
+select {
+  width: 156px;
+  margin-bottom: 10px;
+  border: 2px solid #a6a6a6;
+}
+/* Subtab navigation */
+.subtab {
+  display: flex;
+  border-bottom: 2px solid #aaa;
+  margin-top: 0;
+}
+.subtab button {
+  flex: 1;
+  padding: 8px;
+  cursor: pointer;
+  border: none;
+  outline: none;
+  background: #fff;
+  transition: background 0.3s;
+  color: rgb(0, 0, 0);
+  border-bottom: 2px solid dodgerblue;
+}
+.subtab button:hover {
+  background: #f0f0f0;
+}
+.subtab button.active {
+  background: dodgerblue;
+  color: white;
+  border-bottom: none;
+  font-weight: bold;
+}
+.subtabcontent {
+  display: none;
+  padding: 15px;
+  border: 1px solid #aaa;
+  border-top: none;
+}
+.subtabcontent.active {
+  display: block;
+}
+
+/* Flexible data sections */
+.data-sections {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+.data-section {
+  min-width: 200px;
+  max-width: 300px;
+  flex: 1 1 auto;
+}
+.tulangan {
+  order: 1;
+}
+
+/* Calculate button styling */
+.calculate-btn {
+  padding: 8px 8px;
+  background: dodgerblue;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  display: block;
+  margin-top: 0px;
+  margin-left: auto;
+}
+.calculate-btn:hover {
+  background: #0056b3;
+}
+.radio-group {
+  display: flex;
+  margin-bottom: 6px; /* kasih jarak 4px ke elemen di bawah */
+}
+/* Radio button horizontal alignment */
+.radio-group input[type="radio"] {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  width: 18px;
+  height: 18px;
+  border: 2px solid #555;   /* lingkaran luar */
+  margin:  0.5px 4px -2px 0;
+  border-radius: 50%;
+  background-color: #fff;   /* isi putih */
+  cursor: pointer;
+  position: relative;
+}
+
+/* pas dicheck, munculin lingkaran kecil di dalam */
+.radio-group input[type="radio"]:checked::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 10px;               /* diameter titik */
+  height: 10px;
+  background-color: #555;    /* warna titik */
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+/* Checkbox style */
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  width: 18px;
+  height: 18px;
+  border: 2px solid #555;   /* kotak luar */
+  margin: 0 0 0 0; /* mirip radio */
+  border-radius: 4px;       /* sudut agak kotak */
+  background-color: #fff;   /* isi putih */
+  cursor: pointer;
+  position: relative;
+  margin-bottom: 3px;
+}
+
+/* pas dicentang, muncul centang */
+input[type="checkbox"]:checked::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 12px;
+  border: solid #555;
+  border-width: 0 2px 2px 0;
+  transform: translate(-50%, -60%) rotate(45deg);
+}
