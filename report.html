@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Report Perencanaan Tulangan Balok — Contoh</title>
+    <style>
+    :root{--accent:#163172;--muted:#6b7280;--paper:#f8fafc}
+    body{font-family:Inter,Segoe UI,Roboto,Arial;line-height:1.5;color:#111;background:var(--paper);margin:0;padding:24px}
+    .container{max-width:1100px;margin:0 auto;background:white;padding:28px;border-radius:12px;box-shadow:0 6px 20px rgba(16,24,40,0.06)}
+    header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e6eef8;padding-bottom:12px;margin-bottom:18px;flex-wrap:wrap;gap:12px}
+    h1{font-size:20px;color:var(--accent);margin:0}
+    .meta{font-size:13px;color:var(--muted)}
+    section{margin-bottom:18px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .card{background:#fbfdff;padding:12px;border-radius:8px;border:1px solid #eef6ff}
+    .label{font-size:12px;color:var(--muted);margin-bottom:6px}
+    .value{font-weight:600}
+    pre.math{background:#0f1724;color:#e6f0ff;padding:12px;border-radius:8px;overflow:auto}
+    ol.steps{padding-left:18px}
+    table{width:100%;border-collapse:collapse;margin-top:8px}
+    th,td{border:1px solid #e8eef6;padding:8px;text-align:left;font-size:13px}
+    th{background:#f4f9ff}
+    .right{text-align:right}
+    footer{font-size:12px;color:var(--muted);text-align:center;margin-top:18px}
+    .btn-group{display:flex;gap:8px;margin-top:8px; flex-direction: column; align-items: flex-end;}
+    button{background:var(--accent);color:white;border:none;padding:8px 14px;border-radius:6px;font-size:13px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.1); width: 100%;}
+    button:hover{background:#1e3a8a}
+    .layout{display:grid;grid-template-columns:2fr 1fr;gap:18px;align-items:start}
+    .penampang-card{background:#f9fafb;padding:12px;border:1px solid #e6eef8;border-radius:8px;text-align:center}
+    svg{max-width:100%;height:auto}
+    .circle{display:inline-grid;place-items:center;width:56px;height:56px;border-radius:50%;border:0;cursor:pointer}
+    .circle:focus{outline:3px solid rgba(96,165,250,0.18);outline-offset:3px}
+    .glass {background:#163172; /* lebih transparan */backdrop-filter: blur(6px);}    
+    .pressed{transform:translateY(2px)}
+    @media print{body{padding:6mm} .container{box-shadow:none;border-radius:0} button{display:none} .layout{grid-template-columns:1fr}}
+    .header-flex-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+    }
+    .header-left {
+      text-align: left;
+      flex: 1;
+    }
+    .header-btn-group {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      flex: 1;
+    }
+  </style>
+  <!-- MathJax untuk merender rumus LaTeX -->
+  <script>
+    // Konfigurasi MathJax harus diletakkan sebelum memuat skrip MathJax itu sendiri
+    MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\$', '\\$']], // Mengaktifkan $...$ untuk inline math
+        displayMath: [['$$', '$$'], ['\\$', '\\$']] // Mengaktifkan $$...$$ untuk display math
+      },
+      svg: {
+        fontCache: 'global'
+      }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <div class="container">
+    <header>
+<button class="circle glass" aria-label="Kembali" onclick="goBack(event)" title="Kembali" style="margin-right:12px;">
+  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 18l-6-6 6-6" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</button>
+      <div class="header-left">
+        <div class="header-content">
+          <h1>Report Perhitungan — Tulangan Balok</h1>
+          <div class="meta">Tanggal: <span id="tgl">21 Sep 2025</span></div>
+        </div>
+      </div>
+      <div class="btn-group">
+        <button onclick="downloadFullReport()">Unduh Laporan Lengkap</button>
+        <button onclick="showFullReport()">Tampilkan Laporan Lengkap</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <div>
+        <section>
+          <h2 style="margin:0 0 8px 0">Input Data</h2>
+          <div class="grid">
+            <div class="card">
+              <div class="label">Geometri Balok</div>
+              <div><span class="value">b = 250 mm</span> &nbsp;×&nbsp; <span class="value">h = 500 mm</span></div>
+            </div>
+            <div class="card">
+              <div class="label">Material</div>
+              <div>
+                <span class="value">f'c = 25 MPa</span> &nbsp;•&nbsp; 
+                <span class="value">fy (lentur) = 400 MPa</span> &nbsp;•&nbsp; 
+                <span class="value">fy (geser) = 240 MPa</span>
+              </div>
+            </div>
+            <div class="card">
+              <div class="label">Tulangan</div>
+              <div>
+                <span class="value">Diameter lentur, D = 19 mm</span> &nbsp;•&nbsp; 
+                <span class="value">Diameter sengkang, P = 12 mm</span>
+              </div>
+            </div>
+            <div class="card">
+              <div class="label">Selimut Beton</div>
+              <div class="value">ts = 30 mm</div>
+            </div>
+            <div class="card">
+              <div class="label">Momen dan Gaya Geser Rencana</div>
+              <div>
+                <span class="value">Mu+ = 63.170 kNm</span> &nbsp;•&nbsp; 
+                <span class="value">Mu- = 141.334 kNm</span> &nbsp;•&nbsp; 
+                <span class="value">Vu = 155.000 kN</span>
+              </div>
+            </div>
+            <div class="card">
+              <div class="label">Konstanta</div>
+              <div>Faktor kuat: &phi; = 0.9 &nbsp;•&nbsp; B1 = 0.85</div>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <h2 style="margin:0 0 8px 0">Proses Perhitungan (Kontrol)</h2>
+          <ol class="steps">
+            <li>Faktor tahanan momen positif, \$ R_n = 1.7905 < R_{max} = 6.5736 \$ → <strong>OK</strong></li>
+            <li>Letak titik berat tulangan positif, \$ d' = 51.50\,\text{mm} < 80\,\text{mm} \$ → <strong>OK</strong></li>
+            <li>Tahanan momen balok positif, \$ \phi M_n = 77.510\,\text{kNm} \geq M_u^+ = 63.170\,\text{kNm} \$ → <strong>AMAN</strong></li>
+            <li>Faktor tahanan momen negatif, \$ R_n = 4.0061 < R_{max} = 6.5736 \$ → <strong>OK</strong></li>
+            <li>Letak titik berat tulangan negatif, \$ d' = 51.50\,\text{mm} < 80\,\text{mm} \$ → <strong>OK</strong></li>
+            <li>Tahanan momen balok negatif, \$ \phi M_n = 179.249\,\text{kNm} \geq M_u^- = 141.334\,\text{kNm} \$ → <strong>AMAN</strong></li>
+            <li>Tahanan geser beton, \$ \phi V_c = 52.500\,\text{kN} \$ → Perlu tulangan geser</li>
+            <li>Tahanan geser sengkang, \$ \phi V_s = 102.500\,\text{kN} \$</li>
+            <li>Jarak sengkang yang digunakan, \$ s = 130\,\text{mm} \leq s_{max} = 224.25\,\text{mm} \$ → <strong>OK</strong></li>
+          </ol>
+        </section>
+
+        <section>
+          <h2 style="margin:0 0 8px 0">Ringkasan Tulangan</h2>
+          <table>
+            <thead>
+              <tr><th>Item</th><th>Nilai / Keterangan</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>As momen positif (required)</td><td>492 mm²</td></tr>
+              <tr><td>Tulangan momen positif yang digunakan</td><td>2 Ø19 (567 mm²)</td></tr>
+              <tr><td>As momen negatif (required)</td><td>1175 mm²</td></tr>
+              <tr><td>Tulangan momen negatif yang digunakan</td><td>5 Ø19 (1418 mm²)</td></tr>
+              <tr><td>As tulangan geser (sengkang)</td><td>226.19 mm²</td></tr>
+              <tr><td>Jarak sengkang yang digunakan</td><td>130 mm</td></tr>
+              <tr><td>Selimut beton</td><td>30 mm</td></tr>
+              <tr><td>Keterangan</td><td>Semua kontrol aman (OK) sesuai perhitungan.</td></tr>
+            </tbody>
+          </table>
+        </section>
+      </div>
+
+      <aside>
+        <div class="penampang-card">
+          <h3 style="margin-top:0">Penampang Balok</h3>
+          <svg width="200" height="150" xmlns="http://www.w3.org/2000/svg">
+            <!-- Balok -->
+            <rect x="30" y="20" width="140" height="100" fill="#e0f2fe" stroke="#0f172a" stroke-width="2" />
+            <!-- Tulangan bawah (2 Ø19) -->
+            <circle cx="70" cy="100" r="7" fill="#0f172a" />
+            <circle cx="130" cy="100" r="7" fill="#0f172a" />
+            <!-- Label -->
+            <text x="100" y="140" font-size="11" text-anchor="middle">b = 250 mm</text>
+            <text x="10" y="70" font-size="11" transform="rotate(-90 10,70)">h = 500 mm</text>
+          </svg>
+          <div class="btn-group" style="justify-content:center;margin-top:10px">
+            <button onclick="exportCAD()">Export ke CAD</button>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <footer>Generated by — Sample UI Report Template. Sesuaikan nilai input sesuai standar lokal.</footer>
+  </div>
+
+  <script>
+    document.getElementById('tgl').textContent = new Date().toLocaleDateString('id-ID', { year:'numeric', month:'short', day:'numeric'});
+
+    function downloadFullReport(){
+      alert("[Dummy] Fungsi Unduh Laporan Lengkap — implementasikan dengan jsPDF/html2pdf.");
+    }
+    function showFullReport(){
+      alert("[Dummy] Fungsi Tampilkan Laporan Lengkap — implementasikan sesuai kebutuhan.");
+    }
+    function exportCAD(){
+      alert("[Dummy] Fungsi Export ke CAD — butuh generator DXF/SVG untuk CAD.");
+    }
+
+    function goBack(e){
+      e && e.preventDefault && e.preventDefault();
+      if(window.history && window.history.length > 1){
+        try{ window.history.back(); } catch(err){ window.location.href = "/"; }
+      } else {
+        window.location.href = "/";
+      }
+    }
+    document.addEventListener('pointerdown', function(ev){
+      const c = ev.target.closest && ev.target.closest('.circle');
+      if(c) c.classList.add('pressed');
+    });
+    document.addEventListener('pointerup', function(ev){
+      const c = ev.target.closest && ev.target.closest('.circle');
+      if(c) c.classList.remove('pressed');
+    });
+  </script>
+</body>
+</html>

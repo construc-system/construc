@@ -1,3 +1,4 @@
+// FileName: /script.js
 function openTab(evt, tabName) {
   const tabcontent = document.querySelectorAll(".tabcontent");
   const tablinks = document.querySelectorAll(".tablinks");
@@ -39,12 +40,9 @@ function openSubTab(evt, subTabName) {
 }
 
 // Function to adjust overflow based on content height
+// MODIFIKASI: Menyederhanakan logika overflow untuk selalu mengizinkan scrolling jika konten melebihi viewport
 function adjustOverflow() {
-  if (document.body.scrollHeight > window.innerHeight) {
-    document.body.style.overflowY = 'auto';
-  } else {
-    document.body.style.overflowY = 'hidden';
-  }
+  document.body.style.overflowY = 'auto'; // Selalu izinkan scrolling vertikal jika konten melebihi viewport
 }
 
 // Function to adjust order of data sections based on screen width
@@ -221,14 +219,16 @@ window.addEventListener('resize', function() {
 
 // Function for calculating Desain
 function calculateDesain() {
-  alert('Fungsi sementara dimatikan karena file report.html belum dibuat.');
-  // window.open('report.html');
+  // Fungsi hitung belum dibuat, jadi langsung arahkan ke report.html
+  // alert('Fungsi sementara dimatikan karena file report.html belum dibuat.');
+  window.location.href = 'report.html';
 }
 
 // Function for calculating Evaluasi
 function calculateEvaluasi() {
-  alert('Fungsi sementara dimatikan karena file report.html belum dibuat.');
-  // window.open('report.html');
+  // Fungsi hitung belum dibuat, jadi langsung arahkan ke report.html
+  // alert('Fungsi sementara dimatikan karena file report.html belum dibuat.');
+  window.location.href = 'report.html';
 }
 // Toggle for PelatDesain
 document.getElementById('manual_pelat_desain').addEventListener('change', function() {
