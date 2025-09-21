@@ -4,56 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Report Perencanaan Tulangan Balok — Contoh</title>
-    <style>
-    :root{--accent:#163172;--muted:#6b7280;--paper:#f8fafc}
-    body{font-family:Inter,Segoe UI,Roboto,Arial;line-height:1.5;color:#111;background:var(--paper);margin:0;padding:24px}
-    .container{max-width:1100px;margin:0 auto;background:white;padding:28px;border-radius:12px;box-shadow:0 6px 20px rgba(16,24,40,0.06)}
-    header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e6eef8;padding-bottom:12px;margin-bottom:18px;flex-wrap:wrap;gap:12px}
-    h1{font-size:20px;color:var(--accent);margin:0}
-    .meta{font-size:13px;color:var(--muted)}
-    section{margin-bottom:18px}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    .card{background:#fbfdff;padding:12px;border-radius:8px;border:1px solid #eef6ff}
-    .label{font-size:12px;color:var(--muted);margin-bottom:6px}
-    .value{font-weight:600}
-    pre.math{background:#0f1724;color:#e6f0ff;padding:12px;border-radius:8px;overflow:auto}
-    ol.steps{padding-left:18px}
-    table{width:100%;border-collapse:collapse;margin-top:8px}
-    th,td{border:1px solid #e8eef6;padding:8px;text-align:left;font-size:13px}
-    th{background:#f4f9ff}
-    .right{text-align:right}
-    footer{font-size:12px;color:var(--muted);text-align:center;margin-top:18px}
-    .btn-group{display:flex;gap:8px;margin-top:8px; flex-direction: column; align-items: flex-end;}
-    button{background:var(--accent);color:white;border:none;padding:8px 14px;border-radius:6px;font-size:13px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.1); width: 100%;}
-    button:hover{background:#1e3a8a}
-    .layout{display:grid;grid-template-columns:2fr 1fr;gap:18px;align-items:start}
-    .penampang-card{background:#f9fafb;padding:12px;border:1px solid #e6eef8;border-radius:8px;text-align:center}
-    svg{max-width:100%;height:auto}
-    .circle{display:inline-grid;place-items:center;width:56px;height:56px;border-radius:50%;border:0;cursor:pointer}
-    .circle:focus{outline:3px solid rgba(96,165,250,0.18);outline-offset:3px}
-    .glass {background:#163172; /* lebih transparan */backdrop-filter: blur(6px);}    
-    .pressed{transform:translateY(2px)}
-    @media print{body{padding:6mm} .container{box-shadow:none;border-radius:0} button{display:none} .layout{grid-template-columns:1fr}}
-    .header-flex-container {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      width: 100%;
-      flex-wrap: wrap;
-      gap: 12px;
-    }
-    .header-left {
-      text-align: left;
-      flex: 1;
-    }
-    .header-btn-group {
-      display: flex;
-      gap: 8px;
-      justify-content: flex-end;
-      flex: 1;
-      margin-left: auto;
-    }
-  </style>
+  <link rel="stylesheet" href="report.css">
   <script>
     // Konfigurasi MathJax harus diletakkan sebelum memuat skrip MathJax itu sendiri
     MathJax = {
@@ -87,8 +38,8 @@
     </header>
 
     <div class="layout">
-      <div>
-        <section>
+      <div class="main-content">
+        <section class="input-data" style="grid-area: input;">
           <h2 style="margin:0 0 8px 0">Input Data</h2>
           <div class="grid">
             <div class="card">
@@ -129,7 +80,23 @@
           </div>
         </section>
 
-        <section>
+        <div class="penampang-wrapper" style="grid-area: card;">
+          <div class="penampang-card">
+            <h3 style="margin-top:0">Penampang Balok</h3>
+            <svg width="200" height="150" xmlns="http://www.w3.org/2000/svg">
+              <rect x="30" y="20" width="140" height="100" fill="#e0f2fe" stroke="#0f172a" stroke-width="2" />
+              <circle cx="70" cy="100" r="7" fill="#0f172a" />
+              <circle cx="130" cy="100" r="7" fill="#0f172a" />
+              <text x="100" y="140" font-size="11" text-anchor="middle">b = 250 mm</text>
+              <text x="10" y="70" font-size="11" transform="rotate(-90 10,70)">h = 500 mm</text>
+            </svg>
+            <div class="btn-group" style="justify-content:center;margin-top:10px">
+              <button onclick="exportCAD()">Export ke CAD</button>
+            </div>
+          </div>
+        </div>
+
+        <section class="proses-perhitungan" style="grid-area: proses;">
           <h2 style="margin:0 0 8px 0">Proses Perhitungan (Kontrol)</h2>
           <ol class="steps">
             <li>Faktor tahanan momen positif, \$ R_n = 1.7905 < R_{max} = 6.5736 \$ → <strong>OK</strong></li>
@@ -144,7 +111,7 @@
           </ol>
         </section>
 
-        <section>
+        <section class="ringkasan-tulangan" style="grid-area: ringkasan;">
           <h2 style="margin:0 0 8px 0">Ringkasan Tulangan</h2>
           <table>
             <thead>
@@ -163,56 +130,11 @@
           </table>
         </section>
       </div>
-
-      <aside>
-        <div class="penampang-card">
-          <h3 style="margin-top:0">Penampang Balok</h3>
-          <svg width="200" height="150" xmlns="http://www.w3.org/2000/svg">
-            <rect x="30" y="20" width="140" height="100" fill="#e0f2fe" stroke="#0f172a" stroke-width="2" />
-            <circle cx="70" cy="100" r="7" fill="#0f172a" />
-            <circle cx="130" cy="100" r="7" fill="#0f172a" />
-            <text x="100" y="140" font-size="11" text-anchor="middle">b = 250 mm</text>
-            <text x="10" y="70" font-size="11" transform="rotate(-90 10,70)">h = 500 mm</text>
-          </svg>
-          <div class="btn-group" style="justify-content:center;margin-top:10px">
-            <button onclick="exportCAD()">Export ke CAD</button>
-          </div>
-        </div>
-      </aside>
     </div>
 
     <footer>Generated by — Sample UI Report Template. Sesuaikan nilai input sesuai standar lokal.</footer>
   </div>
 
-  <script>
-    document.getElementById('tgl').textContent = new Date().toLocaleDateString('id-ID', { year:'numeric', month:'short', day:'numeric'});
-
-    function downloadFullReport(){
-      alert("[Dummy] Fungsi Unduh Laporan Lengkap — implementasikan dengan jsPDF/html2pdf.");
-    }
-    function showFullReport(){
-      alert("[Dummy] Fungsi Tampilkan Laporan Lengkap — implementasikan sesuai kebutuhan.");
-    }
-    function exportCAD(){
-      alert("[Dummy] Fungsi Export ke CAD — butuh generator DXF/SVG untuk CAD.");
-    }
-
-    function goBack(e){
-      e && e.preventDefault && e.preventDefault();
-      if(window.history && window.history.length > 1){
-        try{ window.history.back(); } catch(err){ window.location.href = "/"; }
-      } else {
-        window.location.href = "/";
-      }
-    }
-    document.addEventListener('pointerdown', function(ev){
-      const c = ev.target.closest && ev.target.closest('.circle');
-      if(c) c.classList.add('pressed');
-    });
-    document.addEventListener('pointerup', function(ev){
-      const c = ev.target.closest && ev.target.closest('.circle');
-      if(c) c.classList.remove('pressed');
-    });
-  </script>
+  <script src="report.js"></script>
 </body>
 </html>

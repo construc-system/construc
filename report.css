@@ -1,0 +1,88 @@
+:root{--accent:#163172;--muted:#6b7280;--paper:#f8fafc}
+body{font-family:Inter,Segoe UI,Roboto,Arial;line-height:1.5;color:#111;background:var(--paper);margin:0;padding:24px}
+.container{max-width:1100px;margin:0 auto;background:white;padding:28px;border-radius:12px;box-shadow:0 6px 20px rgba(16,24,40,0.06)}
+header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e6eef8;padding-bottom:12px;margin-bottom:18px;flex-wrap:wrap;gap:12px}
+h1{font-size:20px;color:var(--accent);margin:0}
+.meta{font-size:13px;color:var(--muted)}
+section{margin-bottom:18px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.card{background:#fbfdff;padding:12px;border-radius:8px;border:1px solid #eef6ff}
+.label{font-size:12px;color:var(--muted);margin-bottom:6px}
+.value{font-weight:600}
+pre.math{background:#0f1724;color:#e6f0ff;padding:12px;border-radius:8px;overflow:auto}
+ol.steps{padding-left:18px}
+table{width:100%;border-collapse:collapse;margin-top:8px}
+th,td{border:1px solid #e8eef6;padding:8px;text-align:left;font-size:13px}
+th{background:#f4f9ff}
+.right{text-align:right}
+footer{font-size:12px;color:var(--muted);text-align:center;margin-top:18px}
+.btn-group{display:flex;gap:8px;margin-top:8px; flex-direction: column; align-items: flex-end;}
+button{background:var(--accent);color:white;border:none;padding:8px 14px;border-radius:6px;font-size:13px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.1); width: 100%;}
+button:hover{background:#1e3a8a}
+.layout {
+  display: grid !important;
+  grid-template-columns: 2fr 1fr !important;
+  gap: 18px !important;
+  align-items: start !important;
+  grid-template-areas:
+    "input card"
+    "proses card"
+    "ringkasan card";
+}
+
+.main-content {
+  display: contents;
+}
+
+.main-content > section.input-data {
+  grid-area: input;
+}
+.penampang-wrapper {
+  grid-area: card;
+}
+.main-content > section.proses-perhitungan {
+  grid-area: proses;
+}
+.main-content > section.ringkasan-tulangan {
+  grid-area: ringkasan;
+}
+
+@media (max-width: 768px) {
+  .layout {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "input"
+      "card"
+      "proses"
+      "ringkasan";
+  }
+  .penampang-wrapper {
+    margin-top: 16px;
+  }
+}
+.penampang-card{background:#f9fafb;padding:12px;border:1px solid #e6eef8;border-radius:8px;text-align:center}
+svg{max-width:auto;height:auto}
+.circle{display:inline-grid;place-items:center;width:56px;height:56px;border-radius:50%;border:0;cursor:pointer}
+.circle:focus{outline:3px solid rgba(96,165,250,0.18);outline-offset:3px}
+.glass {background:#163172; /* lebih transparan */backdrop-filter: blur(6px);}    
+.pressed{transform:translateY(2px)}
+@media print{body{padding:6mm} .container{box-shadow:none;border-radius:0} button{display:none} .layout{grid-template-columns:1fr}}
+.header-flex-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.header-left {
+  text-align: left;
+  flex: 1;
+}
+.header-btn-group {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  flex: 1;
+  margin-left: auto;
+}
