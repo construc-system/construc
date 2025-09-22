@@ -1,6 +1,37 @@
 :root{--accent:#163172;--muted:#6b7280;--paper:#f8fafc}
-body{font-family:Inter,Segoe UI,Roboto,Arial;line-height:1.5;color:#111;background:var(--paper);margin:0;padding:24px}
-.container{max-width:1100px;margin:0 auto;background:white;padding:28px;border-radius:12px;box-shadow:0 6px 20px rgba(16,24,40,0.06)}
+body{
+  font-family:Inter,Segoe UI,Roboto,Arial;
+  line-height:1.5;
+  color:#111;
+  background:var(--paper);
+  margin:0;
+  padding:0; /* Hapus padding dari body, pindahkan ke wrapper jika perlu */
+  display: flex; /* Gunakan flexbox untuk menengahkan wrapper */
+  justify-content: center; /* Tengahkan wrapper secara horizontal */
+  align-items: flex-start; /* Posisikan wrapper di bagian atas secara vertikal */
+  min-height: 100vh; /* Pastikan body setidaknya setinggi viewport */
+  overflow-x: hidden; /* Hindari scrollbar horizontal dari scaling */
+}
+
+.wrapper {
+  /* Wrapper akan menjadi target scaling */
+  /* Beri padding di sini jika Anda ingin ada ruang di sekitar container */
+  padding: 24px; /* Padding yang sebelumnya ada di body */
+  width: 100%; /* Pastikan wrapper mengambil lebar penuh yang tersedia */
+  display: flex; /* Gunakan flexbox untuk menengahkan container di dalamnya */
+  justify-content: center;
+}
+
+.container{
+  max-width:1100px; /* Pertahankan lebar desain asli */
+  width: 100%; /* Penting agar container menyesuaikan lebar wrapper */
+  /* margin:0 auto; */ /* Tidak perlu margin auto di sini karena sudah di-flexbox oleh wrapper */
+  background:white;
+  padding:28px;
+  border-radius:12px;
+  box-shadow:0 6px 20px rgba(16,24,40,0.06);
+  /* Hapus min-width jika ada di sini, atau pastikan tidak menghalangi */
+}
 header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e6eef8;padding-bottom:12px;margin-bottom:18px;flex-wrap:wrap;gap:12px}
 h1{font-size:20px;color:var(--accent);margin:0}
 .meta{font-size:13px;color:var(--muted)}
@@ -66,7 +97,16 @@ svg{max-width:auto;height:auto}
 .circle:focus{outline:3px solid rgba(96,165,250,0.18);outline-offset:3px}
 .glass {background:#163172; /* lebih transparan */backdrop-filter: blur(6px);}    
 .pressed{transform:translateY(2px)}
-@media print{body{padding:6mm} .container{box-shadow:none;border-radius:0} button{display:none} .layout{grid-template-columns:1fr}}
+@media print{
+  body{padding:6mm}
+  .wrapper {
+    padding: 0; /* Hapus padding wrapper saat print */
+    transform: none !important; /* Nonaktifkan scaling saat print */
+  }
+  .container{box-shadow:none;border-radius:0}
+  button{display:none}
+  .layout{grid-template-columns:1fr}
+}
 .header-flex-container {
   display: flex;
   justify-content: space-between;

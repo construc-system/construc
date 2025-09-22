@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=0.8" />
   <title>Report Perencanaan Tulangan Balok — Contoh</title>
   <link rel="stylesheet" href="report.css">
   <script>
@@ -20,120 +20,124 @@
   <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 </head>
 <body>
-  <div class="container">
-    <header style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e6eef8; padding-bottom: 12px; margin-bottom: 18px; flex-wrap: wrap; gap: 12px;">
-      <div class="header-left-group" style="display: flex; align-items: center; flex-wrap: nowrap; min-width: 0;">
-        <button class="circle glass" aria-label="Kembali" onclick="goBack(event)" title="Kembali" style="margin-right: 12px; flex-shrink: 0;">
-          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 18l-6-6 6-6" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </button>
-        <div style="flex: 1; min-width: 0;">
-          <h1>Report Perhitungan — Tulangan Balok</h1>
-          <div class="meta">Tanggal: <span id="tgl">21 Sep 2025</span></div>
-        </div>
-      </div>
-      <div class="btn-group" style="margin-left: auto; justify-content: flex-end; display: flex; flex-wrap: wrap; gap: 8px; flex-shrink: 0;">
-        <button onclick="downloadFullReport()">Unduh Laporan Lengkap</button>
-        <button onclick="showFullReport()">Tampilkan Laporan Lengkap</button>
-      </div>
-    </header>
-
-    <div class="layout">
-      <div class="main-content">
-        <section class="input-data" style="grid-area: input;">
-          <h2 style="margin:0 0 8px 0">Input Data</h2>
-          <div class="grid">
-            <div class="card">
-              <div class="label">Geometri Balok</div>
-              <div><span class="value">b = 250 mm</span> &nbsp;×&nbsp; <span class="value">h = 500 mm</span></div>
-            </div>
-            <div class="card">
-              <div class="label">Material</div>
-              <div>
-                <span class="value">f'c = 25 MPa</span> &nbsp;•&nbsp; 
-                <span class="value">fy (lentur) = 400 MPa</span> &nbsp;•&nbsp; 
-                <span class="value">fy (geser) = 240 MPa</span>
-              </div>
-            </div>
-            <div class="card">
-              <div class="label">Tulangan</div>
-              <div>
-                <span class="value">Diameter lentur, D = 19 mm</span> &nbsp;•&nbsp; 
-                <span class="value">Diameter sengkang, P = 12 mm</span>
-              </div>
-            </div>
-            <div class="card">
-              <div class="label">Selimut Beton</div>
-              <div class="value">ts = 30 mm</div>
-            </div>
-            <div class="card">
-              <div class="label">Momen dan Gaya Geser Rencana</div>
-              <div>
-                <span class="value">Mu+ = 63.170 kNm</span> &nbsp;•&nbsp; 
-                <span class="value">Mu- = 141.334 kNm</span> &nbsp;•&nbsp; 
-                <span class="value">Vu = 155.000 kN</span>
-              </div>
-            </div>
-            <div class="card">
-              <div class="label">Konstanta</div>
-              <div>Faktor kuat: &phi; = 0.9 &nbsp;•&nbsp; B1 = 0.85</div>
-            </div>
-          </div>
-        </section>
-
-        <div class="penampang-wrapper" style="grid-area: card;">
-          <div class="penampang-card">
-            <h3 style="margin-top:0">Penampang Balok</h3>
-            <svg width="200" height="150" xmlns="http://www.w3.org/2000/svg">
-              <rect x="30" y="20" width="140" height="100" fill="#e0f2fe" stroke="#0f172a" stroke-width="2" />
-              <circle cx="70" cy="100" r="7" fill="#0f172a" />
-              <circle cx="130" cy="100" r="7" fill="#0f172a" />
-              <text x="100" y="140" font-size="11" text-anchor="middle">b = 250 mm</text>
-              <text x="10" y="70" font-size="11" transform="rotate(-90 10,70)">h = 500 mm</text>
-            </svg>
-            <div class="btn-group" style="justify-content:center;margin-top:10px">
-              <button onclick="exportCAD()">Export ke CAD</button>
-            </div>
+  <div class="wrapper"> <!-- Wrapper baru ditambahkan di sini -->
+    <div class="container">
+      <div class="container-inner">
+      <header style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e6eef8; padding-bottom: 12px; margin-bottom: 18px; flex-wrap: wrap; gap: 12px;">
+        <div class="header-left-group" style="display: flex; align-items: center; flex-wrap: nowrap; min-width: 0;">
+          <button class="circle glass" aria-label="Kembali" onclick="goBack(event)" title="Kembali" style="margin-right: 12px; flex-shrink: 0;">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 18l-6-6 6-6" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div style="flex: 1; min-width: 0;">
+            <h1>Report Perhitungan — Tulangan Balok</h1>
+            <div class="meta">Tanggal: <span id="tgl">21 Sep 2025</span></div>
           </div>
         </div>
+        <div class="btn-group" style="margin-left: auto; justify-content: flex-end; display: flex; flex-wrap: wrap; gap: 8px; flex-shrink: 0;">
+          <button onclick="downloadFullReport()">Unduh Laporan Lengkap</button>
+          <button onclick="showFullReport()">Tampilkan Laporan Lengkap</button>
+        </div>
+      </header>
 
-        <section class="proses-perhitungan" style="grid-area: proses;">
-          <h2 style="margin:0 0 8px 0">Proses Perhitungan (Kontrol)</h2>
-          <ol class="steps">
-            <li>Faktor tahanan momen positif, \$ R_n = 1.7905 < R_{max} = 6.5736 \$ → <strong>OK</strong></li>
-            <li>Letak titik berat tulangan positif, \$ d' = 51.50\,\text{mm} < 80\,\text{mm} \$ → <strong>OK</strong></li>
-            <li>Tahanan momen balok positif, \$ \phi M_n = 77.510\,\text{kNm} \geq M_u^+ = 63.170\,\text{kNm} \$ → <strong>AMAN</strong></li>
-            <li>Faktor tahanan momen negatif, \$ R_n = 4.0061 < R_{max} = 6.5736 \$ → <strong>OK</strong></li>
-            <li>Letak titik berat tulangan negatif, \$ d' = 51.50\,\text{mm} < 80\,\text{mm} \$ → <strong>OK</strong></li>
-            <li>Tahanan momen balok negatif, \$ \phi M_n = 179.249\,\text{kNm} \geq M_u^- = 141.334\,\text{kNm} \$ → <strong>AMAN</strong></li>
-            <li>Tahanan geser beton, \$ \phi V_c = 52.500\,\text{kN} \$ → Perlu tulangan geser</li>
-            <li>Tahanan geser sengkang, \$ \phi V_s = 102.500\,\text{kN} \$</li>
-            <li>Jarak sengkang yang digunakan, \$ s = 130\,\text{mm} \leq s_{max} = 224.25\,\text{mm} \$ → <strong>OK</strong></li>
-          </ol>
-        </section>
+      <div class="layout">
+        <div class="main-content">
+          <section class="input-data" style="grid-area: input;">
+            <h2 style="margin:0 0 8px 0">Input Data</h2>
+            <div class="grid">
+              <div class="card">
+                <div class="label">Geometri Balok</div>
+                <div><span class="value">b = 250 mm</span> &nbsp;×&nbsp; <span class="value">h = 500 mm</span></div>
+              </div>
+              <div class="card">
+                <div class="label">Material</div>
+                <div>
+                  <span class="value">f'c = 25 MPa</span> &nbsp;•&nbsp; 
+                  <span class="value">fy (lentur) = 400 MPa</span> &nbsp;•&nbsp; 
+                  <span class="value">fy (geser) = 240 MPa</span>
+                </div>
+              </div>
+              <div class="card">
+                <div class="label">Tulangan</div>
+                <div>
+                  <span class="value">Diameter lentur, D = 19 mm</span> &nbsp;•&nbsp; 
+                  <span class="value">Diameter sengkang, P = 12 mm</span>
+                </div>
+              </div>
+              <div class="card">
+                <div class="label">Selimut Beton</div>
+                <div class="value">ts = 30 mm</div>
+              </div>
+              <div class="card">
+                <div class="label">Momen dan Gaya Geser Rencana</div>
+                <div>
+                  <span class="value">Mu+ = 63.170 kNm</span> &nbsp;•&nbsp; 
+                  <span class="value">Mu- = 141.334 kNm</span> &nbsp;•&nbsp; 
+                  <span class="value">Vu = 155.000 kN</span>
+                </div>
+              </div>
+              <div class="card">
+                <div class="label">Konstanta</div>
+                <div>Faktor kuat: &phi; = 0.9 &nbsp;•&nbsp; B1 = 0.85</div>
+              </div>
+            </div>
+          </section>
 
-        <section class="ringkasan-tulangan" style="grid-area: ringkasan;">
-          <h2 style="margin:0 0 8px 0">Ringkasan Tulangan</h2>
-          <table>
-            <thead>
-              <tr><th>Item</th><th>Nilai / Keterangan</th></tr>
-            </thead>
-            <tbody>
-              <tr><td>As momen positif (required)</td><td>492 mm²</td></tr>
-              <tr><td>Tulangan momen positif yang digunakan</td><td>2 Ø19 (567 mm²)</td></tr>
-              <tr><td>As momen negatif (required)</td><td>1175 mm²</td></tr>
-              <tr><td>Tulangan momen negatif yang digunakan</td><td>5 Ø19 (1418 mm²)</td></tr>
-              <tr><td>As tulangan geser (sengkang)</td><td>226.19 mm²</td></tr>
-              <tr><td>Jarak sengkang yang digunakan</td><td>130 mm</td></tr>
-              <tr><td>Selimut beton</td><td>30 mm</td></tr>
-              <tr><td>Keterangan</td><td>Semua kontrol aman (OK) sesuai perhitungan.</td></tr>
-            </tbody>
-          </table>
-        </section>
+          <div class="penampang-wrapper" style="grid-area: card;">
+            <div class="penampang-card">
+              <h3 style="margin-top:0">Penampang Balok</h3>
+              <svg width="200" height="150" xmlns="http://www.w3.org/2000/svg">
+                <rect x="30" y="20" width="140" height="100" fill="#e0f2fe" stroke="#0f172a" stroke-width="2" />
+                <circle cx="70" cy="100" r="7" fill="#0f172a" />
+                <circle cx="130" cy="100" r="7" fill="#0f172a" />
+                <text x="100" y="140" font-size="11" text-anchor="middle">b = 250 mm</text>
+                <text x="10" y="70" font-size="11" transform="rotate(-90 10,70)">h = 500 mm</text>
+              </svg>
+              <div class="btn-group" style="justify-content:center;margin-top:10px">
+                <button onclick="exportCAD()">Export ke CAD</button>
+              </div>
+            </div>
+          </div>
+
+          <section class="proses-perhitungan" style="grid-area: proses;">
+            <h2 style="margin:0 0 8px 0">Proses Perhitungan (Kontrol)</h2>
+            <ol class="steps">
+              <li>Faktor tahanan momen positif, \$ R_n = 1.7905 < R_{max} = 6.5736 \$ → <strong>OK</strong></li>
+              <li>Letak titik berat tulangan positif, \$ d' = 51.50\,\text{mm} < 80\,\text{mm} \$ → <strong>OK</strong></li>
+              <li>Tahanan momen balok positif, \$ \phi M_n = 77.510\,\text{kNm} \geq M_u^+ = 63.170\,\text{kNm} \$ → <strong>AMAN</strong></li>
+              <li>Faktor tahanan momen negatif, \$ R_n = 4.0061 < R_{max} = 6.5736 \$ → <strong>OK</strong></li>
+              <li>Letak titik berat tulangan negatif, \$ d' = 51.50\,\text{mm} < 80\,\text{mm} \$ → <strong>OK</strong></li>
+              <li>Tahanan momen balok negatif, \$ \phi M_n = 179.249\,\text{kNm} \geq M_u^- = 141.334\,\text{kNm} \$ → <strong>AMAN</strong></li>
+              <li>Tahanan geser beton, \$ \phi V_c = 52.500\,\text{kN} \$ → Perlu tulangan geser</li>
+              <li>Tahanan geser sengkang, \$ \phi V_s = 102.500\,\text{kN} \$</li>
+              <li>Jarak sengkang yang digunakan, \$ s = 130\,\text{mm} \leq s_{max} = 224.25\,\text{mm} \$ → <strong>OK</strong></li>
+            </ol>
+          </section>
+
+          <section class="ringkasan-tulangan" style="grid-area: ringkasan;">
+            <h2 style="margin:0 0 8px 0">Ringkasan Tulangan</h2>
+            <table>
+              <thead>
+                <tr><th>Item</th><th>Nilai / Keterangan</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>As momen positif (required)</td><td>492 mm²</td></tr>
+                <tr><td>Tulangan momen positif yang digunakan</td><td>2 Ø19 (567 mm²)</td></tr>
+                <tr><td>As momen negatif (required)</td><td>1175 mm²</td></tr>
+                <tr><td>Tulangan momen negatif yang digunakan</td><td>5 Ø19 (1418 mm²)</td></tr>
+                <tr><td>As tulangan geser (sengkang)</td><td>226.19 mm²</td></tr>
+                <tr><td>Jarak sengkang yang digunakan</td><td>130 mm</td></tr>
+                <tr><td>Selimut beton</td><td>30 mm</td></tr>
+                <tr><td>Keterangan</td><td>Semua kontrol aman (OK) sesuai perhitungan.</td></tr>
+              </tbody>
+            </table>
+          </section>
+        </div>
+      </div>
+
+      <footer>Generated by — Sample UI Report Template. Sesuaikan nilai input sesuai standar lokal.</footer>
       </div>
     </div>
-
-    <footer>Generated by — Sample UI Report Template. Sesuaikan nilai input sesuai standar lokal.</footer>
-  </div>
+  </div> <!-- Akhir dari wrapper -->
 
   <script src="report.js"></script>
 </body>

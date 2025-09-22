@@ -1,4 +1,7 @@
-document.getElementById('tgl').textContent = new Date().toLocaleDateString('id-ID', { year:'numeric', month:'short', day:'numeric'});
+// report.js
+document.getElementById('tgl').textContent = new Date().toLocaleDateString('id-ID', { 
+  year:'numeric', month:'short', day:'numeric'
+});
 
 function downloadFullReport(){
   alert("[Dummy] Fungsi Unduh Laporan Lengkap — implementasikan dengan jsPDF/html2pdf.");
@@ -18,6 +21,8 @@ function goBack(e){
     window.location.href = "/";
   }
 }
+
+// efek klik pada tombol bulat
 document.addEventListener('pointerdown', function(ev){
   const c = ev.target.closest && ev.target.closest('.circle');
   if(c) c.classList.add('pressed');
@@ -26,3 +31,28 @@ document.addEventListener('pointerup', function(ev){
   const c = ev.target.closest && ev.target.closest('.circle');
   if(c) c.classList.remove('pressed');
 });
+
+// Scaling baru: hanya scale isi container-inner bila lebar < 432px
+// Scaling baru: hanya scale isi container-inner bila lebar < 432px
+function scaleContainer() {
+  const container = document.querySelector('.container');
+  const inner = document.querySelector('.container-inner');
+  if (!container || !inner) return;
+
+  const minWidth = 432;
+  const currentWidth = container.clientWidth;
+
+  let scale = 1;
+  if (currentWidth < minWidth) {
+    scale = currentWidth / minWidth;
+  }
+
+  // Apply transform hanya ke isi (container-inner)
+  inner.style.transformOrigin = "top center";
+  inner.style.transform = `scale(${scale})`;
+
+  // Supaya tinggi container mengikuti tinggi hasil scaling
+  // hitung tinggi asli inner lalu dikali skala
+  const innerHeight = inner.scrollHeight;
+  container.style.height = (innerHeight * scale) + "px";
+}
