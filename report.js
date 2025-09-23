@@ -33,26 +33,3 @@ document.addEventListener('pointerup', function(ev){
 });
 
 // Scaling baru: hanya scale isi container-inner bila lebar < 432px
-// Scaling baru: hanya scale isi container-inner bila lebar < 432px
-function scaleContainer() {
-  const container = document.querySelector('.container');
-  const inner = document.querySelector('.container-inner');
-  if (!container || !inner) return;
-
-  const minWidth = 432;
-  const currentWidth = container.clientWidth;
-
-  let scale = 1;
-  if (currentWidth < minWidth) {
-    scale = currentWidth / minWidth;
-  }
-
-  // Apply transform hanya ke isi (container-inner)
-  inner.style.transformOrigin = "top center";
-  inner.style.transform = `scale(${scale})`;
-
-  // Supaya tinggi container mengikuti tinggi hasil scaling
-  // hitung tinggi asli inner lalu dikali skala
-  const innerHeight = inner.scrollHeight;
-  container.style.height = (innerHeight * scale) + "px";
-}
