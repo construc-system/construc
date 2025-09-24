@@ -131,3 +131,15 @@ mjx-container[jax="CHTML"][display="true"] {
   text-align: left !important;
   margin: 0 !important;
 }
+.step-body {
+  display: flex;
+  justify-content: flex-start; /* item mulai dari kiri */
+  align-items: center;
+  gap: 6px; /* jarak standar antar elemen */
+  margin: 10px;
+  margin-bottom: 15px;
+}
+
+.step-result {
+  margin-left: 0px; /* otomatis geser ke kanan */
+}

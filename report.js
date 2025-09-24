@@ -31,5 +31,3 @@ document.addEventListener('pointerup', function(ev){
   const c = ev.target.closest && ev.target.closest('.circle');
   if(c) c.classList.remove('pressed');
 });
-
-// Scaling baru: hanya scale isi container-inner bila lebar < 432px
