@@ -127,5 +127,7 @@ svg{max-width:auto;height:auto}
   margin-left: auto;
 }
 mjx-container[jax="CHTML"][display="true"] {
-  justify-content: flex-start; /* dari default center */
+  justify-content: flex-start !important; /* dari default center */
+  text-align: left !important;
+  margin: 0 !important;
 }
