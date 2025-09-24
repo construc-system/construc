@@ -138,8 +138,45 @@ mjx-container[jax="CHTML"][display="true"] {
   gap: 6px; /* jarak standar antar elemen */
   margin: 10px;
   margin-bottom: 15px;
+  width: fit-content;
+  white-space: nowrap;
 }
 
 .step-result {
   margin-left: 0px; /* otomatis geser ke kanan */
+}
+/* bingkai: jangan scroll, pos relatif */
+.proses-perhitungan {
+  position: relative;
+}
+
+/* konten yang diskalakan */
+.proses-scale {
+  transform-origin: 0 0; /* top-left */
+  display: block;
+  box-sizing: border-box;
+  padding-left: 36px; /* ruang untuk nomor/bullet supaya tidak terpotong */
+}
+
+/* pastikan ol tidak menambah padding ekstra di dalam elemen yang diskalakan */
+.proses-scale ol {
+  margin: 0;
+  padding-left: 0;
+  list-style-position: outside; /* marker berada pada padding-left di .proses-scale */
+}
+
+/* base font sizes untuk scaling */
+.proses-scale .step-desc {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.proses-scale .step-formula {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.proses-scale .step-result {
+  font-size: 14px;
+  line-height: 1.4;
 }
