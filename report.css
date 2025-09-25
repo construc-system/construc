@@ -37,9 +37,9 @@ h1{font-size:20px;color:var(--accent);margin:0}
 .meta{font-size:13px;color:var(--muted)}
 section{margin-bottom:18px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.card{background:#4646460d;padding:12px;border-radius:8px;border:2px solid #46464619}
+.card{background:#4646460d;padding:12px;border-radius:8px;border:2px solid #46464619;border-left: 5px solid #163172;}
 .label{font-size:12px;color:var(--muted);margin-bottom:6px}
-.value{font-weight:600}
+.value{font-weight:600; margin-left: 35px;}
 pre.math{background:#0f1724;color:#e6f0ff;padding:12px;border-radius:8px;overflow:auto}
 ol.steps{padding-left:18px}
 table{width:100%;border-collapse:collapse;margin-top:8px}
@@ -180,3 +180,39 @@ mjx-container[jax="CHTML"][display="true"] {
   font-size: 14px;
   line-height: 1.4;
 }
+    .feature-icon {
+      width: 24px;
+      height: 24px;
+      background: #163172;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 14px;
+    }
+    h3 {
+  display: flex;
+  align-items: center; /* vertikal center icon dan teks */
+  gap: 10px;           /* jarak icon dan teks */
+  margin: 0;           /* hilangkan margin default */
+  padding: 0;
+}
+    .calculation-results {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin: 20px 0;
+    }
+    .result-item {
+      background: #4646460d;
+      padding: 15px;
+      border-radius: 5px;
+      border-left: 3px solid #163172;
+    }
+    .result-item h4 {
+      margin: 0 0 5px;
+      color: #333;
+      font-size: 14px;
+    }

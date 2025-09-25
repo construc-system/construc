@@ -89,10 +89,12 @@ let _scaleTimer = null;
 function triggerScale() {
   clearTimeout(_scaleTimer);
   _scaleTimer = setTimeout(scaleProses, 80);
-}
-
-window.addEventListener('load', () => {
-  // beri jeda kecil biar MathJax render dulu
-  setTimeout(scaleProses, 150);
-});
+};
 window.addEventListener('resize', triggerScale);
+  const tgl = new Date();
+  const tanggalString = tgl.toLocaleDateString('id-ID', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric'
+  });
+  document.getElementById('tgl').textContent = tanggalString;

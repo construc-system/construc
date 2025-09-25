@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=0.8"/>
-  <title>Report Perencanaan Tulangan Balok — Contoh</title>
+  <title>Laporan Perencanaan Tulangan Balok — Contoh</title>
   <link rel="stylesheet" href="report.css">
   <script>
     // Konfigurasi MathJax harus diletakkan sebelum memuat skrip MathJax itu sendiri
@@ -29,8 +29,8 @@
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 18l-6-6 6-6" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
           <div style="flex: 1; min-width: 0;">
-            <h1>Report Perhitungan — Tulangan Balok</h1>
-            <div class="meta">Tanggal: <span id="tgl">21 Sep 2025</span></div>
+            <h1>Laporan Perhitungan — Tulangan Balok</h1>
+            <div class="meta">Tanggal: <span id="tgl"></span></div>
           </div>
         </div>
         <div class="btn-group" style="margin-left: auto; justify-content: flex-end; display: flex; flex-wrap: wrap; gap: 8px; flex-shrink: 0;">
@@ -45,40 +45,67 @@
             <h2 style="margin:0 0 8px 0">Input Data</h2>
             <div class="grid">
               <div class="card">
-                <div class="label">Geometri Balok</div>
-                <div><span class="value">b = 250 mm</span> &nbsp;×&nbsp; <span class="value">h = 500 mm</span></div>
-              </div>
-              <div class="card">
-                <div class="label">Material</div>
+                <h3 style="display: flex; align-items: center; gap: 10px;">
+                  <div class="feature-icon">1</div>
+                  Dimensi
+                </h3> 
                 <div>
-                  <span class="value">f'c = 25 MPa</span> &nbsp;•&nbsp; 
-                  <span class="value">fy (lentur) = 400 MPa</span> &nbsp;•&nbsp; 
-                  <span class="value">fy (geser) = 240 MPa</span>
+                  <div class="value">b = 250 mm</div>
+                  <div class="value">h = 500 mm</div>
                 </div>
               </div>
-              <div class="card">
-                <div class="label">Tulangan</div>
-                <div>
-                  <span class="value">Diameter lentur, D = 19 mm</span> &nbsp;•&nbsp; 
-                  <span class="value">Diameter sengkang, P = 12 mm</span>
+                <div class="card">
+                  <h3 style="display: flex; align-items: center; gap: 10px;">
+                    <div class="feature-icon">2</div>
+                    Material
+                  </h3>
+                  <div>
+                    <div class="value">f'c = 25 MPa</div>
+                    <div class="value">fy = 400 MPa</div>
+                  </div>
                 </div>
-              </div>
-              <div class="card">
-                <div class="label">Selimut Beton</div>
-                <div class="value">ts = 30 mm</div>
-              </div>
-              <div class="card">
-                <div class="label">Momen dan Gaya Geser Rencana</div>
-                <div>
-                  <span class="value">Mu+ = 63.170 kNm</span> &nbsp;•&nbsp; 
-                  <span class="value">Mu- = 141.334 kNm</span> &nbsp;•&nbsp; 
-                  <span class="value">Vu = 155.000 kN</span>
+
+                <div class="card">
+                  <h3 style="display: flex; align-items: center; gap: 10px;">
+                    <div class="feature-icon">3</div>
+                    Tulangan
+                  </h3>
+                  <div>
+                    <div class="value">D = 19 mm</div>
+                    <div class="value">ɸ = 12 mm</div>
+                  </div>
                 </div>
-              </div>
-              <div class="card">
-                <div class="label">Konstanta</div>
-                <div>Faktor kuat: &phi; = 0.9 &nbsp;•&nbsp; B1 = 0.85</div>
-              </div>
+
+                <div class="card">
+                  <h3 style="display: flex; align-items: center; gap: 10px;">
+                    <div class="feature-icon">4</div>
+                    Selimut Beton
+                  </h3>
+                  <div class="value">ts = 30 mm</div>
+                </div>
+
+                <div class="card">
+                  <h3 style="display: flex; align-items: center; gap: 10px;">
+                    <div class="feature-icon">5</div>
+                    Pembebanan
+                  </h3>
+                  <div>
+                    <div class="value">Mu+ = 63.170 kNm</div>
+                    <div class="value">Mu- = 141.334 kNm</div>
+                    <div class="value">Vu = 155.000 kN</div>
+                  </div>
+                </div>
+
+                <div class="card">
+                  <h3 style="display: flex; align-items: center; gap: 10px;">
+                    <div class="feature-icon">6</div>
+                    Konstanta
+                  </h3>
+                  <div>
+                    <div class="value">&phi; = 0.9</div>
+                    <div class="value">B1 = 0.85</div>
+                  </div>
+                </div>
             </div>
           </section>
 
@@ -170,26 +197,53 @@
 
           <section class="ringkasan-tulangan" style="grid-area: ringkasan;">
             <h2 style="margin:0 0 8px 0">Ringkasan Tulangan</h2>
-            <table>
-              <thead>
-                <tr><th>Item</th><th>Nilai / Keterangan</th></tr>
-              </thead>
-              <tbody>
-                <tr><td>As momen positif (required)</td><td>492 mm²</td></tr>
-                <tr><td>Tulangan momen positif yang digunakan</td><td>2 Ø19 (567 mm²)</td></tr>
-                <tr><td>As momen negatif (required)</td><td>1175 mm²</td></tr>
-                <tr><td>Tulangan momen negatif yang digunakan</td><td>5 Ø19 (1418 mm²)</td></tr>
-                <tr><td>As tulangan geser (sengkang)</td><td>226.19 mm²</td></tr>
-                <tr><td>Jarak sengkang yang digunakan</td><td>130 mm</td></tr>
-                <tr><td>Selimut beton</td><td>30 mm</td></tr>
-                <tr><td>Keterangan</td><td>Semua kontrol aman (OK) sesuai perhitungan.</td></tr>
-              </tbody>
-            </table>
+              <div class="calculation-results">
+                <div class="result-item">
+                  <h4>Luas Tulangan Tarik (As)</h4>
+                  <p id="asResult">429 mm²</p>
+                </div>
+                <div class="result-item">
+                  <h4>Luas Tulangan Tekan (As')</h4>
+                  <p id="asPrimeResult">1175 mm²</p>
+                </div>
+                <div class="result-item">
+                  <h4>Tulangan Tarik</h4>
+                  <p id="diameterResult">2D19</p>
+                </div>
+                <div class="result-item">
+                  <h4>Tulangan Tekan</h4>
+                  <p id="jumlahBatangResult">5D19</p>
+                </div>
+                <div class="result-item">
+                  <h4>Tulangan Begel</h4>
+                  <p id="jarakSengkangResult">∅10-130</p>
+                </div>
+                <div class="result-item">
+                  <h4>Selimut Beton</h4>
+                  <p id="rasioTulanganResult">30 mm</p>
+                </div>
+              </div>
+              <div id="statusMessage"></div>
+            </div>
           </section>
         </div>
       </div>
+        <div class="beam-section">
+          <h2 class="section-title" style="margin-bottom: 0px;">ℹ️ INFORMASI TEKNIS</h2>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
+            <div>
+              <h4>Standar yang Digunakan:</h4>
+              <ul style="color: #666; line-height: 1.6;">
+                <li>SNI 2847:2019</li>
+                <li>ACI 318-19</li>
+                <li>Peraturan Beban Indonesia</li>
+                <li>Standar SRPM</li>
+              </ul>
+            </div>
+          </div>
+        </div>
 
-      <footer>Generated by — Sample UI Report Template. Sesuaikan nilai input sesuai standar lokal.</footer>
+      <footer>Created by Rizqika A'la [D100200270]</footer>
       </div>
     </div>
   </div> <!-- Akhir dari wrapper -->
