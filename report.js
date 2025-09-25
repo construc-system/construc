@@ -98,3 +98,4 @@ window.addEventListener('resize', triggerScale);
     year: 'numeric'
   });
   document.getElementById('tgl').textContent = tanggalString;
+  
