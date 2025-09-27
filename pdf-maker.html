@@ -185,9 +185,13 @@
         .circle:focus{outline:3px solid rgba(96,165,250,0.18);outline-offset:3px}
         .glass {background:#163172; /* lebih transparan */backdrop-filter: blur(6px);}
         @media print {
-            .pdf-button-container {
-                display: none; /* Sembunyikan tombol saat mencetak */
-            }
+    button, 
+    .action-button, 
+    .circle {
+        display: none !important;
+    }
+}
+
         }
     </style>
 </head>
