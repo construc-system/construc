@@ -1,3 +1,30 @@
+function scaleButtons() {
+    const width = window.innerWidth;
+    const minScale = width < 768 ? 2 : 1.2;
+    const scale = Math.max(minScale, width / 1200);
+    const buttons = document.querySelectorAll('.circle.action-button');
+
+    buttons.forEach(button => {
+        const size = 56 * scale;
+        button.style.width = size + 'px';
+        button.style.height = size + 'px';
+
+        // Scale ikon SVG (panah)
+        const svg = button.querySelector('svg');
+        if (svg) {
+            svg.style.strokeWidth = (2 / scale) + 'px';
+        }
+
+        // Scale ikon IMG (print)
+        const img = button.querySelector('img');
+        if (img) {
+            const iconSize = 24 * scale;
+            img.style.width = iconSize + 'px';
+            img.style.height = iconSize + 'px';
+        }
+    });
+}
+
 function generatePdf() {
     const containers = document.querySelectorAll('.page-container');
     if (!containers.length) return;
@@ -29,3 +56,7 @@ function generatePdf() {
 
     worker.save();
 }
+
+// Event listener untuk scaling tombol
+window.addEventListener('load', scaleButtons);
+window.addEventListener('resize', scaleButtons);
