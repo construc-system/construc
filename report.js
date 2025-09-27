@@ -1,36 +1,47 @@
 // report.js
-document.getElementById('tgl').textContent = new Date().toLocaleDateString('id-ID', { 
-  year:'numeric', month:'short', day:'numeric'
+document.addEventListener("DOMContentLoaded", function() {
+  document.getElementById('tgl').textContent = new Date().toLocaleDateString('id-ID', {
+    year: 'numeric', month: 'short', day: 'numeric'
+  });
 });
 
-function downloadFullReport(){
-  alert("[Dummy] Fungsi Unduh Laporan Lengkap — implementasikan dengan jsPDF/html2pdf.");
-}
-function showFullReport(){
+function showFullReport() {
   alert("[Dummy] Fungsi Tampilkan Laporan Lengkap — implementasikan sesuai kebutuhan.");
 }
-function exportCAD(){
-  alert("[Dummy] Fungsi Export ke CAD — butuh generator DXF/SVG untuk CAD.");
+
+function exportCAD() {
+  if (typeof generateCADText === 'function') {
+    const cadText = generateCADText();
+    navigator.clipboard.writeText(cadText).then(() => {
+      alert("Teks CAD berhasil disalin ke clipboard!");
+    }).catch(err => {
+      console.error('Gagal menyalin: ', err);
+      alert("Gagal menyalin teks CAD.");
+    });
+  } else {
+    alert("Fungsi generateCADText tidak tersedia.");
+  }
 }
 
-function goBack(e){
+function goBack(e) {
   e && e.preventDefault && e.preventDefault();
-  if(window.history && window.history.length > 1){
-    try{ window.history.back(); } catch(err){ window.location.href = "/"; }
+  if (window.history && window.history.length > 1) {
+    try { window.history.back(); } catch (err) { window.location.href = "/"; }
   } else {
     window.location.href = "/";
   }
 }
 
 // efek klik pada tombol bulat
-document.addEventListener('pointerdown', function(ev){
+document.addEventListener('pointerdown', function(ev) {
   const c = ev.target.closest && ev.target.closest('.circle');
-  if(c) c.classList.add('pressed');
+  if (c) c.classList.add('pressed');
 });
-document.addEventListener('pointerup', function(ev){
+document.addEventListener('pointerup', function(ev) {
   const c = ev.target.closest && ev.target.closest('.circle');
-  if(c) c.classList.remove('pressed');
+  if (c) c.classList.remove('pressed');
 });
+
 function scaleProses() {
   const wrapper = document.querySelector('.proses-perhitungan');
   const content = document.querySelector('.proses-scale');
@@ -89,13 +100,5 @@ let _scaleTimer = null;
 function triggerScale() {
   clearTimeout(_scaleTimer);
   _scaleTimer = setTimeout(scaleProses, 80);
-};
+}
 window.addEventListener('resize', triggerScale);
-  const tgl = new Date();
-  const tanggalString = tgl.toLocaleDateString('id-ID', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric'
-  });
-  document.getElementById('tgl').textContent = tanggalString;
-  

@@ -17,6 +17,7 @@
       }
     };
   </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 </head>
 <body>
@@ -34,8 +35,7 @@
           </div>
         </div>
         <div class="btn-group" style="margin-left: auto; justify-content: flex-end; display: flex; flex-wrap: wrap; gap: 8px; flex-shrink: 0;">
-          <button onclick="downloadFullReport()">Unduh Laporan Lengkap</button>
-          <button onclick="showFullReport()">Tampilkan Laporan Lengkap</button>
+          <button onclick="window.location.href='pdf-maker.html'">Tampilkan Laporan Lengkap</button>
         </div>
       </header>
 
@@ -210,7 +210,7 @@
                 </div>
                 <div class="result-item">
                   <h4>Tulangan Begel</h4>
-                  <p id="jarakSengkangResult">∅10-130</p>
+                  <p id="jarakSengkangResult">∅12-130</p>
                 </div>
                 <div class="result-item">
                   <h4>Selimut Beton</h4>
@@ -243,6 +243,13 @@
   </div> <!-- Akhir dari wrapper -->
 
   <script src="report.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="cut-generator.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/contrib/auto-render.min.js"></script>
+  <script src="pdf-maker.js"></script>
 </body>
 </html>
