@@ -25,11 +25,7 @@ function exportCAD() {
 
 function goBack(e) {
   e && e.preventDefault && e.preventDefault();
-  if (window.history && window.history.length > 1) {
-    try { window.history.back(); } catch (err) { window.location.href = "/"; }
-  } else {
-    window.location.href = "/";
-  }
+  window.location.href = "index.html"; 
 }
 
 // efek klik pada tombol bulat
