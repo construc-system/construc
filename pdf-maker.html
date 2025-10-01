@@ -222,7 +222,6 @@
                 <tr><td>Tinggi Efektif Balok</td><td>$d$</td><td>340.5</td><td>mm</td></tr>
                 <tr><td>Panjang Bentang Balok</td><td>$L$</td><td>6.7</td><td>m</td></tr>
             </table>
-
             <h3>2. Beban Ultimit Desain</h3>
             <table>
                 <tr><th>Parameter</th><th>Simbol</th><th>Nilai</th><th>Satuan</th></tr>
@@ -237,15 +236,16 @@
     <div class="page-container">
         <div class="section">
             <h3>3. Parameter Konstan</h3>
-            <div class="math-block">
-                \$
-                \text{Tinggi Efektif:} \quad d = h - s - D_s - 0.5 \cdot D \\
-                \quad = 400 - 40 - 10 - 0.5 \cdot 19 = \mathbf{340.5} \text{ mm} \\
-                \beta_1 = 0.85 \quad (\text{karena } f'_c = 20 \text{ MPa} \le 28 \text{ MPa}) \\
-                \phi = 0.80 \quad (\text{Faktor Reduksi Kekuatan Lentur}) \\
-                \phi_v = 0.75 \quad (\text{Faktor Reduksi Kekuatan Geser})
-                \$
-            </div>
+            <table>
+                <tr><th colspan="4">Tinggi Efektif</th></tr>
+                <tr><td>$d = h - s - D_s - 0.5 \cdot D$</td><td><b>340.5</b></td><td>mm</td></tr>
+                <tr><th colspan="4">Faktor Beta 1</th></tr>
+                <tr><td>$\beta_1$ (karena $f'_c = 20 \text{ MPa} \le 28 \text{ MPa}$)</td><td><b>0.85</b></td><td>-</td></tr>
+                <tr><th colspan="4">Faktor Reduksi Kekuatan Lentur</th></tr>
+                <tr><td>$\phi$</td><td><b>0.80</b></td><td>-</td></tr>
+                <tr><th colspan="4">Faktor Reduksi Kekuatan Geser</th></tr>
+                <tr><td>$\phi_v$</td><td><b>0.75</b></td><td>-</td></tr>
+            </table>
         </div>
     </div>
 
@@ -255,33 +255,60 @@
             <h2>B. PERHITUNGAN TULANGAN LENTUR</h2>
 
             <h3>1. Batasan Rasio Tulangan</h3>
-            <div class="math-block">
-                \$
-                \rho_{\min} = \frac{1.4}{f_y} = \frac{1.4}{400} = \mathbf{0.0035} \\
-                \rho_{\text{balanced}} (\rho_b) = \frac{0.85 f'_c \beta_1}{f_y} \left( \frac{600}{600 + f_y} \right) \\
-                \quad = \frac{0.85 \cdot 20 \cdot 0.85}{400} \left( \frac{600}{600 + 400} \right) = \mathbf{0.02167} \\
-                \rho_{\max} = 0.75 \cdot \rho_b = 0.75 \cdot 0.02167 = \mathbf{0.01625}
-                \$
-            </div>
+            <table>
+                <tr><th colspan="3">Rasio Tulangan Minimum</th></tr>
+                <tr>
+                    <td>$\rho_{\min} = \frac{1.4}{f_y}$</td>
+                    <td>$\mathbf{0.0035}$</td>
+                </tr>
+                <tr><th colspan="3">Rasio Tulangan Seimbang</th></tr>
+                <tr>
+                    <td>$\rho_{\text{balanced}} (\rho_b) = \frac{0.85 f'_c \beta_1}{f_y} \left( \frac{600}{600 + f_y} \right)$</td>
+                    <td>$\mathbf{0.02167}$</td>
+                </tr>
+                <tr><th colspan="3">Rasio Tulangan Maksimum</th></tr>
+                <tr>
+                    <td>$\rho_{\max} = 0.75 \cdot \rho_b$</td>
+                    <td>$\mathbf{0.01625}$</td>
+                </tr>
+            </table>
 
             <h3>2. Tulangan Momen Positif ($M_u^+ = 104.4 \text{ kNm}$)</h3>
-            <div class="math-block">
-                \$
-                \text{Koefisien Ketahanan Balok }(R_n) = \frac{M_u}{\phi \cdot b \cdot d^2} \\
-                \quad = \frac{104.4 \times 10^6 \text{ Nmm}}{0.80 \cdot 250 \text{ mm} \cdot (340.5 \text{ mm})^2} \approx \mathbf{3.585} \text{ MPa} \\
-                \$
-            </div>
-            <div class="math-block">
-                \$
-               \text{Rasio Tulangan } (\rho) = \frac{0.85 f'_c}{f_y} \left( 1 - \sqrt{1 - \frac{2 R_n}{0.85 f'_c}} \right) \\
-                \quad = \frac{0.85 \cdot 20}{400} \left( 1 - \sqrt{1 - \frac{2 \cdot 3.585}{0.85 \cdot 20}} \right) \approx \mathbf{0.00962} \\
-                \text{Cek Batas:} \quad \rho_{\min} = 0.0035 < \rho = 0.00962 < \rho_{\max} = 0.01625 \quad (\text{OK}) \\
-                \text{Luas Tulangan Perlu } (A_s) = \rho \cdot b \cdot d \\
-                \quad = 0.00962 \cdot 250 \text{ mm} \cdot 340.5 \text{ mm} \approx \mathbf{818.57} \text{ mm}^2 \\
-                \text{Jumlah Tulangan:} \quad n = \frac{A_s}{A_{D19}} = \frac{818.57 \text{ mm}^2}{283.53 \text{ mm}^2} \approx 2.88 \rightarrow \text{Dipilih } \mathbf{3\text{D}19} \\
-                \text{Luas Terpasang } (A_{s, \text{tp}}) = 3 \cdot 283.53 \text{ mm}^2 \approx \mathbf{850.59} \text{ mm}^2
-                \$
-            </div>
+            <table>
+                <tr><th colspan="4">Koefisien Ketahanan Balok</th></tr>
+                <tr>
+                    <td>$R_n = \frac{M_u}{\phi \cdot b \cdot d^2}$</td>
+                    <td>$\mathbf{3.585}$</td>
+                    <td>MPa</td>
+                </tr>
+                <tr><th colspan="4">Rasio Tulangan</th></tr>
+                <tr>
+                    <td>$\rho = \frac{0.85 f'_c}{f_y} \left( 1 - \sqrt{1 - \frac{2 R_n}{0.85 f'_c}} \right)$</td>
+                    <td>$\mathbf{0.00962}$</td>
+                    <td>-</td>
+                </tr>
+                <tr><th colspan="4">Luas Tulangan Perlu</th></tr>
+                <tr>
+                    <td>$A_s = \rho \cdot b \cdot d$</td>
+                    <td>$\mathbf{818.57}$</td>
+                    <td>mm$^2$</td>
+                </tr>
+                <tr><th colspan="4">Jumlah Tulangan (D19)</th></tr>
+                <tr>
+                    <td>$n = \frac{A_s}{A_{D19}}$</td>
+                    <td>$2.88 \rightarrow \text{Dipilih } \mathbf{3\text{D}19}$</td>
+                    <td>batang</td>
+                </tr>
+                <tr><th colspan="4">Luas Terpasang</th></tr>
+                <tr>
+                    <td>$A_{s, \text{tp}} = 3 \cdot 283.53 \text{ mm}^2$</td>
+                    <td>$\mathbf{850.59}$</td>
+                    <td>mm$^2$</td>
+                </tr>
+            </table>
+            <p class="note">
+                Cek Batas: $\rho_{\min} = 0.0035 < \rho = 0.00962 < \rho_{\max} = 0.01625$ (OK)
+            </p>
         </div>
     </div>
 
@@ -289,17 +316,41 @@
     <div class="page-container">
         <div class="section">
             <h3>3. Tulangan Momen Negatif ($M_u^- = 139.2 \text{ kNm}$)</h3>
-            <div class="math-block">
-                \$
-                \text{Koefisien Ketahanan Balok }(R_n) = \frac{139.2 \times 10^6 \text{ Nmm}}{0.80 \cdot 250 \text{ mm} \cdot (340.5 \text{ mm})^2} \approx \mathbf{4.787} \text{ MPa} \\
-                \text{Rasio Tulangan } (\rho) = \frac{0.85 \cdot 20}{400} \left( 1 - \sqrt{1 - \frac{2 \cdot 4.787}{0.85 \cdot 20}} \right) \approx \mathbf{0.01308} \\
-                \text{Cek Batas:} \quad \rho_{\min} = 0.0035 < \rho = 0.01308 < \rho_{\max} = 0.01625 \quad (\text{OK}) \\
-                \text{Luas Tulangan Perlu } (A_s) = \rho \cdot b \cdot d \\
-                \quad = 0.01308 \cdot 250 \text{ mm} \cdot 340.5 \text{ mm} \approx \mathbf{1113.16} \text{ mm}^2 \\
-                \text{Jumlah Tulangan:} \quad n = \frac{A_s}{A_{D19}} = \frac{1113.16 \text{ mm}^2}{283.53 \text{ mm}^2} \approx 3.93 \rightarrow \text{Dipilih } \mathbf{4\text{D}19} \\
-                \text{Luas Terpasang } (A_{s, \text{tp}}) = 4 \cdot 283.53 \text{ mm}^2 \approx \mathbf{1134.12} \text{ mm}^2
-                \$
-            </div>
+            <table>
+                <tr><th colspan="4">Koefisien Ketahanan Balok</th></tr>
+                <tr>
+                    <td>$R_n = \frac{M_u}{\phi \cdot b \cdot d^2}$</td>
+                    <td>$\mathbf{4.787}$</td>
+                    <td>MPa</td>
+                </tr>
+                <tr><th colspan="4">Rasio Tulangan</th></tr>
+                <tr>
+                    <td>$\rho = \frac{0.85 \cdot 20}{400} \left( 1 - \sqrt{1 - \frac{2 \cdot 4.787}{0.85 \cdot 20}} \right)$</td>
+                    <td>$\mathbf{0.01308}$</td>
+                    <td>-</td>
+                </tr>
+                <tr><th colspan="4">Luas Tulangan Perlu</th></tr>
+                <tr>
+                    <td>$A_s = \rho \cdot b \cdot d$</td>
+                    <td>$\mathbf{1113.16}$</td>
+                    <td>mm$^2$</td>
+                </tr>
+                <tr><th colspan="4">Jumlah Tulangan (D19)</th></tr>
+                <tr>
+                    <td>$n = \frac{A_s}{A_{D19}}$</td>
+                    <td>$3.93 \rightarrow \text{Dipilih } \mathbf{4\text{D}19}$</td>
+                    <td>batang</td>
+                </tr>
+                <tr><th colspan="4">Luas Terpasang</th></tr>
+                <tr>
+                    <td>$A_{s, \text{tp}} = 4 \cdot 283.53 \text{ mm}^2$</td>
+                    <td>$\mathbf{1134.12}$</td>
+                    <td>mm$^2$</td>
+                </tr>
+            </table>
+            <p class="note">
+                Cek Batas: $\rho_{\min} = 0.0035 < \rho = 0.01308 < \rho_{\max} = 0.01625$ (OK)
+            </p>
         </div>
     </div>
 
@@ -312,46 +363,51 @@
             </div>
 
             <h3>1. Kekuatan Geser Beton dan Pengecekan</h3>
-            <div class="math-block">
-                \$
-                \text{Kekuatan Geser Nominal Beton }(V_c) = \frac{1}{6} \lambda \sqrt{f'_c} \cdot b \cdot d \quad (\lambda = 1.0) \\
-                \quad = \frac{1}{6} \cdot 1.0 \cdot \sqrt{20 \text{ MPa}} \cdot 250 \text{ mm} \cdot 340.5 \text{ mm} \\
-                \quad \approx 63102 \text{ N} \approx \mathbf{63.10} \text{ kN}
-                \$
-            </div>
-            <div class="math-block">
-                \$
-                \text{Kekuatan Geser Terfaktor } (\phi V_c) = 0.75 \cdot 63.10 \text{ kN} \approx \mathbf{47.33} \text{ kN}
-                \$
-            </div>
-            <div class="math-block">
-                \$
-                \text{Batas Minimum} \quad \frac{1}{2} \phi V_c = 0.5 \cdot 47.33 \text{ kN} \approx \mathbf{23.67} \text{ kN}
-                \$
-            </div>
+            <table>
+                <tr><th colspan="4">Kekuatan Geser Nominal Beton</th></tr>
+                <tr>
+                    <td>$V_c = \frac{1}{6} \lambda \sqrt{f'_c} \cdot b \cdot d$</td>
+                    <td>$\mathbf{63.10}$</td>
+                    <td>kN</td>
+                </tr>
+                <tr><th colspan="4">Kekuatan Geser Terfaktor</th></tr>
+                <tr>
+                    <td>$\phi V_c = 0.75 \cdot V_c$</td>
+                    <td>$\mathbf{47.33}$</td>
+                    <td>kN</td>
+                </tr>
+                <tr><th colspan="4">Batas Minimum</th></tr>
+                <tr>
+                    <td>$\frac{1}{2} \phi V_c$</td>
+                    <td>$\mathbf{23.67}$</td>
+                    <td>kN</td>
+                </tr>
+            </table>
             <p class="note">
                 Karena $V_u = 84.15 \text{ kN} > \phi V_c = 47.33 \text{ kN}$, maka **tulangan geser diperlukan** dan harus dihitung.
             </p>
 
             <h3>2. Perhitungan Jarak Sengkang</h3>
-            <div class="math-block">
-                \$
-                \text{Kekuatan Geser Tulangan Perlu } (V_s) \ge \frac{V_u - \phi V_c}{\phi_v} \\
-                \ge \frac{84.15 \text{ kN} - 47.33 \text{ kN}}{0.75} \approx \mathbf{49.09} \text{ kN}
-                \$
-            </div>
-            <div class="math-block">
-                \$
-                \text{Luas Sengkang } (A_v) = 2 \cdot \frac{1}{4} \pi D_s^2 = 2 \cdot \frac{1}{4} \pi (10 \text{ mm})^2 \approx \mathbf{157.08} \text{ mm}^2
-                \$
-            </div>
-            <div class="math-block">
-                \$
-                \text{Jarak Sengkang Hitungan } (s_{\text{hitungan}}) = \frac{A_v \cdot f_{ys} \cdot d}{V_s} \\
-                \quad = \frac{157.08 \text{ mm}^2 \cdot 240 \text{ MPa} \cdot 340.5 \text{ mm}}{49.09 \times 10^3 \text{ N}} \approx \mathbf{261.2} \text{ mm}
-                \$
-            </div>
-
+            <table>
+                <tr><th colspan="4">Kekuatan Geser Tulangan Perlu</th></tr>
+                <tr>
+                    <td>$V_s \ge \frac{V_u - \phi V_c}{\phi_v}$</td>
+                    <td>$\mathbf{49.09}$</td>
+                    <td>kN</td>
+                </tr>
+                <tr><th colspan="4">Luas Sengkang (2 kaki D10)</th></tr>
+                <tr>
+                    <td>$A_v = 2 \cdot \frac{1}{4} \pi D_s^2$</td>
+                    <td>$\mathbf{157.08}$</td>
+                    <td>mm$^2$</td>
+                </tr>
+                <tr><th colspan="4">Jarak Sengkang Hitungan</th></tr>
+                <tr>
+                    <td>$s_{\text{hitungan}} = \frac{A_v \cdot f_{ys} \cdot d}{V_s}$</td>
+                    <td>$\mathbf{261.2}$</td>
+                    <td>mm</td>
+                </tr>
+            </table>
         </div>
     </div>
 
@@ -359,16 +415,20 @@
     <div class="page-container">
         <div class="section">
             <h3>3. Kontrol Jarak Maksimum</h3>
-            <div class="math-block">
-                \$
-                s_{\max, 1} = \frac{d}{2} = \frac{340.5}{2} = \mathbf{170.25} \text{ mm}
-                \$
-            </div>
-            <div class="math-block">
-                \$
-                s_{\max, 2} = 600 \text{ mm}
-                \$
-            </div>
+            <table>
+                <tr><th colspan="4">Jarak Maksimum 1</th></tr>
+                <tr>
+                    <td>$s_{\max, 1} = \frac{d}{2}$</td>
+                    <td>$\mathbf{170.25}$</td>
+                    <td>mm</td>
+                </tr>
+                <tr><th colspan="4">Jarak Maksimum 2</th></tr>
+                <tr>
+                    <td>$s_{\max, 2}$</td>
+                    <td>$\mathbf{600}$</td>
+                    <td>mm</td>
+                </tr>
+            </table>
             <p class="note">
                 Karena $s_{\text{hitungan}} (261.2 \text{ mm}) > s_{\max, 1} (170.25 \text{ mm})$, maka jarak sengkang yang dipakai adalah **$s_{\max, 1}$**. Dipilih untuk dibulatkan menjadi $\mathbf{170 \text{ mm}}$ agar mudah di lapangan.
             </p>

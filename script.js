@@ -459,3 +459,49 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // --- END: Penambahan untuk FondasiEvaluasi ---
+document.addEventListener('DOMContentLoaded', () => {
+  const { PDFDocument, rgb, StandardFonts } = PDFLib;
+
+  const btn = document.getElementById('generate');
+  const input = document.getElementById('inputNilai');
+
+  btn.addEventListener('click', async () => {
+    const nilai = input.value || 0;
+
+    try {
+      // 1. Load PDF template
+      const existingPdfBytes = await fetch('template.pdf').then(res => res.arrayBuffer());
+      const pdfDoc = await PDFDocument.load(existingPdfBytes);
+
+      // 2. Ambil halaman pertama
+      const pages = pdfDoc.getPages();
+      const firstPage = pages[0];
+
+      // 3. Embed font
+      const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+      // 4. Tambahkan teks di koordinat tertentu (sesuaikan dengan PDF template)
+      firstPage.drawText(`${nilai}`, {
+        x: 150,
+        y: 500,
+        size: 12,
+        font: font,
+        color: rgb(0, 0, 0)
+      });
+
+      // 5. Simpan PDF baru
+      const pdfBytes = await pdfDoc.save();
+
+      // 6. Download PDF
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'laporan_generated.pdf';
+      link.click();
+
+      console.log('PDF berhasil dibuat!');
+    } catch (err) {
+      console.error('Error saat generate PDF:', err);
+    }
+  });
+});
