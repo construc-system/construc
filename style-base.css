@@ -1,0 +1,483 @@
+/* ========= DEFAULT COLOR VARIABLES ========= */
+:root{
+  --bg-body: #FFF1D5;             /* Background body */
+  --color-buttons: #BDDDE4;       /* Warna tombol & tab aktif */
+  --color-borders: #9EC6F3;       /* Warna border & aksen */
+  --color-labels: #9FB3DF;        /* Warna label & teks aksen */
+  --label-text-color: #000000;    /* Warna teks label - akan diatur otomatis */
+  --text-dark: #2D3748;           /* Teks gelap */
+  --text-medium: #4A5568;         /* Teks medium */
+  --text-light: #718096;          /* Teks terang */
+  --card-bg: #FFFFFF;             /* Background card (tetap putih) */
+  --shadow: 0 10px 30px rgba(45, 55, 72, 0.243);
+  --shadow-deep: 0 15px 40px rgba(45, 55, 72, 0.15);
+  --mono: "JetBrains Mono", "Roboto Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --radius: 12px;
+  --transition: all 0.25s ease;
+}
+
+*{box-sizing:border-box}
+
+html,body{
+  margin:0; 
+  font-family: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; 
+  color:var(--text-dark); 
+  background: var(--bg-body);
+  -webkit-font-smoothing:antialiased;
+  /* PERBAIKAN: Di desktop, body tidak memiliki scroll */
+  overflow-x: hidden;
+  overflow-y: hidden;
+  height: 100%;
+}
+
+/* enhanced grid background */
+body { position: relative; }
+
+/* app shell - DIUBAH: width 100% dan tanpa max-width */
+.app {
+  display:flex;
+  gap:20px;
+  min-height: 100vh;
+  padding:24px;
+  align-items:flex-start;
+  position: relative;
+  /* PERBAIKAN: Hapus max-width dan margin auto, ganti dengan width 100% */
+  width: 100%;
+  /* PERBAIKAN: Hilangkan overflow dari app */
+  overflow: visible;
+}
+
+/* sidebar - DIPERBAIKI: sticky positioning yang benar */
+.sidebar {
+  width:240px;
+  background: var(--card-bg);
+  border-radius:var(--radius);
+  padding:20px;
+  box-shadow: var(--shadow);
+  border-left: 4px solid var(--color-borders);
+  
+  /* PERBAIKAN: Sticky positioning yang benar */
+  height: calc(100vh - 48px);
+  position: sticky;
+  top: 0px;
+  
+  /* PERBAIKAN: Scroll internal untuk sidebar jika konten panjang */
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  
+  /* DIREVISI: Gunakan border-top untuk garis atas yang lebih konsisten */
+  border-top: 4px solid var(--color-borders);
+  position: relative;
+}
+
+/* DIREVISI: Hapus pseudo-element untuk garis atas sidebar */
+.sidebar::before {
+  display: none;
+}
+
+/* DIREVISI: Brand menggunakan gambar lengkap (logo + teks) */
+.brand {
+  display:flex; 
+  gap:12px; 
+  align-items:center; 
+  margin-bottom:20px;
+  flex-shrink: 0;
+  /* DIREVISI: Ganti dengan gambar brand lengkap */
+  background: url('Construc Logo.png') no-repeat center center;
+  background-size: contain;
+  width: 180px;
+  height: 60px;
+  text-indent: -9999px;
+  overflow: hidden;
+}
+
+/* DIREVISI: Hapus logo terpisah karena sudah termasuk dalam gambar brand */
+.logo {
+  display: none;
+}
+
+/* DIREVISI: Sembunyikan teks brand karena sudah termasuk dalam gambar */
+.brand h1,
+.brand p {
+  display: none;
+}
+
+/* Nav tanpa scroll internal */
+.nav {
+  margin-top:12px;
+  display:flex; 
+  flex-direction:column; 
+  gap:10px;
+  flex-grow: 1;
+  overflow: visible;
+  min-height: 0;
+}
+
+.nav button{
+  text-align:left; 
+  padding:12px 14px; 
+  border-radius:8px; 
+  border: 1px solid rgba(127, 142, 174, 0.523);
+  background:transparent; 
+  cursor:pointer;
+  font-weight:600; 
+  color:var(--text-dark); 
+  transition:var(--transition);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.nav button::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+  transition: left 0.5s;
+}
+
+.nav button:hover::before {
+  left: 100%;
+}
+
+.nav button.active{
+  background: var(--color-buttons);
+  border-left:4px solid var(--color-borders); 
+  padding-left:12px;
+  box-shadow: 0 4px 12px rgb(86, 106, 129);
+  /* PERBAIKAN: Warna teks menyesuaikan dengan latar belakang */
+  color: var(--button-text-color, white);
+}
+
+.nav .settings-btn {
+  margin-top: auto;
+  background: rgba(159, 179, 223, 0.1);
+  border: 1px solid rgba(159, 179, 223, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.nav .settings-btn:hover {
+  background: rgba(159, 179, 223, 0.2);
+  border-color: var(--color-borders);
+}
+
+.nav .settings-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* main area - DIUBAH: flex 1 agar menyesuaikan sisa ruang dan tinggi sama dengan sidebar */
+.main {
+  flex:1;
+  min-height:80px;
+  background: var(--card-bg);
+  border-radius:var(--radius);
+  padding:24px;
+  box-shadow:var(--shadow);
+  display:flex; 
+  flex-direction:column;
+  position: relative;
+  overflow: visible;
+  min-width: 0;
+  /* PERBAIKAN: Tambahkan max-width untuk mencegah konten terlalu lebar */
+  max-width: calc(100vw - 300px);
+  /* PERBAIKAN BARU: Tinggi sama dengan sidebar di desktop */
+  height: calc(100vh - 48px);
+  overflow-y: auto;
+}
+
+/* header inside main */
+.main-header{
+  display:flex; 
+  align-items:center; 
+  justify-content:space-between; 
+  gap:12px; 
+  margin-bottom:16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--color-borders);
+  flex-wrap: wrap;
+}
+.main-title{ 
+  font-family:var(--mono); 
+  letter-spacing:1.5px; 
+  color:var(--color-labels); 
+  font-size:25px; 
+  font-weight:700;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.main-sub{ 
+  color:var(--text-medium); 
+  font-size:23px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Enhanced Mode Toggle - Diperbaiki untuk mobile */
+.mode-toggle-container {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.mode-toggle {
+  display: flex;
+  gap: 6px;
+  background: var(--color-buttons);
+  border-radius: 10px;
+  padding: 6px;
+  box-shadow: 0 4px 12px rgba(158, 198, 243, 0.15);
+  flex-shrink: 0;
+}
+
+.mode-toggle button {
+  border: 0;
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+  background: transparent;
+  transition: var(--transition);
+  font-size: 14px;
+  /* PERBAIKAN: Warna teks semua tombol toggle menyesuaikan dengan latar belakang */
+  color: var(--toggle-text-color, var(--text-dark));
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.mode-toggle button.active {
+  background: var(--color-labels);
+  /* PERBAIKAN: Warna teks menyesuaikan dengan latar belakang */
+  color: var(--toggle-active-text-color, white);
+  box-shadow: 0 2px 8px rgba(159, 179, 223, 0.3);
+}
+
+.mode-toggle button:not(.active):hover {
+  background: rgba(159, 179, 223, 0.2);
+}
+
+/* TAMBAH: Style untuk circle-tips-btn di mode-toggle-container */
+.mode-toggle-container .circle-tips-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1.5px solid var(--color-borders);
+  background: transparent;
+  color: var(--text-dark);
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 14px;
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transform: none; /* Reset transform yang ada di circle-tips-btn umum */
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+.mode-toggle-container .circle-tips-btn:hover {
+  background: var(--color-buttons);
+  border-color: var(--color-borders);
+  color: var(--button-text-color, white);
+  transform: none;
+}
+
+/* PERBAIKAN: Style untuk circle-tips-btn di card-header-with-tips */
+.card-header-with-tips .circle-tips-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1.5px solid var(--color-borders);
+  background: transparent;
+  color: var(--text-dark);
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 14px;
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transform: none;
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+.card-header-with-tips .circle-tips-btn:hover {
+  background: var(--color-buttons);
+  border-color: var(--color-borders);
+  color: var(--button-text-color, white);
+  transform: none;
+}
+
+/* Circle Tips Button Styles - DIREVISI untuk bentuk lingkaran sempurna */
+.circle-tips-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1.5px solid var(--color-borders);
+  background: transparent;
+  color: var(--text-dark);
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 14px;
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  /* DIREVISI: Hapus transform scale yang bisa menyebabkan distorsi */
+  transform: none;
+  /* DIREVISI: Pastikan padding dan margin konsisten */
+  padding: 0;
+  margin: 0;
+  /* DIREVISI: Gunakan box-sizing border-box untuk konsistensi */
+  box-sizing: border-box;
+}
+
+.circle-tips-btn:hover {
+  background: var(--color-buttons);
+  border-color: var(--color-borders);
+  color: var(--button-text-color, white);
+  /* DIREVISI: Hapus transform scale pada hover */
+  transform: none;
+}
+
+/* Card Header with Tips */
+.card-header-with-tips {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.card-header-with-tips h3 {
+  margin: 0;
+}
+
+/* decorative elements */
+.color-dots {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.color-dots::before,
+.color-dots::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.1;
+}
+
+.color-dots::before {
+  width: 120px;
+  height: 120px;
+  top: -40px;
+  right: -40px;
+  background: var(--color-borders);
+}
+
+.color-dots::after {
+  width: 80px;
+  height: 80px;
+  bottom: -20px;
+  left: -20px;
+  background: var(--color-buttons);
+}
+
+/* ========= MOBILE NAVIGATION STYLES ========= */
+.mobile-nav-container {
+  display: none;
+  width: 100%;
+}
+
+.mobile-nav-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  gap: 10px;
+}
+
+/* DIREVISI: Mobile brand menggunakan gambar lengkap */
+.mobile-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  transform: scale(0.8);
+  transform-origin: left center;
+  /* DIREVISI: Ganti dengan gambar brand lengkap */
+  background: url('Construc Logo.png') no-repeat center center;
+  background-size: contain;
+  width: 200px;
+  height: 60px;
+  text-indent: -9999px;
+  overflow: hidden;
+}
+
+/* DIREVISI: Sembunyikan elemen logo dan teks di mobile */
+.mobile-brand .logo,
+.mobile-brand-text {
+  display: none;
+}
+
+.mobile-nav-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-grow: 1;
+  justify-content: flex-end;
+}
+
+.mobile-settings-btn {
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+  flex-shrink: 0;
+}
+
+.mobile-settings-btn:hover {
+  background: rgba(159, 179, 223, 0.1);
+}/ *   T A M B A H :   A n i m a s i   u n t u k   c a r d   D a t a   B e b a n   * /  
+ # b e b a n C a r d   {  
+     t r a n s i t i o n :   a l l   0 . 3 s   e a s e - i n - o u t ;  
+ }  
+  
+ / *   T A M B A H :   A n i m a s i   u n t u k   k o n t e n   y a n g   m u n c u l / h i l a n g   * /  
+ . b e b a n - s e c t i o n s ,  
+ . f o r m - g r i d   {  
+     t r a n s i t i o n :   a l l   0 . 3 s   e a s e - i n - o u t ;  
+ }  
+ 
