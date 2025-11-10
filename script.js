@@ -53,10 +53,26 @@ function renderModule(){
     const fytField = document.getElementById('fytField');
     if (fytField) {
         if (currentModuleKey === 'balok' || currentModuleKey === 'kolom') {
-            fytField.style.display = 'flex'; /* Ganti dari 'block' ke 'flex' */
+            fytField.style.display = 'flex';
         } else {
             fytField.style.display = 'none';
         }
+    }
+
+    // Show/hide gammaC field based on module
+    const gammaCField = document.getElementById('gammaCField');
+    if (gammaCField) {
+        if (currentModuleKey === 'fondasi') {
+            gammaCField.style.display = 'flex';
+        } else {
+            gammaCField.style.display = 'none';
+        }
+    }
+    
+    // PERBAIKAN: Simpan pengaturan setelah render jika remember module aktif
+    const checkbox = document.getElementById('rememberModuleCheckbox');
+    if (checkbox && checkbox.checked) {
+        saveGeneralSettingsToLocalStorage();
     }
 }
 
@@ -333,7 +349,10 @@ function loadGeneralSettingsFromLocalStorage() {
   const savedSettings = localStorage.getItem('concretecalc_general');
   if (savedSettings) {
     const settings = JSON.parse(savedSettings);
-    document.getElementById('rememberModuleCheckbox').checked = settings.rememberModule || false;
+    const checkbox = document.getElementById('rememberModuleCheckbox');
+    if (checkbox) {
+      checkbox.checked = settings.rememberModule || false;
+    }
     if (settings.rememberModule && settings.lastModule) {
       currentModuleKey = settings.lastModule;
       if (settings.lastMode) {
@@ -434,6 +453,14 @@ function setupQuickInputsListeners() {
       updateLog(`Quick input fyt updated: ${this.value}`);
     });
   }
+
+  const quickGammaC = document.getElementById('quickGammaC');
+  if (quickGammaC) {
+    quickGammaC.addEventListener('input', function() {
+      quickInputsState.quickGammaC = this.value;
+      updateLog(`Quick input gammaC updated: ${this.value}`);
+    });
+  }
 }
 
 /* Load quick inputs state */
@@ -448,6 +475,10 @@ function loadQuickInputsState() {
 
   if (quickInputsState.quickFyt) {
     document.getElementById('quickFyt').value = quickInputsState.quickFyt;
+  }
+
+  if (quickInputsState.quickGammaC) {
+    document.getElementById('quickGammaC').value = quickInputsState.quickGammaC;
   }
 }
 
@@ -571,6 +602,12 @@ function initCustomDropdown() {
       currentModuleKey = value;
       renderModule();
       
+      // PERBAIKAN: Simpan pengaturan jika remember module aktif
+      const checkbox = document.getElementById('rememberModuleCheckbox');
+      if (checkbox && checkbox.checked) {
+        saveGeneralSettingsToLocalStorage();
+      }
+      
       // Update active state di desktop nav
       const btns = document.querySelectorAll('.nav-btn');
       btns.forEach(b => b.classList.remove('active'));
@@ -626,6 +663,9 @@ function init(){
     }
   } catch(e){ console.warn(e) }
   
+  // PERBAIKAN: Load general settings SEBELUM setup event listeners
+  loadGeneralSettingsFromLocalStorage();
+  
   // setup color inputs
   setupColorInputs();
   // setup custom dropdown
@@ -638,12 +678,21 @@ function init(){
   loadQuickInputsState();
   // setup tips buttons
   setupTipsButtons();
-  // load general settings
-  loadGeneralSettingsFromLocalStorage();
+  
+  // PERBAIKAN: Setup remember module checkbox listener SEBELUM render
+  const rememberCheckbox = document.getElementById('rememberModuleCheckbox');
+  if (rememberCheckbox) {
+    rememberCheckbox.addEventListener('change', function() {
+      saveGeneralSettingsToLocalStorage();
+      // Jika dicentang, simpan state saat ini
+      if (this.checked) {
+        saveGeneralSettingsToLocalStorage();
+      }
+    });
+  }
+  
   // initial render after loading settings
   renderModule();
-  // setup remember module checkbox listener
-  document.getElementById('rememberModuleCheckbox').addEventListener('change', saveGeneralSettingsToLocalStorage);
 }
 
 // Event Listeners

@@ -470,14 +470,4 @@ body { position: relative; }
 
 .mobile-settings-btn:hover {
   background: rgba(159, 179, 223, 0.1);
-}/ *   T A M B A H :   A n i m a s i   u n t u k   c a r d   D a t a   B e b a n   * /  
- # b e b a n C a r d   {  
-     t r a n s i t i o n :   a l l   0 . 3 s   e a s e - i n - o u t ;  
- }  
-  
- / *   T A M B A H :   A n i m a s i   u n t u k   k o n t e n   y a n g   m u n c u l / h i l a n g   * /  
- . b e b a n - s e c t i o n s ,  
- . f o r m - g r i d   {  
-     t r a n s i t i o n :   a l l   0 . 3 s   e a s e - i n - o u t ;  
- }  
- 
+}

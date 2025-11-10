@@ -20,28 +20,21 @@
   min-width: 0;
 }
 
+/* PERBAIKAN: Card border disamakan dengan sidebar */
 .card {
   border-radius:var(--radius); 
   padding:20px; 
   background: var(--card-bg);
-  border: 1px solid rgba(255,255,255,0.7);
+  /* DIUBAH: Hanya border kiri yang tebal, border lainnya tipis */
+  border: 1px solid rgba(127, 142, 174, 0.523);
+  border-left: 4px solid var(--color-borders);
   box-shadow: var(--shadow);
   transition: var(--transition);
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   width: 100%;
 }
 
-.card::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 4px;
-  height: 100%;
-  background: var(--color-borders);
-  z-index: 1;
-}
 
 .card h2{
   margin:0 0 10px 0;
@@ -53,13 +46,6 @@
   align-items: center;
   gap: 8px;
 }
-
-/* DIHAPUS: Hapus style untuk .muted karena deskripsi dihilangkan */
-/* .card .muted{ 
-  color:var(--text-medium); 
-  font-size:14px;
-  line-height: 1.5;
-} */
 
 .form-grid {
   display:grid; 
@@ -207,20 +193,13 @@
   background: var(--card-bg);
   box-shadow: var(--shadow);
   transition: var(--transition);
-  border: 1px solid rgba(255,255,255,0.7);
+  /* DIUBAH: Hanya border kiri */
+  border: 1px solid rgba(127, 142, 174, 0.523);
+  border-left: 4px solid var(--color-borders);
   position: relative;
-  overflow: hidden;
+  overflow: visible;
 }
 
-.quick-inputs-card::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 4px;
-  height: 100%;
-  background: var(--color-borders);
-}
 
 .quick-inputs-card h3{ 
   margin:0 0 10px 0; 
@@ -287,6 +266,17 @@
   color: var(--text-dark);
   font-size: 14px;
   box-sizing: border-box;
+  /* TAMBAHAN: Konsistensi transition dengan field biasa */
+  transition: var(--transition);
+  font-family: 'Inter', sans-serif;
+}
+
+/* TAMBAHAN: Efek focus yang konsisten dengan field biasa */
+.quick-field .input-with-unit input:focus { 
+  outline:none; 
+  box-shadow:0 0 0 4px var(--color-borders); 
+  border-color:var(--color-borders);
+  background: white;
 }
 
 .quick-field .input-with-unit::after {
@@ -499,6 +489,9 @@
   position: relative;
   flex-grow: 1;
   z-index: 15;
+  overflow: visible;
+  /* PERBAIKAN: Pastikan punya width yang jelas */
+  width: 100%;
 }
 
 .dropdown-selected {
@@ -514,6 +507,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  /* PERBAIKAN: Pastikan tidak ada transform yang mengganggu */
+  transform: none !important;
 }
 
 .dropdown-selected:hover {
@@ -550,6 +545,12 @@
   max-height: 200px;
   overflow-y: auto;
   margin-top: 4px;
+  /* PERBAIKAN: Pastikan width mengikuti parent */
+  width: 100%;
+  min-width: 100%;
+  box-sizing: border-box;
+  /* PERBAIKAN: Pastikan tidak ada transform yang aneh */
+  transform: none !important;
 }
 
 .dropdown-options.show {
@@ -737,13 +738,14 @@
 
 /* Specific styles for Data Beban card */
 #bebanCard {
-  overflow: hidden;
+  overflow: visible;
   max-height: none;
 }
 
-#bebanCard::before {
+/* DIHAPUS: Tidak perlu pseudo-element lagi */
+/* #bebanCard::before {
   z-index: 2010;
-}
+} */
 
 #bebanCard .dropdown-options {
   z-index: 2000;
@@ -751,12 +753,14 @@
 
 /* Specific styles for Data Lanjutan card */
 #lanjutanCard {
-  border-left: none;
+  border: none !important;
+  box-shadow: var(--shadow);
 }
 
-#lanjutanCard::before {
+/* DIHAPUS: Tidak perlu pseudo-element lagi */
+/* #lanjutanCard::before {
   display: none;
-}
+} */
 
 #lanjutanCard.expanded {
   padding: 0px 20px 20px 20px;
@@ -1020,7 +1024,7 @@
 
 .pattern-box-clickable.pattern-box-plain {
   background: transparent !important;
-  border: 1.5px solid var(--color-borders) !important;
+  border: 1.5px solid var(#000000) !important;
 }
 
 /* Responsive untuk mobile - PERBAIKAN SCALING */
@@ -1105,3 +1109,95 @@
     height: 100px;
   }
 }
+
+/* DIREVISI: Form grid di dalam Data Lanjutan card */
+#lanjutanCard .form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 20px;
+  align-items: start;
+  margin-top: 0;
+}
+
+/* TAMBAHAN: Pastikan card dengan border yang baru konsisten di mobile */
+@media (max-width: 768px) {
+  .card, .quick-inputs-card {
+    padding: 16px;
+  }
+}
+/* ========= CONSISTENT CHECKBOX STYLES ========= */
+.checkbox-row {
+  margin: 12px 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+}
+
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+}
+
+.checkbox-container input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--color-buttons);
+  flex-shrink: 0;
+}
+
+.checkbox-container label {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-dark);
+  cursor: pointer;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+/* Style untuk field yang disabled */
+.disabled-field {
+  background: #f8f9fa !important;
+  color: #6c757d !important;
+  cursor: not-allowed !important;
+  border-color: #dee2e6 !important;
+  opacity: 0.6;
+  box-shadow: none !important;
+}
+
+.disabled-field::placeholder {
+  color: #adb5bd !important;
+}
+
+.disabled-field:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: #dee2e6 !important;
+}
+
+/* Style untuk unit pada field yang disabled */
+.input-with-unit.disabled::after {
+  color: #adb5bd !important;
+}
+
+/* Style untuk konten Auto di Data Tanah */
+.tanah-auto-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0px;
+}
+
+/* Jarak konsisten antara toggle dan konten */
+.form-grid + .checkbox-row,
+.mode-toggle + .checkbox-row {
+  margin-top: 12px;
+}
+
+/* Jarak konsisten antara checkbox dan form grid berikutnya */
+.checkbox-row + .form-grid {
+  margin-top: 0px;
+}
+[file content end]

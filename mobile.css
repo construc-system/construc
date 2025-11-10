@@ -73,6 +73,11 @@
     grid-template-columns: 1fr; 
   }
   
+  /* DIREVISI: Form grid di dalam Data Lanjutan card di mobile */
+  #lanjutanCard .form-grid {
+    grid-template-columns: 1fr;
+  }
+  
   /* Quick inputs grid di mobile jadi satu kolom */
   .quick-inputs-grid {
     grid-template-columns: 1fr;
