@@ -92,8 +92,8 @@
           <div class="main-sub" id="currentModuleName">Balok</div>
         </div>
         <div class="mode-toggle-container">
-          <!-- Tombol Tips di samping kiri toggle - DIUBAH -->
-          <button class="circle-tips-btn" id="mainTipsBtn" title="Tips & Panduan" data-tips="Tips umum untuk menggunakan aplikasi ConcreteCalc. Gunakan navigasi di sidebar untuk beralih modul, dan tombol toggle untuk mengganti mode desain atau evaluasi.">?</button>
+          <!-- Tombol Tips di samping kiri toggle - DIREVISI: Hapus data-tips -->
+          <button class="circle-tips-btn" id="mainTipsBtn" title="Tips Mode Desain & Evaluasi">?</button>
           
           <!-- Enhanced Mode Toggle - Diperbaiki untuk mobile -->
           <div class="mode-toggle">
@@ -139,8 +139,14 @@
                 Data Material
               </h3>
 
-              <!-- DIUBAH: ganti simple-tips-btn dengan circle-tips-btn -->
-              <button class="circle-tips-btn" data-tips="Quick Inputs memungkinkan Anda mengisi nilai material yang umum digunakan. Nilai f'c adalah kuat tekan beton (MPa) dan fy adalah kuat leleh baja tulangan (MPa).">?</button>
+              <!-- DIREVISI: Tips Data Material yang baru -->
+              <button class="circle-tips-btn" data-tips="f'c — Gunakan nilai sesuai mutu beton yang direncanakan. Umumnya 20–40 MPa untuk beton bertulang biasa.
+
+fy — Gunakan nilai leleh baja tulangan utama. Nilai umum yang digunakan antara 240 MPa sampai 500 MPa.
+
+fyt — Gunakan nilai leleh baja begel. Nilai umum yang digunakan antara 240 MPa sampai 400 MPa, atau biasanya disamakan dengan tulangan utama.
+
+ɣc — Berat jenis beton normal sekitar 24 kN/m³. Sesuaikan jika ada perbedaan spesifikasi beton.">?</button>
             </div>
             <div class="quick-inputs-grid">
               <div class="quick-field">
@@ -202,6 +208,20 @@
               <input type="checkbox" id="rememberModuleCheckbox">
               <span>Remember last opened module</span>
             </label>
+            
+            <!-- TAMBAHAN: Tombol Reset All Data -->
+            <div style="margin-top: 16px;">
+              <button class="btn ghost" id="resetAllDataBtn" style="width: 100%;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trash2-icon lucide-trash-2">
+                  <path d="M10 11v6"/>
+                  <path d="M14 11v6"/>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+                  <path d="M3 6h18"/>
+                  <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                </svg>
+                Reset All Data
+              </button>
+            </div>
           </div>
         </div>
         <hr class="section-divider">
@@ -212,23 +232,23 @@
           <div class="color-inputs">
             <div class="color-input">
               <label for="color1">Body BG:</label>
-              <input type="color" id="colorPicker1" value="#FFF1D5">
-              <input type="text" id="colorInput1" value="#FFF1D5" placeholder="Hex color">
+              <input type="color" id="colorPicker1" value="#FFFFFF">
+              <input type="text" id="colorInput1" value="#FFFFFF" placeholder="Hex color">
             </div>
             <div class="color-input">
               <label for="color2">Buttons:</label>
-              <input type="color" id="colorPicker2" value="#BDDDE4">
-              <input type="text" id="colorInput2" value="#BDDDE4" placeholder="Hex color">
+              <input type="color" id="colorPicker2" value="#282B53">
+              <input type="text" id="colorInput2" value="#282B53" placeholder="Hex color">
             </div>
             <div class="color-input">
               <label for="color3">Borders:</label>
-              <input type="color" id="colorPicker3" value="#9EC6F3">
-              <input type="text" id="colorInput3" value="#9EC6F3" placeholder="Hex color">
+              <input type="color" id="colorPicker3" value="#1C1136">
+              <input type="text" id="colorInput3" value="#1C1136" placeholder="Hex color">
             </div>
             <div class="color-input">
               <label for="color4">Labels:</label>
-              <input type="color" id="colorPicker4" value="#9FB3DF">
-              <input type="text" id="colorInput4" value="#9FB3DF" placeholder="Hex color">
+              <input type="color" id="colorPicker4" value="#202242">
+              <input type="text" id="colorInput4" value="#202242" placeholder="Hex color">
             </div>
           </div>
         </div>
@@ -256,7 +276,20 @@
       </div>
     </div>
   </div>
-
+<!-- Alert Modal -->
+<div class="modal-overlay" id="alertModal">
+  <div class="modal alert-modal">
+    <div class="modal-header">
+      <h2>‼️ Alert</h2>
+      <button class="close-modal" id="closeAlertModalBtn">&times;</button>
+    </div>
+    <div class="modal-content">
+      <div class="alert-content" id="alertContent">
+        <!-- Content akan diisi oleh JavaScript -->
+      </div>
+    </div>
+  </div>
+</div>
   <!-- Load modul JavaScript -->
   <script src="modul-balok.js"></script>
   <script src="modul-kolom.js"></script>

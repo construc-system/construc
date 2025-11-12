@@ -107,24 +107,28 @@ function switchMode(evt){
 /* actions */
 function saveDraft(){
   // Simpan data form, quick inputs, dan bebanMode
-      const draftData = {
+  const draftData = {
     formState: formState,
     quickInputsState: quickInputsState,
-    bebanMode: bebanMode  // Tambahkan bebanMode ke draft
+    bebanMode: bebanMode
   };
   
-  localStorage.setItem('concretecalc_draft', JSON.stringify(draftData));
-  updateLog('Draft saved to localStorage (including quick inputs and bebanMode).');
-  alert('Draft saved (lokal).');
+  // Debug: Tampilkan state saat ini
+  console.log('Saving draft with formState:', formState);
+  console.log('Saving draft with quickInputsState:', quickInputsState);
+  console.log('Saving draft with bebanMode:', bebanMode);
+  
+  try {
+    localStorage.setItem('concretecalc_draft', JSON.stringify(draftData));
+    updateLog('Draft saved to localStorage (including quick inputs and bebanMode).');
+    showAlert('Draft berhasil disimpan (lokal).\n\nData yang disimpan:\n- Data Dimensi\n- Data Beban\n- Data Tulangan\n- Data Material\n- Data Lanjutan', '💾 Draft Tersimpan');
+  } catch (e) {
+    console.error('Error saving draft:', e);
+    showAlert('Gagal menyimpan draft. Kemungkinan storage penuh atau data terlalu besar.', '❌ Error Menyimpan Draft');
+  }
 }
 
-function calculate(){
-  // placeholder calculation: collect inputs and display in log
-  ensureState(currentModuleKey, currentMode);
-  const data = formState[currentModuleKey] && formState[currentModuleKey][currentMode] ? formState[currentModuleKey][currentMode] : {};
-  updateLog(`Calculate requested for ${currentModuleKey}.${currentMode} with payload:\n${JSON.stringify(data, null, 2)}`);
-  alert('Fungsi hitung belum diimplementasikan.');
-}
+// Hapus fungsi calculate lama karena sekarang ditangani oleh masing-masing modul
 
 /* COLOR CUSTOMIZER FUNCTIONS */
 function applyColors() {
@@ -165,7 +169,7 @@ function updateLabelTextColor(backgroundColor) {
     b = parseInt(backgroundColor.substr(3, 1) + backgroundColor.substr(3, 1), 16);
   } else {
     // Fallback ke hitam jika format tidak dikenali
-    document.documentElement.style.setProperty('--label-text-color', '#000000');
+    document.documentElement.style.setProperty('--label-text-color', '#ffffff');
     return;
   }
   
@@ -221,24 +225,24 @@ function calculateLuminance(hexColor) {
 
 function resetColors() {
   // Reset ke warna default
-  document.documentElement.style.setProperty('--bg-body', '#FFF1D5');
-  document.documentElement.style.setProperty('--color-buttons', '#BDDDE4');
-  document.documentElement.style.setProperty('--color-borders', '#9EC6F3');
-  document.documentElement.style.setProperty('--color-labels', '#9FB3DF');
+  document.documentElement.style.setProperty('--bg-body', '#ffffff');
+  document.documentElement.style.setProperty('--color-buttons', '#282B53');
+  document.documentElement.style.setProperty('--color-borders', '#1C1136');
+  document.documentElement.style.setProperty('--color-labels', '#202242');
   
   // Reset input fields
-  document.getElementById('colorInput1').value = '#FFF1D5';
-  document.getElementById('colorInput2').value = '#BDDDE4';
-  document.getElementById('colorInput3').value = '#9EC6F3';
-  document.getElementById('colorInput4').value = '#9FB3DF';
+  document.getElementById('colorInput1').value = '#ffffff';
+  document.getElementById('colorInput2').value = '#282B53';
+  document.getElementById('colorInput3').value = '#1C1136';
+  document.getElementById('colorInput4').value = '#202242';
   
-  document.getElementById('colorPicker1').value = '#FFF1D5';
-  document.getElementById('colorPicker2').value = '#BDDDE4';
-  document.getElementById('colorPicker3').value = '#9EC6F3';
-  document.getElementById('colorPicker4').value = '#9FB3DF';
+  document.getElementById('colorPicker1').value = '#ffffff';
+  document.getElementById('colorPicker2').value = '#282B53';
+  document.getElementById('colorPicker3').value = '#1C1136';
+  document.getElementById('colorPicker4').value = '#202242';
   
   // Update warna teks label
-  updateLabelTextColor('#9FB3DF');
+  updateLabelTextColor('#202242');
   
   // Update warna teks tombol
   updateButtonTextColors();
@@ -274,14 +278,128 @@ function applyRandomColors() {
   applyColors();
 }
 
+/* ========= MODAL FUNCTIONS WITH ESC SUPPORT ========= */
+
+// Fungsi untuk menangani tombol ESC
+function handleEscKey(e) {
+  if (e.key === 'Escape') {
+    // Cek modal mana yang sedang aktif dan tutup
+    if (document.getElementById('tipsModal').classList.contains('active')) {
+      closeTips();
+    } else if (document.getElementById('settingsModal').classList.contains('active')) {
+      closeSettings();
+    } else if (document.getElementById('alertModal').classList.contains('active')) {
+      closeAlert();
+    }
+  }
+}
+
 /* Settings Modal Functions */
 function openSettings() {
   document.getElementById('settingsModal').classList.add('active');
   updateLog('Settings panel opened');
+  // Tambahkan event listener untuk tombol ESC
+  document.addEventListener('keydown', handleEscKey);
 }
 
 function closeSettings() {
   document.getElementById('settingsModal').classList.remove('active');
+  // Hapus event listener untuk tombol ESC
+  document.removeEventListener('keydown', handleEscKey);
+  updateLog('Settings panel closed');
+}
+
+/* Tips Modal Functions */
+function openTips() {
+  const tipsContent = document.getElementById('tipsContent');
+  
+  // KONTEN TIPS YANG SAMA UNTUK SEMUA MODUL
+  tipsContent.innerHTML = `
+    <h3>Mode Desain dan Evaluasi</h3>
+    <p><strong>Mode Desain</strong> digunakan ketika data tulangan belum ditentukan. Pada mode ini, sistem akan melakukan perhitungan otomatis untuk mencari kombinasi tulangan yang paling efisien dan memenuhi syarat perencanaan.</p>
+    <p><strong>Mode Evaluasi</strong> digunakan ketika data tulangan sudah tersedia. Mode ini memungkinkan pengguna meninjau apakah jumlah tulangan yang digunakan telah memenuhi ketentuan kekuatan dan keamanan struktur.</p>
+  `;
+  
+  document.getElementById('tipsModal').classList.add('active');
+  updateLog('Tips panel opened - General mode tips');
+  
+  // Tambahkan event listener untuk tombol ESC
+  document.addEventListener('keydown', handleEscKey);
+}
+
+function closeTips() {
+  document.getElementById('tipsModal').classList.remove('active');
+  // Hapus event listener untuk tombol ESC
+  document.removeEventListener('keydown', handleEscKey);
+  updateLog('Tips panel closed');
+}
+
+/* Alert Modal Functions */
+function showAlert(message, title = "‼️ Alert") {
+  const alertContent = document.getElementById('alertContent');
+  const alertModal = document.getElementById('alertModal');
+  const alertTitle = document.querySelector('#alertModal .modal-header h2');
+  
+  alertContent.innerHTML = message;
+  alertTitle.textContent = title;
+  alertModal.classList.add('active');
+  
+  // Tambahkan event listener untuk tombol ESC
+  document.addEventListener('keydown', handleEscKey);
+}
+
+function closeAlert() {
+  document.getElementById('alertModal').classList.remove('active');
+  // Hapus event listener untuk tombol ESC
+  document.removeEventListener('keydown', handleEscKey);
+}
+
+// Setup alert modal listeners
+function setupAlertModal() {
+  const alertModal = document.getElementById('alertModal');
+  const closeBtn = document.getElementById('closeAlertModalBtn');
+  
+  if (closeBtn) {
+    closeBtn.addEventListener('click', closeAlert);
+  }
+  
+  alertModal.addEventListener('click', function(e) {
+    if (e.target === alertModal) {
+      closeAlert();
+    }
+  });
+}
+
+// Make showAlert available globally
+window.showAlert = showAlert;
+
+// ========== EVENT DELEGATION UNTUK INPUT DINAMIS ==========
+
+// Fungsi event delegation untuk menangani input dinamis
+function setupGlobalInputListeners() {
+  // Event delegation untuk semua input dengan data-key
+  document.addEventListener('input', function(e) {
+    if (e.target.matches('input[data-key], select[data-key]')) {
+      const input = e.target;
+      const key = input.dataset.key;
+      
+      ensureState(currentModuleKey, currentMode);
+      formState[currentModuleKey][currentMode][key] = input.value;
+      updateLog(`set ${currentModuleKey}.${currentMode}.${key} = ${input.value}`);
+    }
+  });
+
+  // Event delegation untuk checkbox
+  document.addEventListener('change', function(e) {
+    if (e.target.matches('input[type="checkbox"][data-key]')) {
+      const checkbox = e.target;
+      const key = checkbox.dataset.key;
+      
+      ensureState(currentModuleKey, currentMode);
+      formState[currentModuleKey][currentMode][key] = checkbox.checked;
+      updateLog(`set ${currentModuleKey}.${currentMode}.${key} = ${checkbox.checked}`);
+    }
+  });
 }
 
 // Sync antara color picker dan text input
@@ -465,62 +583,31 @@ function setupQuickInputsListeners() {
 
 /* Load quick inputs state */
 function loadQuickInputsState() {
-  if (quickInputsState.quickFc) {
-    document.getElementById('quickFc').value = quickInputsState.quickFc;
+  // Load fc
+  if (quickInputsState.quickFc !== undefined) {
+    const fcInput = document.getElementById('quickFc');
+    if (fcInput) fcInput.value = quickInputsState.quickFc;
   }
 
-  if (quickInputsState.quickFy) {
-    document.getElementById('quickFy').value = quickInputsState.quickFy;
+  // Load fy
+  if (quickInputsState.quickFy !== undefined) {
+    const fyInput = document.getElementById('quickFy');
+    if (fyInput) fyInput.value = quickInputsState.quickFy;
   }
 
-  if (quickInputsState.quickFyt) {
-    document.getElementById('quickFyt').value = quickInputsState.quickFyt;
+  // Load fyt
+  if (quickInputsState.quickFyt !== undefined) {
+    const fytInput = document.getElementById('quickFyt');
+    if (fytInput) fytInput.value = quickInputsState.quickFyt;
   }
 
-  if (quickInputsState.quickGammaC) {
-    document.getElementById('quickGammaC').value = quickInputsState.quickGammaC;
-  }
-}
-
-/* Tips Modal Functions */
-function openTips() {
-  const tipsContent = document.getElementById('tipsContent');
-  const currentModule = modules[currentModuleKey];
-  
-  if (!currentModule) {
-    tipsContent.innerHTML = '<p>Modul tidak tersedia. Silakan refresh halaman.</p>';
-  } else {
-    tipsContent.innerHTML = `
-      <h3>Mode ${capitalize(currentMode)}</h3>
-      <p>${getModeTips()}</p>
-      
-      <h3>Modul ${currentModule.name}</h3>
-      <p>${currentModule.info}</p>
-      
-      <h3>Tips Umum</h3>
-      <ul>
-        <li>Gunakan Quick Inputs untuk mengisi nilai material yang umum</li>
-        <li>Simpan draft secara berkala untuk menghindari kehilangan data</li>
-        <li>Pastikan semua field terisi sebelum melakukan perhitungan</li>
-        <li>Ganti warna tema sesuai preferensi Anda di pengaturan</li>
-      </ul>
-    `;
+  // Load gammaC
+  if (quickInputsState.quickGammaC !== undefined) {
+    const gammaCInput = document.getElementById('quickGammaC');
+    if (gammaCInput) gammaCInput.value = quickInputsState.quickGammaC;
   }
   
-  document.getElementById('tipsModal').classList.add('active');
-  updateLog('Tips panel opened');
-}
-
-function closeTips() {
-  document.getElementById('tipsModal').classList.remove('active');
-}
-
-function getModeTips() {
-  if (currentMode === 'desain') {
-    return "Mode Desain digunakan untuk merancang elemen struktur baru. Sistem akan menghitung kebutuhan tulangan berdasarkan input yang diberikan.";
-  } else {
-    return "Mode Evaluasi digunakan untuk memeriksa keamanan elemen struktur yang sudah ada. Sistem akan menganalisis kapasitas elemen berdasarkan tulangan yang dimasukkan.";
-  }
+  updateLog('Quick inputs state loaded');
 }
 
 // Event delegation untuk tombol tips di card headers
@@ -528,30 +615,63 @@ function setupTipsButtons() {
   document.addEventListener('click', function(e) {
     if (e.target.closest('.circle-tips-btn')) {
       const tipsBtn = e.target.closest('.circle-tips-btn');
+      
+      // JANGAN proses tombol tips utama (yang di samping toggle)
+      if (tipsBtn.id === 'mainTipsBtn') {
+        return; // Biarkan event handler khusus yang menangani
+      }
+      
       const tipsText = tipsBtn.getAttribute('data-tips');
       
       const tipsContent = document.getElementById('tipsContent');
       
       // Cek apakah ini tombol di Quick Inputs atau di Module Form
-      if (tipsText.includes('Quick Inputs')) {
+      if (tipsText && tipsText.includes('f\'c —')) {
+        // Tips untuk Data Material dengan format baru - Filter berdasarkan modul aktif
+        const tipsItems = tipsText.split('\n\n');
+        let filteredTips = [];
+        
+        // Selalu tampilkan f'c dan fy
+        filteredTips.push(tipsItems.find(item => item.includes('f\'c —')));
+        filteredTips.push(tipsItems.find(item => item.includes('fy —')));
+        
+        // Tampilkan fyt hanya untuk Balok dan Kolom
+        if (currentModuleKey === 'balok' || currentModuleKey === 'kolom') {
+          const fytTip = tipsItems.find(item => item.includes('fyt —'));
+          if (fytTip) filteredTips.push(fytTip);
+        }
+        
+        // Tampilkan gammaC hanya untuk Fondasi
+        if (currentModuleKey === 'fondasi') {
+          const gammaCTip = tipsItems.find(item => item.includes('ɣc —'));
+          if (gammaCTip) filteredTips.push(gammaCTip);
+        }
+        
+        // Filter null values
+        filteredTips = filteredTips.filter(item => item !== undefined);
+        
+        tipsContent.innerHTML = `
+          <h3>Data Material - Panduan Pengisian</h3>
+          <div style="line-height: 1.6;">
+            ${filteredTips.map(item => {
+              const [label, description] = item.split(' — ');
+              return `<p><strong>${label}</strong> — ${description}</p>`;
+            }).join('')}
+          </div>
+        `;
+      } else if (tipsText && tipsText.includes('Quick Inputs')) {
         tipsContent.innerHTML = `
           <h3>Quick Inputs</h3>
           <p>${tipsText}</p>
           <p>Nilai yang dimasukkan di sini dapat digunakan untuk mengisi field material secara otomatis.</p>
         `;
-      } else {
-        // Tips untuk module form
+      } else if (tipsText) {
+        // Tips untuk module form - Hapus bagian "Field yang Tersedia"
         const currentModule = modules[currentModuleKey];
         if (currentModule) {
           tipsContent.innerHTML = `
             <h3>${currentModule.name} — ${capitalize(currentMode)}</h3>
             <p>${tipsText}</p>
-            <h3>Field yang Tersedia</h3>
-            <ul>
-              ${currentModule.fields[currentMode].map(field => 
-                `<li><strong>${field.label}</strong>: ${field.placeholder} (${field.unit})</li>`
-              ).join('')}
-            </ul>
           `;
         } else {
           tipsContent.innerHTML = '<p>Modul tidak tersedia.</p>';
@@ -559,6 +679,9 @@ function setupTipsButtons() {
       }
       
       document.getElementById('tipsModal').classList.add('active');
+      
+      // Tambahkan event listener untuk tombol ESC
+      document.addEventListener('keydown', handleEscKey);
     }
   });
 }
@@ -647,6 +770,134 @@ function updateCustomDropdown() {
   }
 }
 
+function resetAllData() {
+  // Konfirmasi sebelum menghapus
+  showAlert(
+    'Apakah Anda yakin ingin menghapus semua data? Tindakan ini tidak dapat dibatalkan.',
+    '⚠️ Reset All Data'
+  );
+  
+  // Setup confirm buttons
+  const alertContent = document.getElementById('alertContent');
+  const confirmHTML = `
+    <div style="text-align: center; margin-top: 20px;">
+      <button id="confirmReset" class="btn" style="background: #ff6b6b; color: white; margin-right: 10px;">Ya, Hapus Semua</button>
+      <button id="cancelReset" class="btn ghost">Batal</button>
+    </div>
+  `;
+  
+  alertContent.innerHTML += confirmHTML;
+  
+  document.getElementById('confirmReset').addEventListener('click', function() {
+    // Hapus semua data localStorage yang terkait dengan aplikasi
+    localStorage.removeItem('concretecalc_draft');
+    localStorage.removeItem('concretecalc_colors');
+    localStorage.removeItem('concretecalc_general');
+    
+    // Reset state aplikasi
+    formState = {};
+    quickInputsState = {};
+    bebanMode = {};
+    
+    // Reset ke modul dan mode default
+    currentModuleKey = 'balok';
+    currentMode = 'desain';
+    
+    // Update UI untuk navigasi dan mode
+    updateUIAfterReset();
+    
+    // Reset warna ke default
+    resetColors();
+    
+    // Reset checkbox remember module
+    const checkbox = document.getElementById('rememberModuleCheckbox');
+    if (checkbox) {
+      checkbox.checked = false;
+    }
+    
+    // Render ulang modul untuk menampilkan form kosong
+    renderModule();
+    
+    // Reset quick inputs
+    document.getElementById('quickFc').value = '';
+    document.getElementById('quickFy').value = '';
+    document.getElementById('quickFyt').value = '';
+    document.getElementById('quickGammaC').value = '';
+    
+    updateLog('All data reset successfully');
+    closeAlert();
+    showAlert('Semua data telah direset. Aplikasi sekarang dalam keadaan seperti baru.', '✅ Reset Berhasil');
+    
+    // Tutup modal pengaturan
+    closeSettings();
+  });
+  
+  document.getElementById('cancelReset').addEventListener('click', function() {
+    closeAlert();
+  });
+}
+
+/* PERBAIKAN: Fungsi untuk update UI setelah reset */
+function updateUIAfterReset() {
+  // Update nav buttons di desktop
+  const navBtns = document.querySelectorAll('.nav-btn');
+  navBtns.forEach(btn => {
+    btn.classList.remove('active');
+    if (btn.dataset.target === 'balok') {
+      btn.classList.add('active');
+    }
+  });
+
+  // Update mode toggle buttons
+  const modeBtns = document.querySelectorAll('.mode-toggle button');
+  modeBtns.forEach(btn => {
+    btn.classList.remove('active');
+    if (btn.dataset.mode === 'desain') {
+      btn.classList.add('active');
+    }
+  });
+
+  // Update custom dropdown di mobile
+  updateCustomDropdown();
+
+  // Update judul modul
+  document.getElementById('currentModuleName').textContent = 'Balok';
+  
+  // Update tombol calculate
+  document.getElementById('calculateBtn').textContent = 'Hitung Desain';
+
+  updateLog(`UI reset to default: module=balok, mode=desain`);
+}
+
+/* TAMBAHAN: Fungsi untuk setup tombol reset data */
+function setupResetDataButton() {
+  const resetBtn = document.getElementById('resetAllDataBtn');
+  if (resetBtn) {
+    resetBtn.addEventListener('click', resetAllData);
+  }
+}
+
+// Fungsi debug untuk memeriksa state
+function debugFormState() {
+  console.log('=== DEBUG FORM STATE ===');
+  console.log('currentModuleKey:', currentModuleKey);
+  console.log('currentMode:', currentMode);
+  console.log('formState:', formState);
+  console.log('quickInputsState:', quickInputsState);
+  console.log('bebanMode:', bebanMode);
+  
+  // Cek nilai specific untuk modul balok
+  if (formState.balok) {
+    console.log('=== BALOK STATE ===');
+    console.log('Desain:', formState.balok.desain);
+    console.log('Evaluasi:', formState.balok.evaluasi);
+  }
+}
+
+// Tambahkan ke window untuk akses dari console
+window.debugFormState = debugFormState;
+window.getFormState = () => formState;
+
 /* load draft if exists */
 function init(){
   console.log('Initializing application...');
@@ -658,26 +909,22 @@ function init(){
       const draftData = JSON.parse(raw);
       formState = draftData.formState || {};
       quickInputsState = draftData.quickInputsState || {};
-      bebanMode = draftData.bebanMode || {};  // Load bebanMode dari draft
+      bebanMode = draftData.bebanMode || {};
       updateLog('Draft loaded from localStorage (including quick inputs and bebanMode).');
     }
   } catch(e){ console.warn(e) }
   
-  // PERBAIKAN: Load general settings SEBELUM setup event listeners
+  // Setup berbagai komponen
   loadGeneralSettingsFromLocalStorage();
-  
-  // setup color inputs
   setupColorInputs();
-  // setup custom dropdown
   initCustomDropdown();
-  // load saved colors
   loadColorsFromLocalStorage();
-  // setup quick inputs listeners
   setupQuickInputsListeners();
-  // load quick inputs state
   loadQuickInputsState();
-  // setup tips buttons
   setupTipsButtons();
+  setupResetDataButton();
+  setupAlertModal();
+  setupGlobalInputListeners(); // ← TAMBAH INI
   
   // PERBAIKAN: Setup remember module checkbox listener SEBELUM render
   const rememberCheckbox = document.getElementById('rememberModuleCheckbox');
@@ -718,7 +965,7 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Action button event listeners
   document.getElementById('saveDraftBtn').addEventListener('click', saveDraft);
-  document.getElementById('calculateBtn').addEventListener('click', calculate);
+  // HAPUS: event listener untuk calculateBtn karena sekarang ditangani oleh modul-balok.js
   
   // Modal event listeners
   document.getElementById('closeModalBtn').addEventListener('click', closeSettings);
@@ -741,4 +988,7 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('randomColorsBtn').addEventListener('click', applyRandomColors);
   document.getElementById('resetColorsBtn').addEventListener('click', resetColors);
   document.getElementById('applyColorsBtn').addEventListener('click', applyColors);
+  
+  // TAMBAHAN: Reset data button event listener
+  document.getElementById('resetAllDataBtn').addEventListener('click', resetAllData);
 });

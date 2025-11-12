@@ -1,10 +1,10 @@
 /* ========= DEFAULT COLOR VARIABLES ========= */
 :root{
-  --bg-body: #FFF1D5;             /* Background body */
-  --color-buttons: #BDDDE4;       /* Warna tombol & tab aktif */
-  --color-borders: #9EC6F3;       /* Warna border & aksen */
-  --color-labels: #9FB3DF;        /* Warna label & teks aksen */
-  --label-text-color: #000000;    /* Warna teks label - akan diatur otomatis */
+  --bg-body: #ffffff;             /* Background body */
+  --color-buttons: #282B53;       /* Warna tombol & tab aktif */
+  --color-borders: #1C1136;       /* Warna border & aksen */
+  --color-labels: #202242;        /* Warna label & teks aksen */
+  --label-text-color: #ffffff;    /* Warna teks label - akan diatur otomatis */
   --text-dark: #2D3748;           /* Teks gelap */
   --text-medium: #4A5568;         /* Teks medium */
   --text-light: #718096;          /* Teks terang */

@@ -186,6 +186,18 @@
   color: white;
 }
 
+/* TAMBAHAN: Styling khusus untuk tombol reset data */
+#resetAllDataBtn {
+  border-color: #ff6b6b;
+  color: #ff6b6b;
+}
+
+#resetAllDataBtn:hover {
+  background: #ff6b6b;
+  border-color: #ff6b6b;
+  color: white;
+}
+
 /* Quick Inputs Card - dipindah ke panel-col */
 .quick-inputs-card {
   border-radius:var(--radius);
@@ -321,7 +333,7 @@
   box-shadow: var(--shadow-deep);
   width: 90%;
   max-width: 500px;
-  /* DIREVISI: Tinggi menyesuaikan konten, tidak lebih dari viewport */
+  /* DIREVISI: Tinggi maksimal viewport dengan margin */
   max-height: calc(100vh - 40px);
   display: flex;
   flex-direction: column;
@@ -592,13 +604,17 @@
   color: var(--toggle-active-text-color, white);
 }
 
-/* Tips Modal */
 .tips-modal {
   max-width: 600px;
+  /* DIREVISI: Pastikan tips modal juga memiliki tinggi maksimal */
+  max-height: calc(100vh - 40px);
 }
 
 .tips-content {
   line-height: 1.6;
+  /* DIREVISI: Pastikan konten tips tidak melebihi parent */
+  max-height: 100%;
+  overflow-y: visible;
 }
 
 .tips-content h3 {
@@ -808,7 +824,7 @@
 }
 /* Pattern box styles for pelat module */
 .pattern-box-side {
-  border: 1.5px solid var(--color-borders);
+  border: 1.5px solid var(#0000000);
   background: repeating-linear-gradient(45deg, transparent, rgb(0, 0, 0) 2px, rgba(0, 0, 0, 0) 1px, rgba(0, 0, 0, 0) 10px);
   border-radius: 0px;
   flex-shrink: 0;
@@ -825,7 +841,7 @@
 
 .pattern-box-side.pattern-box-clickable.pattern-box-plain {
   background: transparent !important;
-  border: 1.5px solid var(--color-borders) !important;
+  border: 1.5px solid var(#000000) !important;
 }
 /* Pattern container untuk kelima kotak */
 .pattern-container {
@@ -851,7 +867,7 @@
 .pattern-box-bottom {
   width: 350px;
   height: 30px;
-  border: 1.5px solid var(--color-borders);
+  border: 1.5px solid var(#000000);
   background: repeating-linear-gradient(45deg, transparent, rgb(0, 0, 0) 2px, rgba(0, 0, 0, 0) 1px, rgba(0, 0, 0, 0) 10px);
   border-radius: 0px;
   flex-shrink: 0;
@@ -862,7 +878,7 @@
 .pattern-box-right {
   width: 30px;
   height: 200px;
-  border: 1.5px solid var(--color-borders);
+  border: 1.5px solid var(#000000);
   background: repeating-linear-gradient(45deg, transparent, rgb(0, 0, 0) 2px, rgba(0, 0, 0, 0) 1px, rgba(0, 0, 0, 0) 10px);
   border-radius: 0px;
   flex-shrink: 0;
@@ -894,7 +910,7 @@
 
 .pattern-box-clickable.pattern-box-plain {
   background: transparent !important;
-  border: 1.5px solid var(--color-borders) !important;
+  border: 1.5px solid var(#000000) !important;
 }
 
 /* Responsive untuk mobile */
@@ -976,7 +992,7 @@
 .pattern-box-bottom {
   width: 350px;
   height: 30px;
-  border: 1.5px solid var(--color-borders);
+  border: 1.5px solid var(#000000);
   background: repeating-linear-gradient(45deg, transparent, rgb(0, 0, 0) 2px, rgba(0, 0, 0, 0) 1px, rgba(0, 0, 0, 0) 10px);
   border-radius: 0px;
   flex-shrink: 0;
@@ -987,7 +1003,7 @@
 .pattern-box-right {
   width: 30px;
   height: 200px;
-  border: 1.5px solid var(--color-borders);
+  border: 1.5px solid var(#000000);
   background: repeating-linear-gradient(45deg, transparent, rgb(0, 0, 0) 2px, rgba(0, 0, 0, 0) 1px, rgba(0, 0, 0, 0) 10px);
   border-radius: 0px;
   flex-shrink: 0;
@@ -1199,5 +1215,46 @@
 /* Jarak konsisten antara checkbox dan form grid berikutnya */
 .checkbox-row + .form-grid {
   margin-top: 0px;
+}
+/* ========= FIXED BLACK BORDER FOR PELAT PATTERN BOXES ========= */
+.pattern-box-top,
+.pattern-box-bottom,
+.pattern-box-left,
+.pattern-box-right,
+.sand-texture-box {
+    border: 1.5px solid #000000 !important;
+}
+
+.pattern-box-top.pattern-box-plain,
+.pattern-box-bottom.pattern-box-plain,
+.pattern-box-left.pattern-box-plain,
+.pattern-box-right.pattern-box-plain {
+    border: 1.5px solid #000000 !important;
+}
+
+.pattern-box-clickable:hover {
+    border: 2.5px solid #000000 !important;
+    box-shadow: 
+        0 0 0 2px rgba(0, 0, 0, 0.3),
+        0 0 15px 5px rgba(0, 0, 0, 0.2) !important;
+}
+/* Alert Modal Styles */
+.alert-modal {
+  max-width: 500px;
+}
+
+.alert-content {
+  line-height: 1.6;
+  white-space: pre-line;
+}
+
+.alert-content pre {
+  background: #f5f5f5;
+  padding: 12px;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 12px;
+  margin: 10px 0;
+  border: 1px solid #e0e0e0;
 }
 [file content end]

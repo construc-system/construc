@@ -94,7 +94,7 @@
   
   .modal {
     width: 100%;
-    max-height: calc(100vh - 20px);
+    max-height: calc(90vh - 80px);
   }
   
   .modal-content {
@@ -142,4 +142,8 @@
     background: url('Construc Logo.png') no-repeat center center;
     background-size: contain;
   }
+}
+/* TAMBAHAN: Pastikan modal tips juga konsisten di mobile */
+.tips-modal .modal-content {
+  max-height: calc(90vh - 150px); /* Sesuaikan untuk modal tips */
 }
