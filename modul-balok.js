@@ -348,7 +348,7 @@ window.modules.balok = {
     }
   },
 
-  // ========== FUNGSI BARU UNTUK VALIDASI DAN HITUNG ==========
+  // ========== FUNGSI VALIDASI DAN HITUNG ==========
 
   setupCalculateButton: function() {
     const calculateBtn = document.getElementById('calculateBtn');
@@ -565,69 +565,40 @@ window.modules.balok = {
   },
 
   sendToCalculation: function(data) {
-    // Panggil fungsi dari calc-balok.js
-    if (typeof window.calculateBalok === 'function') {
-      window.calculateBalok(data);
+    // Gunakan fungsi baru yang langsung redirect
+    if (typeof window.calculateBalokWithRedirect === 'function') {
+      console.log("🚀 Mengirim data ke calculateBalokWithRedirect...", data);
+      window.calculateBalokWithRedirect(data);
+    } else if (typeof window.calculateBalok === 'function') {
+      // Fallback ke fungsi lama
+      console.log("⚠️ Menggunakan calculateBalok lama...");
+      const result = window.calculateBalok(data);
+      
+      if (result.status === "sukses") {
+        // Simpan manual dan redirect
+        sessionStorage.setItem('calculationResult', JSON.stringify({
+          module: data.module,
+          mode: data.mode,
+          data: result.data,
+          kontrol: result.kontrol,
+          rekap: result.rekap,
+          kontrol_rekap: result.kontrol_rekap,
+          optimasi: result.optimasi,
+          inputData: data,
+          timestamp: new Date().toISOString()
+        }));
+        
+        // Redirect manual
+        window.location.href = 'report.html';
+      } else {
+        showAlert(`Perhitungan gagal: ${result.message || 'Terjadi kesalahan'}`);
+      }
     } else {
-      // Jika calc-balok.js belum ada, tampilkan data yang akan dikirim
       const dataStr = JSON.stringify(data, null, 2);
-      const variablesList = this.formatVariablesList(data);
-      
       showAlert(
-        `calc-balok.js tidak ditemukan.\n\nData yang akan dikirim ke calc-balok.js:\n\n${dataStr}\n\n=== VARIABEL YANG TERSEDIA ===\n${variablesList}`,
-        "‼️ calc-balok.js Tidak Ditemukan"
+        `Fungsi perhitungan tidak ditemukan.\n\nData yang akan dikirim:\n\n${dataStr}`,
+        "‼️ Fungsi Tidak Ditemukan"
       );
-      
-      // Untuk testing, tampilkan di console
-      updateLog(`Calculation data for ${currentModuleKey}.${currentMode}:`, data);
     }
-  },
-
-  formatVariablesList: function(data) {
-    let variablesList = [];
-    
-    // Data Material
-    variablesList.push("=== DATA MATERIAL ===");
-    variablesList.push(`fc: ${data.material.fc} MPa`);
-    variablesList.push(`fy: ${data.material.fy} MPa`);
-    variablesList.push(`fyt: ${data.material.fyt} MPa`);
-    
-    // Data Dimensi
-    variablesList.push("\n=== DATA DIMENSI ===");
-    variablesList.push(`h: ${data.dimensi.h} mm`);
-    variablesList.push(`b: ${data.dimensi.b} mm`);
-    variablesList.push(`sb: ${data.dimensi.sb} mm`);
-    
-    // Data Beban
-    variablesList.push("\n=== DATA BEBAN ===");
-    ['left', 'center', 'right'].forEach(section => {
-      variablesList.push(`\n${section.toUpperCase()}:`);
-      variablesList.push(`  mu_pos: ${data.beban[section].mu_pos} kNm`);
-      variablesList.push(`  mu_neg: ${data.beban[section].mu_neg} kNm`);
-      variablesList.push(`  vu: ${data.beban[section].vu} kN`);
-      variablesList.push(`  tu: ${data.beban[section].tu} kNm`);
-    });
-    
-    // Data Lanjutan
-    variablesList.push("\n=== DATA LANJUTAN ===");
-    variablesList.push(`lambda: ${data.lanjutan.lambda || '1 (default)'}`);
-    variablesList.push(`n (kaki begel): ${data.lanjutan.n || '2 (default)'}`);
-    
-    // Data Tulangan (hanya untuk evaluasi)
-    if (data.mode === 'evaluasi' && data.tulangan) {
-      variablesList.push("\n=== DATA TULANGAN ===");
-      variablesList.push(`d: ${data.tulangan.d} mm`);
-      variablesList.push(`phi: ${data.tulangan.phi} mm`);
-      
-      ['support', 'field'].forEach(section => {
-        variablesList.push(`\n${section.toUpperCase()}:`);
-        variablesList.push(`  n: ${data.tulangan[section].n}`);
-        variablesList.push(`  np: ${data.tulangan[section].np}`);
-        variablesList.push(`  nt: ${data.tulangan[section].nt || '0 (opsional)'}`);
-        variablesList.push(`  s: ${data.tulangan[section].s} mm`);
-      });
-    }
-    
-    return variablesList.join('\n');
   }
 };
