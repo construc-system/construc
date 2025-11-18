@@ -1065,5 +1065,151 @@ function clearStorageAndRetry() {
 function goBack() {
     window.location.href = 'index.html';
 }
+// FUNGSI BARU: Render Penampang Balok (Dual View)
+function renderPenampang(result) {
+    // Render untuk tumpuan
+    renderSinglePenampang(result, 'tumpuan', 'svg-container-tumpuan');
+    
+    // Render untuk lapangan  
+    renderSinglePenampang(result, 'lapangan', 'svg-container-lapangan');
+}
 
+// FUNGSI BARU: Render Single Penampang (Lengkap dengan Torsi)
+function renderSinglePenampang(result, jenis, containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) {
+        console.error(`Element #${containerId} tidak ditemukan`);
+        return;
+    }
+
+    const { data, inputData, mode } = result;
+    
+    if (!data || !inputData) {
+        console.error("Data tidak lengkap untuk render penampang");
+        container.innerHTML = '<p style="text-align: center; color: #888;">Data penampang tidak tersedia</p>';
+        return;
+    }
+
+    try {
+        // Ambil data dimensi
+        const dimensi = inputData.dimensi || {};
+        const lebar = parseFloat(dimensi.b) || 300;
+        const tinggi = parseFloat(dimensi.h) || 500;
+        const sb = parseFloat(dimensi.sb) || 30;
+
+        // Ambil data material dan tulangan
+        const material = inputData.material || {};
+        const tulangan = inputData.tulangan || {};
+
+        // Tentukan D dan phi berdasarkan mode
+        let D, phi;
+        if (mode === 'evaluasi' && tulangan) {
+            D = parseFloat(tulangan.d) || 19;
+            phi = parseFloat(tulangan.phi) || 10;
+        } else {
+            // Untuk mode desain, gunakan nilai default atau dari hasil optimasi
+            D = 19;
+            phi = 10;
+        }
+
+        // Tentukan jumlah tulangan berdasarkan jenis (tumpuan/lapangan)
+        let jumlahAtas, jumlahBawah;
+        
+        if (jenis === 'tumpuan') {
+            // Untuk tumpuan, gunakan jumlah maksimum dari kiri/kanan
+            jumlahAtas = Math.max(
+                data.tulanganKirinegatif?.n || 2,
+                data.tulanganKanannegatif?.n || 2
+            );
+            jumlahBawah = Math.max(
+                data.tulanganKiripositif?.n || 3,
+                data.tulanganKananpositif?.n || 3
+            );
+        } else { // lapangan
+            // Untuk lapangan, gunakan jumlah dari tengah
+            jumlahAtas = data.tulanganTengahnegatif?.n || 2;
+            jumlahBawah = data.tulanganTengahpositif?.n || 3;
+        }
+
+        // Tentukan jumlah tulangan torsi dan jarak berdasarkan jenis penampang
+        let jumlahTorsi, jarakTorsi;
+
+        if (jenis === 'tumpuan') {
+            // Untuk tumpuan, ambil maksimum dari kiri/kanan
+            jumlahTorsi = Math.max(
+                data.torsikiri?.n || 0,
+                data.torsikanan?.n || 0
+            );
+            // Jarak torsi menggunakan spasi begel minimum
+            jarakTorsi = Math.min(
+                parseFloat(data.begelkiri?.sTerkecil) || 100,
+                parseFloat(data.begelkanan?.sTerkecil) || 100
+            );
+        } else { // lapangan
+            jumlahTorsi = data.torsitengah?.n || 0;
+            jarakTorsi = parseFloat(data.begeltengah?.sTerkecil) || 100;
+        }
+
+        // Ambil m dari hasil perhitungan
+        const m = data.m || 3;
+
+        console.log(`📐 Data untuk penampang ${jenis}:`, {
+            lebar, tinggi, D, phi, jumlahAtas, jumlahBawah, sb, m, jumlahTorsi, jarakTorsi
+        });
+
+        // Tampilkan loading terlebih dahulu
+        container.innerHTML = `
+            <div style="text-align: center; padding: 1rem; color: #666;">
+                <p>Memuat gambar ${jenis}...</p>
+                <p style="font-size: 0.8rem; margin-top: 0.5rem;">
+                    ${jumlahBawah}D${D} bawah, ${jumlahAtas}D${D} atas
+                    ${jumlahTorsi > 0 ? `, ${jumlahTorsi}D${D} torsi` : ''}
+                </p>
+            </div>
+        `;
+
+        // Panggil fungsi render dari cut-generator dengan parameter lengkap
+        if (typeof window.renderPenampangBalok === 'function') {
+            window.renderPenampangBalok({
+                lebar: lebar,
+                tinggi: tinggi,
+                D: D,
+                begel: phi,
+                jumlahAtas: jumlahAtas,
+                jumlahBawah: jumlahBawah,
+                selimut: sb,
+                m: m,
+                jumlahTorsi: jumlahTorsi,
+                jarakTorsi: jarakTorsi
+            }, containerId);
+            
+        } else {
+            console.warn("cut-generator.js belum dimuat");
+            container.innerHTML = `
+                <div style="text-align: center; padding: 1rem; color: #dc3545;">
+                    <p>Gagal memuat gambar</p>
+                    <p style="font-size: 0.8rem;">Modul tidak tersedia</p>
+                </div>
+            `;
+        }
+
+    } catch (error) {
+        console.error(`Error rendering penampang ${jenis}:`, error);
+        container.innerHTML = `
+            <div style="text-align: center; padding: 1rem; color: #dc3545;">
+                <p>Error memuat gambar</p>
+                <p style="font-size: 0.8rem;">${error.message}</p>
+            </div>
+        `;
+    }
+}
+
+// FUNGSI BARU: Render Penampang Balok (Dual View)
+function renderPenampang(result) {
+    // Render untuk tumpuan
+    renderSinglePenampang(result, 'tumpuan', 'svg-container-tumpuan');
+    
+    // Render untuk lapangan  
+    renderSinglePenampang(result, 'lapangan', 'svg-container-lapangan');
+}
 console.log("✅ report.js loaded successfully");

@@ -1,12 +1,21 @@
-// cut-generator.js - Versi terintegrasi dengan hasil perhitungan
+// cut-generator.js - Versi dengan perbaikan jarak torsi Snv + D
+
+// Konfigurasi global untuk CAD
+window.cadConfig = {
+    tumpuan: null,
+    lapangan: null,
+    activeType: 'tumpuan'
+};
 
 // Fungsi utama untuk merender penampang balok
-window.renderPenampangBalok = function(config) {
+window.renderPenampangBalok = function(config, containerId = "svg-container") {
     console.log("🎨 Rendering penampang dengan config:", config);
+    console.log("🔍 Snv di cut-generator:", config.Snv);
+    console.log("🔍 Jumlah torsi di cut-generator:", config.jumlahTorsi);
     
-    const container = document.getElementById("svg-container");
+    const container = document.getElementById(containerId);
     if (!container) {
-        console.error("Error: Element dengan ID 'svg-container' tidak ditemukan!");
+        console.error(`Error: Element dengan ID '${containerId}' tidak ditemukan!`);
         return;
     }
 
@@ -14,7 +23,7 @@ window.renderPenampangBalok = function(config) {
     container.innerHTML = "";
 
     // Gunakan config yang diberikan atau default
-    window.config = config || {
+    const renderConfig = config || {
         lebar: 300,
         tinggi: 500,
         D: 19,
@@ -22,29 +31,43 @@ window.renderPenampangBalok = function(config) {
         jumlahAtas: 2,
         jumlahBawah: 3,
         selimut: 30,
-        m: 3
+        m: 3,
+        jumlahTorsi: 0,
+        jarakTorsi: 100,
+        Snv: 25  // Default Snv
     };
 
-    // Ambil nilai dari config
-    const { lebar, tinggi, D, begel, jumlahAtas, jumlahBawah, selimut, m } = window.config;
+    // Simpan config berdasarkan jenis penampang
+    if (containerId.includes('tumpuan')) {
+        window.cadConfig.tumpuan = { ...renderConfig, containerId };
+    } else if (containerId.includes('lapangan')) {
+        window.cadConfig.lapangan = { ...renderConfig, containerId };
+    }
+
+    // Ambil nilai dari config - TAMBAH Snv
+    const { lebar, tinggi, D, begel, jumlahAtas, jumlahBawah, selimut, m, jumlahTorsi, jarakTorsi, Snv } = renderConfig;
     const r = D / 2;
     const jarakAntarBaris = Math.max(25, D);
+
+    // Pastikan Snv tersedia, jika tidak hitung dari D
+    const actualSnv = Snv || Math.max(25, D);
 
     const svgNS = "http://www.w3.org/2000/svg";
     const svg = document.createElementNS(svgNS, "svg");
     svg.setAttribute("width", "100%");
     svg.setAttribute("height", "100%");
     svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
-    svg.setAttribute("viewBox", `0 0 ${lebar + 60} ${tinggi + 40}`);
+    svg.setAttribute("viewBox", `0 0 ${lebar + 60} ${tinggi + 20}`);
     container.appendChild(svg);
 
     // Array untuk menyimpan data lingkaran
     const lingkaranData = [];
+    const lingkaranTorsiData = [];
 
     // Beton utama
     const rect = document.createElementNS(svgNS, "rect");
     rect.setAttribute("x", 30);
-    rect.setAttribute("y", 20);
+    rect.setAttribute("y", 10);
     rect.setAttribute("width", lebar);
     rect.setAttribute("height", tinggi);
     rect.setAttribute("fill", "#ffffff");
@@ -52,48 +75,62 @@ window.renderPenampangBalok = function(config) {
     rect.setAttribute("stroke-width", 2);
     svg.appendChild(rect);
 
-    // Begel luar (offset selimut)
+    // Radius sudut begel
+    const radiusLuar = D/2 + begel;
+    const radiusDalam = D/2;
+
+    // Begel luar
     const rectBegelLuar = document.createElementNS(svgNS, "rect");
     rectBegelLuar.setAttribute("x", 30 + selimut);
-    rectBegelLuar.setAttribute("y", 20 + selimut);
+    rectBegelLuar.setAttribute("y", 10 + selimut);
     rectBegelLuar.setAttribute("width", lebar - 2 * selimut);
     rectBegelLuar.setAttribute("height", tinggi - 2 * selimut);
-    rectBegelLuar.setAttribute("rx", 2 * begel);
-    rectBegelLuar.setAttribute("ry", 2 * begel);
+    rectBegelLuar.setAttribute("rx", radiusLuar);
+    rectBegelLuar.setAttribute("ry", radiusLuar);
     rectBegelLuar.setAttribute("fill", "none");
     rectBegelLuar.setAttribute("stroke", "black");
     rectBegelLuar.setAttribute("stroke-width", 1.5);
     svg.appendChild(rectBegelLuar);
 
-    // Begel dalam (offset begel)
+    // Begel dalam
     const rectBegelDalam = document.createElementNS(svgNS, "rect");
     rectBegelDalam.setAttribute("x", 30 + selimut + begel);
-    rectBegelDalam.setAttribute("y", 20 + selimut + begel);
+    rectBegelDalam.setAttribute("y", 10 + selimut + begel);
     rectBegelDalam.setAttribute("width", lebar - 2 * (selimut + begel));
     rectBegelDalam.setAttribute("height", tinggi - 2 * (selimut + begel));
-    rectBegelDalam.setAttribute("rx", begel);
-    rectBegelDalam.setAttribute("ry", begel);
+    rectBegelDalam.setAttribute("rx", radiusDalam);
+    rectBegelDalam.setAttribute("ry", radiusDalam);
     rectBegelDalam.setAttribute("fill", "none");
     rectBegelDalam.setAttribute("stroke", "black");
     rectBegelDalam.setAttribute("stroke-width", 1.5);
     svg.appendChild(rectBegelDalam);
 
-    // Fungsi bikin lingkaran
-    function buatLingkaran(cx, cy) {
+    // Fungsi bikin lingkaran tulangan utama
+    function buatLingkaran(cx, cy, isTorsi = false) {
         const circle = document.createElementNS(svgNS, "circle");
         const actualCx = 30 + cx;
-        const actualCy = 20 + cy;
+        const actualCy = 10 + cy;
 
         circle.setAttribute("cx", actualCx);
         circle.setAttribute("cy", actualCy);
         circle.setAttribute("r", r);
-        circle.setAttribute("fill", "#0f172a");
+        
+        if (isTorsi) {
+            // Tulangan torsi: warna merah dengan stroke yang lebih tebal
+            circle.setAttribute("fill", "#dc2626");
+            circle.setAttribute("stroke", "#991b1b");
+            circle.setAttribute("stroke-width", "1.5");
+            lingkaranTorsiData.push({ cx, cy, r });
+        } else {
+            // Tulangan utama: warna hitam
+            circle.setAttribute("fill", "#0f172a");
+            lingkaranData.push({ cx, cy, r });
+        }
+        
         svg.appendChild(circle);
-
-        lingkaranData.push({ cx: cx, cy: cy, r: r });
     }
 
-    // Fungsi bikin barisan tulangan
+    // Fungsi bikin barisan tulangan utama
     function buatBaris(jumlah, cy, isAtas) {
         const barisUtuh = Math.floor(jumlah / m);
         const sisa = jumlah % m;
@@ -131,34 +168,182 @@ window.renderPenampangBalok = function(config) {
     const cyBawah = tinggi - (selimut + begel + r);
     buatBaris(jumlahBawah, cyBawah, false);
 
-    // Simpan data untuk CAD
-    window.lingkaranData = lingkaranData;
+    // Render tulangan torsi jika ada (menggunakan Snv + D)
+    if (jumlahTorsi > 0) {
+        renderTulanganTorsi(jumlahTorsi, jarakTorsi);
+    }
 
-    console.log("✅ Penampang berhasil di-render. Total tulangan:", lingkaranData.length);
-    
-    // Tambahkan informasi dimensi
-    const infoText = document.createElementNS(svgNS, "text");
-    infoText.setAttribute("x", 30 + lebar / 2);
-    infoText.setAttribute("y", 20 + tinggi + 25);
-    infoText.setAttribute("text-anchor", "middle");
-    infoText.setAttribute("font-family", "Arial, sans-serif");
-    infoText.setAttribute("font-size", "12");
-    infoText.setAttribute("fill", "#666");
-    infoText.textContent = `${lebar} × ${tinggi} mm`;
-    svg.appendChild(infoText);
+    // FUNGSI RENDER TULANGAN TORSI YANG DIPERBAIKI
+    function renderTulanganTorsi(jumlah, jarak) {
+        console.log(`🔧 Render tulangan torsi: jumlah=${jumlah}, Snv=${actualSnv}, D=${D}`);
+        
+        // Posisi tengah vertikal
+        const yMid = tinggi / 2;
+
+        // Posisi X - menempel di dalam begel
+        const xKiri = selimut + begel + r;
+        const xKanan = lebar - selimut - begel - r;
+
+        // Hitung berapa di kanan dan kiri (mengikuti logika VBA)
+        const nKanan = Math.ceil(jumlah / 2);   // ceiling
+        const nKiri = Math.floor(jumlah / 2);   // floor
+
+        // JARAK YANG BENAR: Gunakan Snv + D untuk jarak pusat ke pusat
+        const jarakPusatKePusat = actualSnv + D;
+
+        console.log(`🔧 Jarak pusat ke pusat: ${jarakPusatKePusat} = ${actualSnv} + ${D}`);
+        console.log(`🔧 Distribusi: Kanan=${nKanan} batang, Kiri=${nKiri} batang`);
+
+        // Tempatkan batang di sisi kanan (nKanan batang)
+        for (let i = 1; i <= nKanan; i++) {
+            const offsetY = (i - (nKanan + 1) / 2) * jarakPusatKePusat;
+            const cy = yMid + offsetY;
+
+            console.log(`🔧 Torsi kanan ${i}: offsetY=${offsetY.toFixed(1)}, cy=${cy.toFixed(1)}`);
+            buatLingkaran(xKanan, cy, true);
+        }
+
+        // Tempatkan batang di sisi kiri (nKiri batang)
+        for (let i = 1; i <= nKiri; i++) {
+            const offsetY = (i - (nKiri + 1) / 2) * jarakPusatKePusat;
+            const cy = yMid + offsetY;
+
+            console.log(`🔧 Torsi kiri ${i}: offsetY=${offsetY.toFixed(1)}, cy=${cy.toFixed(1)}`);
+            buatLingkaran(xKiri, cy, true);
+        }
+    }
+
+    // Tambahkan legenda jika ada tulangan torsi
+    if (jumlahTorsi > 0) {
+        tambahkanLegendaTorsi();
+    }
+
+    function tambahkanLegendaTorsi() {
+        const legendGroup = document.createElementNS(svgNS, "g");
+        
+        // Kotak legenda
+        const legendRect = document.createElementNS(svgNS, "rect");
+        legendRect.setAttribute("x", 30 + lebar + 5);
+        legendRect.setAttribute("y", 10);
+        legendRect.setAttribute("width", 120);
+        legendRect.setAttribute("height", 60);
+        legendRect.setAttribute("fill", "white");
+        legendRect.setAttribute("stroke", "#666");
+        legendRect.setAttribute("stroke-width", "1");
+        legendGroup.appendChild(legendRect);
+        
+        // Judul legenda
+        const legendTitle = document.createElementNS(svgNS, "text");
+        legendTitle.setAttribute("x", 30 + lebar + 15);
+        legendTitle.setAttribute("y", 25);
+        legendTitle.setAttribute("font-size", "10");
+        legendTitle.setAttribute("font-weight", "bold");
+        legendTitle.textContent = "Legenda Tulangan";
+        legendGroup.appendChild(legendTitle);
+        
+        // Contoh tulangan utama
+        const mainExample = document.createElementNS(svgNS, "circle");
+        mainExample.setAttribute("cx", 30 + lebar + 20);
+        mainExample.setAttribute("cy", 40);
+        mainExample.setAttribute("r", 4);
+        mainExample.setAttribute("fill", "#0f172a");
+        legendGroup.appendChild(mainExample);
+        
+        const mainText = document.createElementNS(svgNS, "text");
+        mainText.setAttribute("x", 30 + lebar + 30);
+        mainText.setAttribute("y", 43);
+        mainText.setAttribute("font-size", "9");
+        mainText.textContent = "Tulangan Utama";
+        legendGroup.appendChild(mainText);
+        
+        // Contoh tulangan torsi
+        const torsiExample = document.createElementNS(svgNS, "circle");
+        torsiExample.setAttribute("cx", 30 + lebar + 20);
+        torsiExample.setAttribute("cy", 55);
+        torsiExample.setAttribute("r", 4);
+        torsiExample.setAttribute("fill", "#dc2626");
+        torsiExample.setAttribute("stroke", "#991b1b");
+        torsiExample.setAttribute("stroke-width", "1");
+        legendGroup.appendChild(torsiExample);
+        
+        const torsiText = document.createElementNS(svgNS, "text");
+        torsiText.setAttribute("x", 30 + lebar + 30);
+        torsiText.setAttribute("y", 58);
+        torsiText.setAttribute("font-size", "9");
+        torsiText.textContent = "Tulangan Torsi";
+        legendGroup.appendChild(torsiText);
+        
+        svg.appendChild(legendGroup);
+    }
+
+    // Simpan data lingkaran untuk jenis penampang ini
+    if (containerId.includes('tumpuan')) {
+        window.cadConfig.tumpuan.lingkaranData = lingkaranData;
+        window.cadConfig.tumpuan.lingkaranTorsiData = lingkaranTorsiData;
+    } else if (containerId.includes('lapangan')) {
+        window.cadConfig.lapangan.lingkaranData = lingkaranData;
+        window.cadConfig.lapangan.lingkaranTorsiData = lingkaranTorsiData;
+    }
+
+    // Set default untuk CAD
+    if (containerId.includes('tumpuan') || !window.cadConfig.activeType) {
+        window.config = renderConfig;
+        window.lingkaranData = lingkaranData;
+        window.lingkaranTorsiData = lingkaranTorsiData;
+        window.cadConfig.activeType = 'tumpuan';
+    }
+
+    console.log(`✅ Penampang ${containerId} berhasil di-render. Total tulangan: ${lingkaranData.length}, Tulangan torsi: ${lingkaranTorsiData.length}`);
+
+    return {
+        config: renderConfig,
+        lingkaranData: lingkaranData,
+        lingkaranTorsiData: lingkaranTorsiData,
+        containerId: containerId
+    };
 };
 
-// Fungsi generate CAD
+// Fungsi untuk beralih antara CAD tumpuan dan lapangan
+window.switchCADType = function(type) {
+    if (type === 'tumpuan' && window.cadConfig.tumpuan) {
+        window.config = window.cadConfig.tumpuan;
+        window.lingkaranData = window.cadConfig.tumpuan.lingkaranData || [];
+        window.lingkaranTorsiData = window.cadConfig.tumpuan.lingkaranTorsiData || [];
+        window.cadConfig.activeType = 'tumpuan';
+        console.log("🔁 CAD switched to: TUMPUAN");
+        return true;
+    } else if (type === 'lapangan' && window.cadConfig.lapangan) {
+        window.config = window.cadConfig.lapangan;
+        window.lingkaranData = window.cadConfig.lapangan.lingkaranData || [];
+        window.lingkaranTorsiData = window.cadConfig.lapangan.lingkaranTorsiData || [];
+        window.cadConfig.activeType = 'lapangan';
+        console.log("🔁 CAD switched to: LAPANGAN");
+        return true;
+    }
+    return false;
+};
+
+// Fungsi generate CAD (tetap sama)
 window.generateCADText = function() {
     try {
+        // Gunakan config aktif
         const config = window.config;
         if (!config) {
             throw new Error("Config tidak ditemukan!");
         }
-        const { lebar, tinggi, D, begel, selimut } = config;
+        
+        const { lebar, tinggi, D, begel, selimut, jumlahTorsi } = config;
         const r = D / 2;
 
         const lingkaranList = window.lingkaranData || [];
+        const lingkaranTorsiList = window.lingkaranTorsiData || [];
+
+        // Gabungkan semua tulangan
+        const semuaLingkaran = [...lingkaranList, ...lingkaranTorsiList];
+
+        // Gunakan radius yang sama dengan render
+        const radiusLuar = D/2 + begel;
+        const radiusDalam = D/2;
 
         const cadVars = {
             lebarRect: lebar,
@@ -199,7 +384,9 @@ window.generateCADText = function() {
                 const distX = (selimut + begel) - this.x13;
                 return this.y10 + (distX / denom) * Math.sin(135 * Math.PI / 180);
             },
-            rLingkaran: r
+            rLingkaran: r,
+            radiusLuar: radiusLuar,
+            radiusDalam: radiusDalam
         };
 
         const cadLines = [
@@ -241,16 +428,47 @@ window.generateCADText = function() {
             "ENTER",
         ];
 
-        lingkaranList.forEach(c => {
+        // Tambahkan semua lingkaran (utama dan torsi)
+        semuaLingkaran.forEach(c => {
             const cyCAD = tinggi - c.cy;
             cadLines.push(`CIRCLE ${c.cx},${cyCAD} ${c.r} `);
         });
 
-        return cadLines.join("\n");
+        // Tambahkan header dengan informasi jenis penampang
+        const header = [
+            `; ==============================================`,
+            `; CAD TEXT FOR PENAMPANG ${window.cadConfig.activeType.toUpperCase()}`,
+            `; Generated by ConcreteCalc`,
+            `; Date: ${new Date().toLocaleDateString()}`,
+            `; Dimensi: ${lebar} x ${tinggi} mm`,
+            `; Tulangan: ${config.jumlahBawah || 'N/A'}D${D} bawah, ${config.jumlahAtas || 'N/A'}D${D} atas`,
+            `; Tulangan Torsi: ${jumlahTorsi || 0}D${D}`,
+            `; Radius Begel: ${radiusLuar.toFixed(1)}mm (luar), ${radiusDalam.toFixed(1)}mm (dalam)`,
+            `; ==============================================`,
+            ``
+        ];
+
+        return header.join('\n') + cadLines.join('\n');
     } catch (error) {
         console.error("Error in generateCADText:", error);
         return "Error generating CAD text: " + error.message;
     }
 };
 
-console.log("✅ cut-generator.js loaded (integrated version)");
+// Fungsi untuk mendapatkan informasi penampang aktif
+window.getActiveCADInfo = function() {
+    const activeType = window.cadConfig.activeType || 'tumpuan';
+    const config = window.config || {};
+    
+    return {
+        type: activeType,
+        lebar: config.lebar || 0,
+        tinggi: config.tinggi || 0,
+        D: config.D || 0,
+        jumlahAtas: config.jumlahAtas || 0,
+        jumlahBawah: config.jumlahBawah || 0,
+        jumlahTorsi: config.jumlahTorsi || 0
+    };
+};
+
+console.log("✅ cut-generator.js loaded (VERSION FINAL - dengan Snv + D untuk torsi)");
