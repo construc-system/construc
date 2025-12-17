@@ -119,6 +119,7 @@ window.modules.pelat = {
     const muValue = currentState['mu'] || '';
     const quValue = currentState['qu'] || '';
     const bebanTpValue = currentState['beban_tp'] || 'Pilih Jenis Tumpuan';
+    const bebanTpManualValue = currentState['beban_tp_manual'] || 'Pilih Jenis Tumpuan';
     
     // Dapatkan state pattern boxes
     const patternBoxesState = currentState['pattern_boxes'] || {};
@@ -228,6 +229,29 @@ window.modules.pelat = {
             <input data-key="mu" placeholder="Momen Ultimit" value="${escapeHtml(muValue)}">
           </div>
         </div>
+        <!-- TAMBAHKAN DROPDOWN JENIS TUMPUAN UNTUK MANUAL -->
+        <div class="field">
+          <label>tp</label>
+          <div class="custom-dropdown" id="bebanTumpuanManualDropdown">
+            <div class="dropdown-selected" id="bebanTumpuanManualDropdownSelected">
+              <span>${escapeHtml(bebanTpManualValue)}</span>
+            </div>
+            <div class="dropdown-options" id="bebanTumpuanManualDropdownOptions">
+              <div class="dropdown-option" data-value="Satu Arah">Satu Arah</div>
+              <div class="dropdown-option" data-value="Dua Arah">Dua Arah</div>
+              <div class="dropdown-option" data-value="Kantilever">Kantilever</div>
+              <div class="dropdown-option clear-option" data-value="clear">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trash2-icon lucide-trash-2">
+                  <path d="M10 11v6"/>
+                  <path d="M14 11v6"/>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+                  <path d="M3 6h18"/>
+                  <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
       ` : ''}
     `;
@@ -238,6 +262,7 @@ window.modules.pelat = {
     if (currentMode === 'desain' || currentMode === 'evaluasi') {
       this.setupBebanModeToggle();
       this.initBebanTumpuanDropdown();
+      this.initBebanTumpuanManualDropdown();
       this.setupPatternBoxToggle();
       // Setup tips button khusus untuk Data Beban pelat
       this.setupPelatBebanTipsButton();
@@ -254,12 +279,17 @@ window.modules.pelat = {
           <h3>Data Beban</h3>
           <div style="line-height: 1.6;">
             <p>Atur metode perhitungan beban dan momen pelat. Pilih <strong>Auto</strong> untuk menghitung momen ultimit berdasarkan kondisi tumpuan dan beban total, atau <strong>Manual</strong> jika nilai momen ultimit (<strong>Mu</strong>) sudah ditentukan pengguna.</p>
+            <p><strong>Mode Auto:</strong></p>
             <p><strong>tp (Jenis Tumpuan Pelat)</strong> — Tentukan tipe tumpuan (<strong>Terjepit Penuh</strong> atau <strong>Menerus/Elastis</strong>) yang memengaruhi distribusi momen.</p>
             <p><strong>qu (Beban Ultimit)</strong> — Merupakan beban total hasil kombinasi beban mati, hidup, dan lainnya, yang sudah dikalikan faktor ultimit.</p>
             <p><strong>Diagram Interaktif Pelat</strong> — Ilustrasi ini menunjukkan pelat dan tumpuannya. Kotak besar di tengah mewakili <strong>bidang pelat</strong>, sedangkan empat kotak kecil di sisi atas, bawah, kiri, dan kanan mewakili <strong>kondisi tumpuan</strong> di tiap tepi.</p>
-            <p>Setiap kotak sisi menampilkan pola <strong>garis miring</strong> untuk menandakan bahwa sisi tersebut <strong>ditumpu oleh tumpuan tp</strong>. Jika pengguna <strong>mengklik kotak tumpuan</strong>, pola garis miringnya akan <strong>hilang</strong> untuk menunjukkan sisi yang <strong>terletak bebas (tidak ditumpu)</strong>.</p>
+            <p>Setiap kotak sisi menampilkan pola <strong>garis miring</strong> untuk menandakan bahwa sisi tersebut <strong>ditumpu oleh tumpuan tp</strong>. Jika pengguna <strong>mengklik kotak tumpuan</strong>, pola garis milingnya akan <strong>hilang</strong> untuk menunjukkan sisi yang <strong>terletak bebas (tidak ditumpu)</strong>.</p>
             <p>Dengan cara ini, pengguna bisa menyesuaikan kombinasi tumpuan pelat sesuai kondisi nyata di lapangan, misalnya <strong>pelat menerus di dua sisi dan bebas di sisi lainnya</strong>.</p>
             <p>Kondisi tumpuan inilah yang nantinya digunakan sistem untuk menentukan <strong>distribusi momen</strong> dan <strong>arah pembebanan utama</strong> ketika mode <strong>Auto</strong> aktif.</p>
+            
+            <p><strong>Mode Manual:</strong></p>
+            <p><strong>Mu (Momen Ultimit)</strong> — Nilai momen ultimit yang sudah diketahui/dihitung sebelumnya.</p>
+            <p><strong>tp (Jenis Tumpuan)</strong> — Pilih tipe perilaku pelat: <strong>Satu Arah</strong> (pelat yang menyalurkan beban hanya dalam satu arah), <strong>Dua Arah</strong> (pelat yang menyalurkan beban ke dua arah), atau <strong>Kantilever</strong> (pelat yang menjorok tanpa tumpuan di ujungnya).</p>
           </div>
         `;
         document.getElementById('tipsModal').classList.add('active');
@@ -310,7 +340,7 @@ window.modules.pelat = {
         <div class="field">
           <label>s<sub>b</sub></label>
           <div class="input-with-unit" data-unit="mm">
-            <input data-key="sb" placeholder="Jarak Tulangan Bagi" value="${escapeHtml(currentState['sb'] || '')}">
+            <input data-key="sb_tulangan" placeholder="Jarak Tulangan Bagi" value="${escapeHtml(currentState['sb_tulangan'] || '')}">
           </div>
         </div>
       </div>
@@ -438,6 +468,11 @@ window.modules.pelat = {
   },
 
   initBebanTumpuanDropdown: function() {
+    // Hanya inisialisasi jika mode auto aktif
+    if (!(bebanMode[currentModuleKey] && bebanMode[currentModuleKey][currentMode] === 'auto')) {
+      return;
+    }
+    
     const dropdownSelected = document.getElementById('bebanTumpuanDropdownSelected');
     const dropdownOptions = document.getElementById('bebanTumpuanDropdownOptions');
 
@@ -478,6 +513,66 @@ window.modules.pelat = {
           ensureState(currentModuleKey, currentMode);
           formState[currentModuleKey][currentMode]['beban_tp'] = value;
           updateLog(`set ${currentModuleKey}.${currentMode}.beban_tp = ${value}`);
+        }
+
+        dropdownSelected.classList.remove('open');
+        dropdownOptions.classList.remove('show');
+      });
+    });
+
+    // Tutup dropdown ketika klik di luar
+    document.addEventListener('click', function() {
+      dropdownSelected.classList.remove('open');
+      dropdownOptions.classList.remove('show');
+    });
+  },
+
+  initBebanTumpuanManualDropdown: function() {
+    // Hanya inisialisasi jika mode manual aktif
+    if (!(bebanMode[currentModuleKey] && bebanMode[currentModuleKey][currentMode] === 'manual')) {
+      return;
+    }
+    
+    const dropdownSelected = document.getElementById('bebanTumpuanManualDropdownSelected');
+    const dropdownOptions = document.getElementById('bebanTumpuanManualDropdownOptions');
+
+    if (!dropdownSelected || !dropdownOptions) return;
+
+    // Toggle dropdown ketika bagian selected diklik
+    dropdownSelected.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const isOpen = dropdownSelected.classList.contains('open');
+
+      // Tutup semua dropdown yang terbuka
+      document.querySelectorAll('.dropdown-selected.open').forEach(el => {
+        if (el !== dropdownSelected) el.classList.remove('open');
+      });
+      document.querySelectorAll('.dropdown-options.show').forEach(el => {
+        if (el !== dropdownOptions) el.classList.remove('show');
+      });
+
+      // Toggle dropdown ini
+      dropdownSelected.classList.toggle('open');
+      dropdownOptions.classList.toggle('show');
+    });
+
+    // Tangani pilihan opsi
+    dropdownOptions.querySelectorAll('.dropdown-option').forEach(option => {
+      option.addEventListener('click', function() {
+        const value = this.getAttribute('data-value');
+
+        if (value === 'clear') {
+          // Kosongkan input tp di bagian manual
+          dropdownSelected.querySelector('span').textContent = 'Pilih Jenis Tumpuan';
+          formState[currentModuleKey][currentMode]['beban_tp_manual'] = '';
+          updateLog('beban_tp_manual cleared for pelat module');
+        } else {
+          // Update tampilan dropdown
+          dropdownSelected.querySelector('span').textContent = this.textContent;
+          // Update state
+          ensureState(currentModuleKey, currentMode);
+          formState[currentModuleKey][currentMode]['beban_tp_manual'] = value;
+          updateLog(`set ${currentModuleKey}.${currentMode}.beban_tp_manual = ${value}`);
         }
 
         dropdownSelected.classList.remove('open');
@@ -559,22 +654,22 @@ window.modules.pelat = {
         missingFields.push("tp (Jenis Tumpuan) - Data Beban");
       }
       
-      // Validasi pattern boxes - minimal harus ada satu tumpuan
-      const patternBoxes = state['pattern_boxes'] || {};
-      const hasTumpuan = patternBoxes['top'] || patternBoxes['left'] || patternBoxes['right'] || patternBoxes['bottom'];
-      if (!hasTumpuan) {
-        missingFields.push("Minimal satu tumpuan harus dipilih - Diagram Tumpuan");
-      }
+      // DIAGRAM TUMPUAN TIDAK WAJIB - validasi dihapus
+      // Pengguna tidak diharuskan memilih minimal satu tumpuan
+      
     } else {
-      // Mode Manual: mu wajib
+      // Mode Manual: mu dan beban_tp_manual wajib
       if (!state['mu'] || state['mu'].toString().trim() === '') {
         missingFields.push("Mu (Momen Ultimit) - Data Beban");
+      }
+      if (!state['beban_tp_manual'] || state['beban_tp_manual'].toString().trim() === '') {
+        missingFields.push("tp (Jenis Tumpuan) - Data Beban");
       }
     }
 
     // Field wajib dari Data Tulangan (hanya untuk mode evaluasi)
     if (currentMode === 'evaluasi') {
-      const tulanganFields = ['d', 'db', 's', 'sb'];
+      const tulanganFields = ['d', 'db', 's', 'sb_tulangan'];
       tulanganFields.forEach(field => {
         if (!state[field] || state[field].toString().trim() === '') {
           missingFields.push(`${this.getFieldLabel(field)} (Data Tulangan)`);
@@ -597,7 +692,8 @@ window.modules.pelat = {
       'sb_tulangan': 'sb (Jarak Tulangan Bagi)',
       'qu': 'qu (Beban Ultimit)',
       'mu': 'Mu (Momen Ultimit)',
-      'beban_tp': 'tp (Jenis Tumpuan)'
+      'beban_tp': 'tp (Jenis Tumpuan)',
+      'beban_tp_manual': 'tp (Jenis Tumpuan)'
     };
     return labels[key] || key;
   },
@@ -628,7 +724,7 @@ window.modules.pelat = {
         ly: state.ly,
         lx: state.lx,
         h: state.h,
-        sb: state.sb
+        sb: state.sb  // ⬅️ INI ADALAH SELIMUT BETON
       },
       beban: {
         mode: bebanMode[currentModuleKey] && bebanMode[currentModuleKey][currentMode] ? bebanMode[currentModuleKey][currentMode] : 'auto',
@@ -638,7 +734,8 @@ window.modules.pelat = {
           pattern_binary: patternBinary
         },
         manual: {
-          mu: state.mu
+          mu: state.mu,
+          tumpuan_type: state.beban_tp_manual  // TAMBAHKAN INI
         }
       },
       material: quickInputs,
@@ -653,31 +750,68 @@ window.modules.pelat = {
         d: state.d,
         db: state.db,
         s: state.s,
-        sb: state.sb
+        sb: state.sb_tulangan  // ⬅️ INI ADALAH JARAK TULANGAN BAGI
       };
     }
 
     return calculationData;
   },
 
-  sendToCalculation: function(data) {
-    // Panggil fungsi dari calc-pelat.js
-    if (typeof window.calculatePelat === 'function') {
-      window.calculatePelat(data);
-    } else {
-      // Jika calc-pelat.js belum ada, tampilkan data yang akan dikirim
-      const dataStr = JSON.stringify(data, null, 2);
-      const variablesList = this.formatVariablesList(data);
-      
-      showAlert(
-        `calc-pelat.js tidak ditemukan.\n\nData yang akan dikirim ke calc-pelat.js:\n\n${dataStr}\n\n=== VARIABEL YANG TERSEDIA ===\n${variablesList}`,
-        "‼️ calc-pelat.js Tidak Ditemukan"
-      );
-      
-      // Untuk testing, tampilkan di console
-      updateLog(`Calculation data for ${currentModuleKey}.${currentMode}:`, data);
+sendToCalculation: async function(data) {
+    console.log("🚀 Memulai perhitungan pelat...", data);
+    
+    try {
+        // Gunakan calculatePelatWithRedirect yang sudah ada
+        if (typeof window.calculatePelatWithRedirect === 'function') {
+            console.log("✅ Menggunakan calculatePelatWithRedirect...");
+            const result = await window.calculatePelatWithRedirect(data);
+            console.log("📊 Hasil calculatePelatWithRedirect:", result);
+            
+        } else if (typeof window.calculatePelat === 'function') {
+            console.log("⚠️ calculatePelatWithRedirect tidak tersedia, menggunakan calculatePelat...");
+            
+            const result = await window.calculatePelat(data);
+            console.log("📊 Hasil calculatePelat:", result);
+            
+            if (result && (result.status === 'sukses' || result.status === 'cek')) {
+                console.log("💾 Menyimpan data ke sessionStorage...");
+                
+                // Simpan data dengan struktur yang konsisten
+                const storageData = {
+                    module: data.module,
+                    mode: data.mode,
+                    data: result.data,
+                    kontrol: result.kontrol,
+                    rekap: result.rekap,
+                    inputData: data,
+                    timestamp: new Date().toISOString()
+                };
+                
+                sessionStorage.setItem('calculationResultPelat', JSON.stringify(storageData));
+                console.log("✅ Data berhasil disimpan di calculationResultPelat");
+                
+                // ✅ REDIRECT MANUAL - INI YANG PALING PENTING
+                console.log("🔄 Redirect manual ke report.html...");
+                setTimeout(() => {
+                    window.location.href = 'report.html';
+                }, 500);
+                
+            } else {
+                console.error("❌ Perhitungan gagal:", result);
+                let errorMessage = 'Terjadi kesalahan';
+                if (result?.message) errorMessage = result.message;
+                if (result?.problems) errorMessage = result.problems.join(', ');
+                showAlert(`Perhitungan gagal: ${errorMessage}`);
+            }
+        } else {
+            console.error("❌ Fungsi calculatePelat tidak tersedia");
+            showAlert("Modul perhitungan pelat tidak tersedia. Pastikan calc-pelat.js sudah dimuat.");
+        }
+    } catch (error) {
+        console.error("❌ Exception dalam sendToCalculation:", error);
+        showAlert(`Error: ${error.message}`);
     }
-  },
+},
 
   formatVariablesList: function(data) {
     let variablesList = [];
@@ -710,6 +844,7 @@ window.modules.pelat = {
       variablesList.push(`Interpretasi Pattern: ${patternDesc}`);
     } else {
       variablesList.push(`mu: ${data.beban.manual.mu} kNm`);
+      variablesList.push(`Jenis Tumpuan: ${data.beban.manual.tumpuan_type}`);
     }
     
     // Data Lanjutan

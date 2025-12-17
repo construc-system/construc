@@ -433,20 +433,18 @@ window.modules.kolom = {
       console.log("🚀 Mengirim data ke calculateKolomWithRedirect...", data);
       window.calculateKolomWithRedirect(data);
     } else if (typeof window.calculateKolom === 'function') {
-      // Fallback ke fungsi lama
+      // Fallback ke fungsi lama - PERBAIKAN: gunakan key yang berbeda
       console.log("⚠️ Menggunakan calculateKolom lama...");
       const result = window.calculateKolom(data);
       
       if (result.status === "sukses") {
-        // Simpan manual dan redirect
-        sessionStorage.setItem('calculationResult', JSON.stringify({
+        // PERBAIKAN: Gunakan key yang berbeda untuk kolom
+        sessionStorage.setItem('calculationResultKolom', JSON.stringify({
           module: data.module,
           mode: data.mode,
           data: result.data,
           kontrol: result.kontrol,
           rekap: result.rekap,
-          kontrol_rekap: result.kontrol_rekap,
-          optimasi: result.optimasi,
           inputData: data,
           timestamp: new Date().toISOString()
         }));

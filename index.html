@@ -170,7 +170,7 @@ fyt — Gunakan nilai leleh baja begel. Nilai umum yang digunakan antara 240 MPa
               <div class="quick-field" id="gammaCField" style="display: none;">
                 <label>ɣ<sub>c</sub></label>
                 <div class="input-with-unit" data-unit="kN/m³">
-                  <input id="quickGammaC" placeholder="Berat Jenis Tanah">
+                  <input id="quickGammaC" placeholder="Berat Jenis Beton">
                 </div>
               </div>
             </div>
@@ -295,8 +295,24 @@ fyt — Gunakan nilai leleh baja begel. Nilai umum yang digunakan antara 240 MPa
   <script src="modul-kolom.js"></script>
   <script src="modul-pelat.js"></script>
   <script src="modul-fondasi.js"></script>
-  <script src="optimizer.js"></script>
   <script src="calc-balok.js"></script>
+  <script src="optimizer-balok.js"></script>
+  <script src="calc-kolom.js"></script>
+  <script src="optimizer-kolom.js"></script>
+  <script src="calc-pelat.js"></script>
+  <script src="optimizer-pelat.js"></script>
+  <script src="calc-fondasi.js"></script>
+  <script src="optimizer-fondasi.js"></script>
   <script src="script.js"></script>
+<script>
+// Clear storage hanya ketika membuka index.html
+sessionStorage.removeItem('calculationResult');
+sessionStorage.removeItem('calculationResultKolom'); 
+sessionStorage.removeItem('calculationResultPelat');
+sessionStorage.removeItem('calculationResultFondasi'); 
+sessionStorage.removeItem('savedDraft');
+sessionStorage.removeItem('currentModule');
+console.log("🧹 Storage cleared for new session");
+</script>
 </body>
 </html>

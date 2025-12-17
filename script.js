@@ -992,3 +992,40 @@ document.addEventListener('DOMContentLoaded', function() {
   // TAMBAHAN: Reset data button event listener
   document.getElementById('resetAllDataBtn').addEventListener('click', resetAllData);
 });
+// Deteksi ketika kembali dari report dan reset state autoDimensi
+window.addEventListener('load', function() {
+    console.log('[GLOBAL] Page loaded, checking for report back...');
+    
+    // Cek apakah kita baru saja kembali dari report
+    const fromReport = sessionStorage.getItem('fromReport');
+    if (fromReport === 'true') {
+        console.log('[GLOBAL] Detected back from report, resetting autoDimensi states...');
+        
+        // Reset semua autoDimensi state untuk semua modul
+        Object.keys(formState).forEach(moduleKey => {
+            Object.keys(formState[moduleKey] || {}).forEach(modeKey => {
+                // Reset autoDimensi untuk semua mode fondasi
+                delete formState[moduleKey][modeKey]['autoDimensi_tunggal'];
+                delete formState[moduleKey][modeKey]['autoDimensi_menerus'];
+                
+                console.log(`[GLOBAL] Reset autoDimensi states for ${moduleKey}.${modeKey}`);
+            });
+        });
+        
+        // Hapus flag
+        sessionStorage.removeItem('fromReport');
+        
+        // Force re-render modul
+        if (typeof renderModule === 'function') {
+            setTimeout(() => {
+                renderModule();
+            }, 100);
+        }
+    }
+});
+
+// Di report.html, tambahkan kode berikut sebelum redirect back:
+function goBackToIndex() {
+    sessionStorage.setItem('fromReport', 'true');
+    window.location.href = 'index.html';
+}
