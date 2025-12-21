@@ -509,17 +509,32 @@
             }
         }
     
-        // Cek kontrol torsi
+        // Cek kontrol torsi (diperbarui untuk 2 kondisi torsi)
         if (kontrol.kontrolTorsi) {
             for (const [key, value] of Object.entries(kontrol.kontrolTorsi)) {
                 const label = getLabelFromKey(key);
                 
                 if (value.perluDanAman === false) {
                     kontrolTidakAman.push(`Torsi ${label}`);
-                    if (value.detail?.amanTorsi === false) {
-                        saranPerbaikan.push(`Tambahkan tulangan torsi (longitudinal dan sengkang tertutup) pada ${label}`);
-                    } else if (value.detail?.amanBegel1 === false || value.detail?.amanBegel2 === false) {
-                        saranPerbaikan.push(`Tambahkan tulangan sengkang torsi pada ${label}`);
+                    const detail = value.detail;
+                    
+                    // Berikan saran spesifik berdasarkan kondisi torsi yang tidak aman
+                    if (detail) {
+                        if (detail.perluTorsi) {
+                            if (!detail.amanBegel1 || !detail.amanBegel2) {
+                                saranPerbaikan.push(`Tambahkan luas sengkang torsi (Av,t) pada ${label} untuk memenuhi syarat minimum`);
+                            }
+                            if (!detail.amanTorsi1) {
+                                saranPerbaikan.push(`Perbesar At/s sengkang torsi pada ${label} (minimum: ${detail.kontrolTorsi?.toFixed(3) || 'N/A'} mm²/mm)`);
+                            }
+                            if (!detail.amanTorsi2) {
+                                const A1_kebutuhan = detail.A1 || 0;
+                                const A1_terpasang = detail.A1_terpasang || 0;
+                                saranPerbaikan.push(`Tambahkan tulangan longitudinal torsi (A1) pada ${label}: dibutuhkan ${A1_kebutuhan.toFixed(2)} mm², terpasang ${A1_terpasang.toFixed(2)} mm²`);
+                            }
+                        } else {
+                            saranPerbaikan.push(`Tidak perlu torsi pada ${label}, tetapi ada masalah dalam kontrol torsi`);
+                        }
                     } else {
                         saranPerbaikan.push(`Periksa dan perbaiki tulangan torsi pada ${label}`);
                     }
@@ -708,27 +723,54 @@
             }
         }
     
-        // 5. KONTROL TORSI
+        // 5. KONTROL TORSI - DIPERBARUI DENGAN 2 KONDISI
         if (kontrol.kontrolTorsi && kontrol.kontrolTorsi[config.torsi]) {
             const kontrolData = kontrol.kontrolTorsi[config.torsi];
-            if (kontrolData.perluDanAman !== undefined && kontrolData.detail?.perluTorsi) {
+            const detail = kontrolData.detail;
+            
+            if (detail?.perluTorsi) {
+                // Kontrol 1: amanBegel1
+                html += renderStep(
+                    stepNumberGenerator.next().value,
+                    `Kontrol Begel Torsi (Minimum 1) ${lokasi}`,
+                    `A<sub>v,t</sub> = ${detail?.Avt?.toFixed(2) || 'N/A'} mm² ≥ ${detail?.kontrolBegel1?.toFixed(2) || 'N/A'} mm²`,
+                    detail?.amanBegel1
+                );
+                
+                // Kontrol 2: amanBegel2
+                html += renderStep(
+                    stepNumberGenerator.next().value,
+                    `Kontrol Begel Torsi (Minimum 2) ${lokasi}`,
+                    `A<sub>v,t</sub> = ${detail?.Avt?.toFixed(2) || 'N/A'} mm² ≥ ${detail?.kontrolBegel2?.toFixed(2) || 'N/A'} mm²`,
+                    detail?.amanBegel2
+                );
+                
+                // Kontrol 3: amanTorsi1 (At_per_S >= kontrolTorsi)
+                html += renderStep(
+                    stepNumberGenerator.next().value,
+                    `Kontrol Sengkang Torsi ${lokasi}`,
+                    `A<sub>t</sub>/s = ${detail?.At_per_S?.toFixed(3) || 'N/A'} mm²/mm ≥ ${detail?.kontrolTorsi?.toFixed(3) || 'N/A'} mm²/mm`,
+                    detail?.amanTorsi1
+                );
+                
+                // Kontrol 4: amanTorsi2 (A1_terpasang >= A1)
+                const A1_terpasang = detail?.A1_terpasang || 0;
+                const A1 = detail?.A1 || 0;
+                html += renderStep(
+                    stepNumberGenerator.next().value,
+                    `Kontrol Tulangan Longitudinal Torsi ${lokasi}`,
+                    `A<sub>1,terpasang</sub> = ${A1_terpasang.toFixed(2)} mm² ≥ A<sub>1</sub> = ${A1.toFixed(2)} mm²`,
+                    detail?.amanTorsi2
+                );
+            } else {
+                // Tidak perlu torsi
                 html += renderStep(
                     stepNumberGenerator.next().value,
                     `Kontrol Torsi ${lokasi}`,
-                    `T<sub>n</sub> = ${kontrolData.detail?.Tn?.toFixed(3) || 'N/A'} kNm ≥ T<sub>u</sub> = ${kontrolData.detail?.Tu?.toFixed(3) || 'N/A'} kNm`,
-                    kontrolData.perluDanAman
+                    `T<sub>u</sub> = ${detail?.Tu?.toFixed(3) || 'N/A'} kNm ≤ T<sub>u,min</sub> = ${detail?.Tu_min?.toFixed(3) || 'N/A'} kNm (Tidak Perlu Torsi)`,
+                    true
                 );
             }
-        }
-    
-        if (config.data_torsi && config.data_torsi.perluTorsi) {
-            const kontrolBegel1 = config.data_torsi.kontrolBegel1;
-            html += renderStep(
-                stepNumberGenerator.next().value,
-                `Kontrol Begel Torsi ${lokasi}`,
-                `A<sub>v,t</sub> ≥ ${kontrolBegel1 !== undefined ? parseFloat(kontrolBegel1).toFixed(0) : 'N/A'} mm²`,
-                config.data_torsi.amanBegel1
-            );
         }
     
         return html;
@@ -973,9 +1015,62 @@
         );
     }
     
+    // ==================== FUNGSI UNTUK MEMUAT DATA DARI SESSION STORAGE ====================
+    function loadResultFromStorage() {
+        const saved = sessionStorage.getItem('calculationResult');
+        if (!saved) return null;
+        
+        try {
+            const result = JSON.parse(saved);
+            
+            // Pastikan struktur data lengkap
+            if (result.data && result.data.torsikiri) {
+                // Data sudah lengkap
+                return result;
+            }
+            
+            // Jika data lama, tambahkan properti yang diperlukan
+            if (result.data) {
+                // Periksa dan perbarui struktur torsi jika perlu
+                ['torsikiri', 'torsitengah', 'torsikanan'].forEach(key => {
+                    if (result.data[key] && !result.data[key].A11) {
+                        // Data torsi lama, tambahkan properti baru
+                        result.data[key].A11 = result.data[key].A1 || "0.00";
+                        result.data[key].A12 = result.data[key].A1_alt || "0.00";
+                        result.data[key].A1_terpasang = "0.00";
+                        result.data[key].luasTulanganMemanjang = "0.00";
+                        result.data[key].amanTorsi1 = result.data[key].amanTorsi || true;
+                        result.data[key].amanTorsi2 = true;
+                        
+                        // Perbarui kontrol torsi jika ada
+                        if (result.kontrol && result.kontrol.kontrolTorsi && result.kontrol.kontrolTorsi[key]) {
+                            const kontrolTorsi = result.kontrol.kontrolTorsi[key];
+                            kontrolTorsi.detail = {
+                                ...kontrolTorsi.detail,
+                                A11: parseFloat(result.data[key].A11),
+                                A12: parseFloat(result.data[key].A12),
+                                A1: parseFloat(result.data[key].A1 || result.data[key].A1_alt || 0),
+                                A1_terpasang: 0,
+                                amanTorsi1: result.data[key].amanTorsi1,
+                                amanTorsi2: true,
+                                amanTorsi: result.data[key].amanTorsi1 && true
+                            };
+                        }
+                    }
+                });
+            }
+            
+            return result;
+        } catch (error) {
+            console.error('Error parsing saved result:', error);
+            return null;
+        }
+    }
+    
     // ==================== EKSPOS KE GLOBAL ====================
     // Ekspos hanya fungsi yang diperlukan
     window.renderBalokReport = renderBalokReport;
+    window.loadResultFromStorage = loadResultFromStorage;
     
     // Tambahkan fungsi untuk event listener resize
     window.addEventListener('resize', function() {

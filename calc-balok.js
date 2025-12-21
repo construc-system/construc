@@ -51,10 +51,10 @@ function kontrolBalok(hasil) {
     const kontrolLentur = {};
     const configLentur = [
         { key: 'kiri_negatif', data: tulanganKirinegatif, ms: ms1, tipe: 'tumpuan_negatif' },
-        { key: 'tengah_negatif', data: tulanganTengahnegatif, ms: ms2, tipe: 'lapangan_negatif' },
+        { key: 'tengah_negatif', data: tulanganTengahnegatif, ms: ms1, tipe: 'lapangan_negatif' },
         { key: 'kanan_negatif', data: tulanganKanannegatif, ms: ms1, tipe: 'tumpuan_negatif' },
         { key: 'kiri_positif', data: tulanganKiripositif, ms: ms2, tipe: 'tumpuan_positif' },
-        { key: 'tengah_positif', data: tulanganTengahpositif, ms: ms1, tipe: 'lapangan_positif' },
+        { key: 'tengah_positif', data: tulanganTengahpositif, ms: ms2, tipe: 'lapangan_positif' },
         { key: 'kanan_positif', data: tulanganKananpositif, ms: ms2, tipe: 'tumpuan_positif' }
     ];
 
@@ -162,21 +162,32 @@ function kontrolTulanganGeser(begel) {
 }
 
 function kontrolTulanganTorsi(torsi) {
-    const { perluTorsi, amanBegel1, amanBegel2, amanTorsi, Tu_min, Tn } = torsi;
+    const { perluTorsi, amanBegel1, amanBegel2, amanTorsi1, amanTorsi2, Tu_min, Tn } = torsi;
     
     const TuNum = parseFloat(torsi.Tu || 0);
     const TuMinNum = parseFloat(Tu_min);
     
     return {
-        perluDanAman: perluTorsi ? (amanBegel1 && amanBegel2 && amanTorsi) : true,
+        perluDanAman: perluTorsi ? (amanBegel1 && amanBegel2 && amanTorsi1 && amanTorsi2) : true,
         detail: { 
             perluTorsi, 
             amanBegel1, 
             amanBegel2, 
-            amanTorsi, 
+            amanTorsi1,
+            amanTorsi2,
+            amanTorsi: amanTorsi1 && amanTorsi2,
             Tu: TuNum, 
             Tu_min: TuMinNum, 
-            Tn: parseFloat(Tn) 
+            Tn: parseFloat(Tn),
+            A11: parseFloat(torsi.A11),
+            A12: parseFloat(torsi.A12),
+            A1: parseFloat(torsi.A1),
+            A1_terpasang: parseFloat(torsi.A1_terpasang),
+            At: parseFloat(torsi.At),
+            At_per_S: parseFloat(torsi.At_per_S),
+            kontrolTorsi: parseFloat(torsi.kontrolTorsi),
+            n: torsi.n,
+            luasTulanganMemanjang: parseFloat(torsi.luasTulanganMemanjang)
         }
     };
 }
@@ -327,7 +338,7 @@ function hitungEvaluasi(data, options = {}) {
     const tuc = parseFloat(beban.center?.tu ?? 0);
 
     const muposr = parseFloat(beban.right?.mu_pos ?? 0);
-    const munegr = parseFloat(beban.right?.mu_neg ?? 0); // PERBAIKAN: beben -> beban
+    const munegr = parseFloat(beban.right?.mu_neg ?? 0);
     const vur = parseFloat(beban.right?.vu ?? 0);
     const tur = parseFloat(beban.right?.tu ?? 0);
 
@@ -558,12 +569,14 @@ function hitungBegel(Vu, fc, fyt, b, dmin, phi, lambda, n_val, fr2, mode = "desa
     };
 }
 
-// -- Tulangan Torsi - dimodifikasi untuk evaluasi
+// -- Tulangan Torsi - dimodifikasi sesuai permintaan
 function hitungTorsi(Tu, fc, fy, fyt, b, h, phi, Sb, fr2, Av, D, mode = "desain", nt_pasang = null) {
     if (Tu <= 0 || fc <= 0 || fy <= 0 || fyt <= 0 || b <= 0 || h <= 0) {
         return {
             Tu: Tu.toFixed(3), status: "Tidak Perlu", perluTorsi: false,
-            amanBegel1: true, amanBegel2: true, amanTorsi: true, n: 0
+            amanBegel1: true, amanBegel2: true, amanTorsi1: true, amanTorsi2: true, n: 0,
+            A11: "0.00", A12: "0.00", A1: "0.00", A1_terpasang: "0.00",
+            luasTulanganMemanjang: "0.00"
         };
     }
 
@@ -576,7 +589,7 @@ function hitungTorsi(Tu, fc, fy, fyt, b, h, phi, Sb, fr2, Av, D, mode = "desain"
 
     const perluTorsi = Tu > Tu_min;
 
-    let A0h = 0, ph = 0, A0 = 0, At = 0, A1 = 0;
+    let A0h = 0, ph = 0, A0 = 0, At = 0, A11 = 0, A12 = 0, A1 = 0;
     const S = 1000;
 
     if (perluTorsi) {
@@ -584,7 +597,15 @@ function hitungTorsi(Tu, fc, fy, fyt, b, h, phi, Sb, fr2, Av, D, mode = "desain"
         ph = 2 * (b + h - 4 * phi - 4 * Sb);
         A0 = 0.85 * A0h;
         At = (Tn * 1e6 * 1000) / (2 * A0 * fyt * cot);
-        A1 = (At / S) * ph * (fyt / fy) * cot2;
+        
+        // Hitung A11 (persamaan sebelumnya A1)
+        A11 = (At / S) * ph * (fyt / fy) * cot2;
+        
+        // Hitung A12 (persamaan sebelumnya A1_alt)
+        A12 = (0.42 * Math.sqrt(fc) * Acp / fy - (At / S) * ph * (fyt / fy));
+        
+        // Ambil nilai A1 yang lebih besar
+        A1 = Math.max(A11, A12);
     }
 
     const Avt = parseFloat(Av) + At;
@@ -594,34 +615,54 @@ function hitungTorsi(Tu, fc, fy, fyt, b, h, phi, Sb, fr2, Av, D, mode = "desain"
     const amanBegel2 = Avt >= kontrolBegel2;
 
     const At_per_S = At / S;
-    const A1_alt = Math.max(
-        At_per_S * ph * (fyt / fy) * cot2,
-        0.42 * Math.sqrt(fc) * Acp / fy - At_per_S * ph * (fyt / fy)
-    );
-
     const kontrolTorsi = 0.175 * b / fyt;
     
-    let n, amanTorsi;
+    let n, A1_terpasang, amanTorsi1, amanTorsi2;
     const luasTulanganMemanjang = 0.25 * Math.PI * D * D;
     
-    if (mode === "evaluasi" && nt_pasang) {
+    if (mode === "evaluasi" && nt_pasang !== null) {
         // Untuk evaluasi, gunakan jumlah tulangan torsi yang dipasang
         n = nt_pasang;
-        const A1_terpasang = n * luasTulanganMemanjang;
-        amanTorsi = A1_terpasang >= A1;
+        A1_terpasang = n * luasTulanganMemanjang;
+        amanTorsi1 = At_per_S >= kontrolTorsi;
+        amanTorsi2 = A1_terpasang >= A1;
     } else {
         // Untuk desain, hitung jumlah tulangan torsi berdasarkan kebutuhan
         n = luasTulanganMemanjang > 0 ? Math.ceil(A1 / luasTulanganMemanjang) : 0;
-        amanTorsi = At_per_S >= kontrolTorsi;
+        A1_terpasang = n * luasTulanganMemanjang;
+        amanTorsi1 = At_per_S >= kontrolTorsi;
+        amanTorsi2 = A1_terpasang >= A1;
     }
 
+    const amanTorsi = amanTorsi1 && amanTorsi2;
+
     return {
-        Tu: Tu.toFixed(3), Tn: Tn.toFixed(3), Acp: Acp.toFixed(0), Pcp: Pcp.toFixed(0),
-        Tu_min: Tu_min.toFixed(3), perluTorsi, A0h: A0h.toFixed(0), ph: ph.toFixed(0),
-        A0: A0.toFixed(0), At: At.toFixed(0), A1: A1.toFixed(0), Avt: Avt.toFixed(0),
-        kontrolBegel1: kontrolBegel1.toFixed(0), kontrolBegel2: kontrolBegel2.toFixed(0),
-        amanBegel1, amanBegel2, At_per_S: At_per_S.toFixed(3), A1_alt: A1_alt.toFixed(0),
-        kontrolTorsi: kontrolTorsi.toFixed(3), amanTorsi, n,
+        Tu: Tu.toFixed(3), 
+        Tn: Tn.toFixed(3), 
+        Acp: Acp.toFixed(0), 
+        Pcp: Pcp.toFixed(0),
+        Tu_min: Tu_min.toFixed(3), 
+        perluTorsi, 
+        A0h: A0h.toFixed(0), 
+        ph: ph.toFixed(0),
+        A0: A0.toFixed(0), 
+        At: At.toFixed(2), 
+        A11: A11.toFixed(2), 
+        A12: A12.toFixed(2), 
+        A1: A1.toFixed(2),
+        Avt: Avt.toFixed(2),
+        kontrolBegel1: kontrolBegel1.toFixed(2), 
+        kontrolBegel2: kontrolBegel2.toFixed(2),
+        amanBegel1, 
+        amanBegel2, 
+        At_per_S: At_per_S.toFixed(3), 
+        kontrolTorsi: kontrolTorsi.toFixed(3),
+        amanTorsi1, 
+        amanTorsi2,
+        amanTorsi,
+        n,
+        A1_terpasang: A1_terpasang.toFixed(2),
+        luasTulanganMemanjang: luasTulanganMemanjang.toFixed(2),
         status: perluTorsi ? (amanBegel1 && amanBegel2 && amanTorsi ? "Aman" : "Tidak Aman") : "Tidak Perlu"
     };
 }
@@ -667,7 +708,19 @@ function saveResultAndRedirect(result, inputData) {
         rekap: result.rekap,
         kontrol_rekap: result.kontrol_rekap,
         optimasi: result.optimasi,
+        info: result.info || {},
         inputData: inputData,
+        // Simpan semua detail perhitungan torsi
+        torsiDetail: {
+            kiri: result.data.torsikiri,
+            tengah: result.data.torsitengah,
+            kanan: result.data.torsikanan,
+            kontrol: {
+                kiri: result.kontrol.kontrolTorsi.kiri,
+                tengah: result.kontrol.kontrolTorsi.tengah,
+                kanan: result.kontrol.kontrolTorsi.kanan
+            }
+        },
         timestamp: new Date().toISOString()
     }));
     
@@ -687,6 +740,43 @@ function saveColorSettings() {
         toggleActiveTextColor: getComputedStyle(document.documentElement).getPropertyValue('--toggle-active-text-color').trim()
     };
     sessionStorage.setItem('colorSettings', JSON.stringify(colorSettings));
+}
+
+// Fungsi untuk memuat data dari session storage
+function loadResultFromStorage() {
+    const saved = sessionStorage.getItem('calculationResult');
+    if (!saved) return null;
+    
+    try {
+        const result = JSON.parse(saved);
+        
+        // Pastikan struktur data lengkap
+        if (result.data && result.data.torsikiri) {
+            // Data sudah lengkap
+            return result;
+        }
+        
+        // Jika data lama, tambahkan properti yang diperlukan
+        if (result.data) {
+            // Periksa dan perbarui struktur torsi jika perlu
+            ['torsikiri', 'torsitengah', 'torsikanan'].forEach(key => {
+                if (result.data[key] && !result.data[key].A11) {
+                    // Data torsi lama, tambahkan properti baru
+                    result.data[key].A11 = result.data[key].A1 || "0.00";
+                    result.data[key].A12 = result.data[key].A1_alt || "0.00";
+                    result.data[key].A1_terpasang = "0.00";
+                    result.data[key].luasTulanganMemanjang = "0.00";
+                    result.data[key].amanTorsi1 = result.data[key].amanTorsi || true;
+                    result.data[key].amanTorsi2 = true;
+                }
+            });
+        }
+        
+        return result;
+    } catch (error) {
+        console.error('Error parsing saved result:', error);
+        return null;
+    }
 }
 
 // Modifikasi fungsi calculateBalok untuk auto-redirect
@@ -718,7 +808,8 @@ function calculateBalokWithRedirect(data) {
     }
 }
 
-// Ekspos kedua fungsi
+// Ekspos semua fungsi
 window.calculateBalokWithRedirect = calculateBalokWithRedirect;
+window.loadResultFromStorage = loadResultFromStorage;
 
-console.log("✅ calc-balok.js loaded (complete with evaluation mode)");
+console.log("✅ calc-balok.js loaded (complete with evaluation mode and updated torsion calculation)");

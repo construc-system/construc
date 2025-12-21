@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laporan Perhitungan Balok Beton Bertulang</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/contrib/auto-render.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        /* CSS tetap sama seperti sebelumnya */
+        :root {
+            --font-size-h1: 24pt;
+            --font-size-h2: 16pt;
+            --font-size-h3: 14pt;
+            --font-size-p: 12pt;
+            --font-size-table-header: 11pt;
+            --font-size-table-data: 11pt;
+            --font-size-note: 10pt;
+            --font-size-katex-inline: 0.9em;
+            --font-size-katex-display: 0.9em;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            line-height: 1.3;
+            color: #000;
+            background-color: #f0f0f0;
+            padding: 20px;
+            font-size: var(--font-size-p);
+        }
+        
+        .a4-page {
+            width: 210mm;
+            min-height: 297mm;
+            margin: 0 auto 20mm auto;
+            padding: 40mm 30mm 32mm 40mm;
+            background-color: white;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            position: relative;
+            page-break-after: always;
+            overflow: hidden;
+        }
+        
+        .page-content {
+            position: relative;
+            min-height: calc(297mm - 40mm - 32mm);
+            margin-bottom: 15px;
+        }
+        
+        .page-footer {
+            position: absolute;
+            bottom: 25mm;
+            left: 40mm;
+            right: 30mm;
+            font-size: 9pt;
+            text-align: center;
+            color: #666;
+            padding-top: 8px;
+            border-top: 0.5px solid #ccc;
+            height: 25px;
+            overflow: visible;
+        }
+        
+        .content-boundary {
+            position: absolute;
+            top: 40mm;
+            left: 40mm;
+            right: 30mm;
+            bottom: 32mm;
+            border: 3px solid #ff0000;
+            pointer-events: none;
+            z-index: 1;
+            display: none;
+        }
+        
+        .circle {
+            display: inline-grid;
+            place-items: center;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            border: 0;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            flex-shrink: 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .circle:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+        }
+        
+        .circle:active {
+            transform: scale(0.98);
+        }
+        
+        .circle:focus {
+            outline: 3px solid rgba(96,165,250,0.18);
+            outline-offset: 3px;
+        }
+        
+        .action-button {
+            position: fixed;
+            z-index: 9999;
+        }
+        
+        .action-button svg {
+            width: 24px;
+            height: 24px;
+        }
+        
+        @media (max-width: 768px) {
+            .circle {
+                width: 48px;
+                height: 48px;
+            }
+            
+            .action-button svg {
+                width: 20px;
+                height: 20px;
+            }
+            
+            body {
+                padding: 10px;
+            }
+            
+            .a4-page {
+                margin: 0 auto 10mm auto;
+                box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .circle {
+                width: 44px;
+                height: 44px;
+            }
+            
+            .action-button svg {
+                width: 18px;
+                height: 18px;
+            }
+        }
+        
+        @media print {
+            body {
+                background-color: white;
+                margin: 0;
+                padding: 0;
+            }
+            
+            .a4-page {
+                width: 100%;
+                height: auto;
+                margin: 0;
+                box-shadow: none;
+                padding: 0;
+                page-break-after: always;
+            }
+            
+            .content-boundary {
+                display: none;
+            }
+            
+            button, 
+            .action-button, 
+            .circle {
+                display: none !important;
+            }
+            
+            @page {
+                size: A4;
+                margin: 4cm 3cm 3.5cm 4cm;
+            }
+            
+            .page-footer {
+                position: fixed;
+                bottom: 0;
+                left: 4cm;
+                right: 3cm;
+                height: 25px;
+                font-size: 9pt;
+            }
+        }
+        
+        h1 {
+            font-size: var(--font-size-h1);
+            text-align: center;
+            margin-bottom: 15px;
+            page-break-after: avoid;
+        }
+        
+        h2 {
+            font-size: var(--font-size-h2);
+            border-bottom: 1px solid #000;
+            padding-bottom: 4px;
+            margin: 20px 0 12px 0;
+            page-break-after: avoid;
+        }
+        
+        h3 {
+            font-size: var(--font-size-h3);
+            margin: 15px 0 8px 0;
+            page-break-after: avoid;
+        }
+        
+        p {
+            margin: 6px 0;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 8px 0 12px 0;
+            font-size: var(--font-size-table-data);
+            page-break-inside: avoid;
+        }
+        
+        th, td {
+            border: 1px solid #000;
+            padding: 5px 6px;
+            text-align: left;
+            vertical-align: middle;
+        }
+        
+        th {
+            background-color: #e0e0e0;
+            font-weight: bold;
+            font-size: var(--font-size-table-header);
+        }
+        
+        .note {
+            font-style: italic;
+            color: #333;
+            font-size: var(--font-size-note);
+            margin: 4px 0;
+        }
+        
+        .katex {
+            font-size: var(--font-size-katex-inline);
+        }
+        
+        .katex-display .katex {
+            font-size: var(--font-size-katex-display);
+        }
+        
+        .status-aman {
+            color: #155724;
+            background-color: #d4edda;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-weight: bold;
+            display: inline-block;
+            font-size: 10pt;
+        }
+        
+        .status-tidak-aman {
+            color: #721c24;
+            background-color: #f8d7da;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-weight: bold;
+            display: inline-block;
+            font-size: 10pt;
+        }
+        
+        .header-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10pt;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 0.5px solid #ccc;
+            page-break-after: avoid;
+        }
+        
+        .header-info div {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header-info span {
+            margin-bottom: 2px;
+        }
+        
+        .subtitle {
+            font-weight: bold;
+            margin: 12px 0 6px 0;
+            font-size: 12pt;
+            page-break-after: avoid;
+        }
+        
+        .rumus {
+            font-family: 'Cambria Math', 'Times New Roman', serif;
+            margin: 4px 0;
+        }
+        
+        .data-value {
+            font-weight: bold;
+            font-family: 'Cambria Math', 'Times New Roman', serif;
+        }
+        
+        .section-group {
+            page-break-inside: avoid;
+            margin-bottom: 20px;
+        }
+        
+        .section-group h3 {
+            margin-top: 0;
+            margin-bottom: 8px;
+        }
+        
+        .three-col-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 8px 0 12px 0;
+            font-size: 10pt;
+            page-break-inside: avoid;
+        }
+        
+        .three-col-table th {
+            padding: 4px 6px;
+            text-align: left;
+        }
+        
+        .three-col-table td {
+            padding: 3px 5px;
+            border: 1px solid #000;
+            vertical-align: middle;
+        }
+        
+        .col-param {
+            width: 60%;
+        }
+        
+        .col-value {
+            width: 20%;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .col-unit {
+            width: 20%;
+            text-align: center;
+        }
+        
+        .col-status-merged {
+            width: 40%;
+            text-align: center;
+            font-weight: normal;
+            font-size: 9pt;
+            padding: 4px;
+        }
+        
+        .col-full-width {
+            width: 100%;
+            text-align: center;
+            font-weight: bold;
+            background-color: #f0f0f0;
+        }
+        
+        .col-param strong {
+            font-weight: bold;
+            color: #000;
+        }
+        
+        .col-param .indent {
+            padding-left: 20px;
+            font-weight: normal;
+        }
+        
+        .header-row td {
+            background-color: #f0f0f0;
+            font-weight: bold;
+            border-bottom: 2px solid #000 !important;
+        }
+        
+        .keep-together {
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+        
+        .break-before {
+            page-break-before: always;
+        }
+        
+        .break-after {
+            page-break-after: always;
+        }
+        
+        ul {
+            margin: 5px 0 5px 20px;
+        }
+        
+        li {
+            margin: 3px 0;
+        }
+        
+        .conclusion-box {
+            padding: 12px;
+            border: 1px solid #000;
+            border-radius: 5px;
+            margin: 15px 0;
+            background-color: #f9f9f9;
+            page-break-inside: avoid;
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            color: white;
+            font-size: 18px;
+            flex-direction: column;
+        }
+        
+        .loading-spinner {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .content-block {
+            page-break-inside: avoid;
+            break-inside: avoid;
+            margin-bottom: 15px;
+        }
+        
+        .header-content-group {
+            page-break-inside: avoid;
+            break-inside: avoid;
+            margin-bottom: 20px;
+        }
+        
+        .header-content-group h2,
+        .header-content-group h3 {
+            margin-bottom: 8px;
+        }
+        
+        .status-simple {
+            font-weight: normal;
+            font-size: 10pt;
+            text-align: center;
+            display: block;
+            margin-top: 4px;
+        }
+        
+        .rumus-kondisi {
+            font-size: 9pt;
+            font-family: 'Cambria Math', 'Times New Roman', serif;
+        }
+        
+        .rekap-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 8px 0 12px 0;
+            font-size: 10pt;
+            page-break-inside: avoid;
+        }
+        
+        .rekap-table th, .rekap-table td {
+            border: 1px solid #000;
+            padding: 8px 5px;
+            text-align: center;
+            vertical-align: middle;
+            min-height: 30px;
+        }
+        
+        .rekap-table th {
+            background-color: #e0e0e0;
+            font-weight: bold;
+            height: 35px;
+        }
+        
+        .rekap-col-tulangan {
+            width: 25%;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .rekap-col-tumpuan {
+            width: 18.75%;
+            text-align: center;
+        }
+        
+        .rekap-col-lapangan {
+            width: 18.75%;
+            text-align: center;
+        }
+        
+        .row-merged {
+            background-color: #f5f5f5;
+        }
+        
+        .text-bold {
+            font-weight: bold;
+        }
+        
+        .text-center {
+            text-align: center;
+        }
+        
+        .vertical-middle {
+            vertical-align: middle;
+        }
+        
+        .kondisi-text {
+            font-style: normal;
+            font-weight: normal;
+            text-align: center;
+            display: block;
+        }
+
+        .rekap-table tr {
+            height: 35px;
+        }
+
+        .rekap-table td {
+            word-break: break-word;
+            overflow: hidden;
+        }
+
+        .rekap-table td:not(.rekap-col-tulangan) {
+            font-size: 9pt;
+            line-height: 1.2;
+        }
+
+        .two-col-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 8px 0 12px 0;
+            font-size: 10pt;
+            page-break-inside: avoid;
+        }
+        
+        .two-col-table th {
+            padding: 4px 6px;
+            text-align: left;
+            background-color: #e0e0e0;
+            font-weight: bold;
+        }
+        
+        .two-col-table td {
+            padding: 3px 5px;
+            border: 1px solid #000;
+            vertical-align: middle;
+        }
+        
+        .col-param-2 {
+            width: 60%;
+        }
+        
+        .col-status-2 {
+            width: 40%;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .problem-item {
+            color: #721c24;
+            margin: 2px 0;
+            padding-left: 10px;
+        }
+        
+        .recommendation-item {
+            color: #155724;
+            margin: 2px 0;
+            padding-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div>Membuat PDF, harap tunggu...</div>
+    </div>
+    
+    <button class="circle action-button" style="top: 20px; left: 20px; background: #163172;" aria-label="Kembali" onclick="window.location.href='report.html'" title="Kembali">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M15 18l-6-6 6-6" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+    </button>
+    
+    <button class="circle action-button" style="bottom: 20px; right: 90px; background: #163172;" aria-label="Download PDF" onclick="downloadPDF()" title="Download PDF">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 15V3"/>
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <path d="m7 10 5 5 5-5"/>
+        </svg>
+    </button>
+    
+    <button class="circle action-button" style="bottom: 20px; right: 20px; background: #163172;" aria-label="Toggle Border" onclick="toggleBorder()" title="Toggle Border">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="9" y1="3" x2="9" y2="21"></line>
+        </svg>
+    </button>
+
+    <div id="pagesContainer"></div>
+
+    <script>
+        // Inisialisasi jsPDF
+        const { jsPDF } = window.jspdf;
+        
+        // Data dari sessionStorage
+        let resultData;
+        
+        try {
+            const sessionData = sessionStorage.getItem('calculationResult');
+            if (sessionData) {
+                resultData = JSON.parse(sessionData);
+                console.log("Data berhasil diambil dari sessionStorage:", resultData);
+            } else {
+                alert("Tidak ada data hasil perhitungan. Silakan kembali dan lakukan perhitungan terlebih dahulu.");
+                window.location.href = 'report.html';
+            }
+        } catch (error) {
+            console.error("Error parsing data:", error);
+            alert("Data tidak valid. Silakan kembali dan lakukan perhitungan ulang.");
+            window.location.href = 'report.html';
+        }
+
+        // Konstanta halaman A4
+        const PAGE_WIDTH_MM = 210;
+        const PAGE_HEIGHT_MM = 297;
+        const MARGIN_TOP_MM = 40;
+        const MARGIN_BOTTOM_MM = 32;
+        const MARGIN_LEFT_MM = 40;
+        const MARGIN_RIGHT_MM = 30;
+        const CONTENT_HEIGHT_MM = PAGE_HEIGHT_MM - MARGIN_TOP_MM - MARGIN_BOTTOM_MM;
+        
+        // Konversi mm ke pixel
+        const MM_TO_PX = 96 / 25.4;
+        const CONTENT_HEIGHT_PX = CONTENT_HEIGHT_MM * MM_TO_PX;
+        
+        // Variabel global untuk pagination
+        let currentPage = null;
+        let currentPageHeight = 0;
+        let pages = [];
+        
+        // Fungsi untuk memformat tanggal
+        function formatTimestampFull(timestamp) {
+            if (!timestamp) {
+                const now = new Date();
+                const day = now.getDate();
+                const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni",
+                                   "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+                const month = monthNames[now.getMonth()];
+                const year = now.getFullYear();
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                return `${day} ${month} ${year} pukul ${hours}.${minutes}`;
+            }
+            
+            const date = new Date(timestamp);
+            const day = date.getDate();
+            const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni",
+                               "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+            const month = monthNames[date.getMonth()];
+            const year = date.getFullYear();
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${day} ${month} ${year} pukul ${hours}.${minutes}`;
+        }
+        
+        // Fungsi untuk membuat halaman baru
+        function createNewPage(pageNumber) {
+            const page = document.createElement('div');
+            page.className = 'a4-page';
+            
+            const contentBoundary = document.createElement('div');
+            contentBoundary.className = 'content-boundary';
+            
+            const pageContent = document.createElement('div');
+            pageContent.className = 'page-content';
+            
+            const pageFooter = document.createElement('div');
+            pageFooter.className = 'page-footer';
+            pageFooter.innerHTML = `Halaman ${pageNumber} | Dicetak: ${formatTimestampFull(resultData.timestamp)} | Dihitung dengan Construc By Ala`;
+            
+            page.appendChild(contentBoundary);
+            page.appendChild(pageContent);
+            page.appendChild(pageFooter);
+            
+            return {
+                element: page,
+                content: pageContent,
+                footer: pageFooter,
+                height: 0
+            };
+        }
+        
+        // Fungsi untuk membuat blok konten
+        function createContentBlock(html) {
+            const block = document.createElement('div');
+            block.className = 'content-block';
+            block.innerHTML = html;
+            return block;
+        }
+        
+        // Fungsi untuk mengukur tinggi blok dengan KaTeX
+        function measureBlockHeight(block) {
+            return new Promise(resolve => {
+                const tempContainer = document.createElement('div');
+                tempContainer.style.cssText = `
+                    position: absolute;
+                    left: -10000px;
+                    top: -10000px;
+                    width: ${(PAGE_WIDTH_MM - MARGIN_LEFT_MM - MARGIN_RIGHT_MM) * MM_TO_PX}px;
+                    font-family: 'Times New Roman', Times, serif;
+                    line-height: 1.3;
+                    font-size: 12pt;
+                    visibility: hidden;
+                `;
+                
+                const blockClone = block.cloneNode(true);
+                tempContainer.appendChild(blockClone);
+                document.body.appendChild(tempContainer);
+                
+                renderMathInElement(blockClone, {
+                    delimiters: [
+                        {left: '$$', right: '$$', display: true},
+                        {left: '\\[', right: '\\]', display: true},
+                        {left: '$', right: '$', display: false},
+                        {left: '\\(', right: '\\)', display: false}
+                    ],
+                    throwOnError: false
+                });
+                
+                setTimeout(() => {
+                    blockClone.offsetHeight;
+                    const height = blockClone.getBoundingClientRect().height;
+                    document.body.removeChild(tempContainer);
+                    resolve(height);
+                }, 100);
+            });
+        }
+        
+        // Fungsi untuk menambahkan blok ke halaman saat ini
+        async function addBlockToCurrentPage(block) {
+            const blockHeight = await measureBlockHeight(block);
+            
+            if (!currentPage || (currentPageHeight + blockHeight > CONTENT_HEIGHT_PX)) {
+                const pageNumber = pages.length + 1;
+                currentPage = createNewPage(pageNumber);
+                currentPageHeight = 0;
+                pages.push(currentPage);
+                document.getElementById('pagesContainer').appendChild(currentPage.element);
+            }
+            
+            currentPage.content.appendChild(block);
+            currentPageHeight += blockHeight;
+        }
+        
+        // Fungsi untuk toggle border merah
+        function toggleBorder() {
+            const boundaries = document.querySelectorAll('.content-boundary');
+            boundaries.forEach(boundary => {
+                const isVisible = boundary.style.display === 'block';
+                boundary.style.display = isVisible ? 'none' : 'block';
+            });
+            
+            const toggleBtn = document.querySelector('[aria-label="Toggle Border"]');
+            if (toggleBtn) {
+                const isVisible = boundaries[0]?.style.display === 'block';
+                toggleBtn.title = isVisible ? "Sembunyikan Border" : "Tampilkan Border";
+            }
+        }
+        
+        // Fungsi download PDF
+        async function downloadPDF() {
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            loadingOverlay.style.display = 'flex';
+            
+            try {
+                const actionButtons = document.querySelectorAll('.action-button');
+                const contentBoundaries = document.querySelectorAll('.content-boundary');
+                
+                actionButtons.forEach(btn => btn.style.display = 'none');
+                contentBoundaries.forEach(border => border.style.display = 'none');
+                
+                const pageElements = document.querySelectorAll('.a4-page');
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                
+                for (let i = 0; i < pageElements.length; i++) {
+                    const page = pageElements[i];
+                    
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
+                    const canvas = await html2canvas(page, {
+                        scale: 2,
+                        useCORS: true,
+                        logging: false,
+                        backgroundColor: '#ffffff',
+                        removeContainer: true,
+                        allowTaint: true,
+                        foreignObjectRendering: false,
+                        imageTimeout: 15000,
+                        width: page.offsetWidth,
+                        height: page.offsetHeight,
+                        onclone: function(clonedDoc) {
+                            clonedDoc.querySelectorAll('*').forEach(el => {
+                                if (el.style) {
+                                    el.style.boxShadow = 'none';
+                                }
+                            });
+                        }
+                    });
+                    
+                    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+                    const imgWidth = 210;
+                    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                    
+                    if (i > 0) {
+                        pdf.addPage();
+                    }
+                    
+                    pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight, undefined, 'FAST');
+                    
+                    canvas.width = 0;
+                    canvas.height = 0;
+                }
+                
+                if (typeof pdf.setLanguage === 'function') {
+                    pdf.setLanguage('id-ID');
+                }
+                
+                const fileName = `Laporan_Balok_Beton_${new Date().toISOString().slice(0, 10)}.pdf`;
+                pdf.save(fileName, { compression: true });
+                
+            } catch (error) {
+                console.error('Error generating PDF:', error);
+            } finally {
+                const actionButtons = document.querySelectorAll('.action-button');
+                actionButtons.forEach(btn => btn.style.display = 'block');
+                loadingOverlay.style.display = 'none';
+            }
+        }
+
+        // Terapkan warna dari sessionStorage
+        function applyColorSettings() {
+            const colorSettings = JSON.parse(sessionStorage.getItem('colorSettings')) || {
+                bgBody: "#9c9fab",
+                colorButtons: "#6272b2",
+                colorBorders: "#293848",
+                colorLabels: "#2d3d62",
+                buttonTextColor: "#FFFFFF",
+                toggleTextColor: "#FFFFFF",
+                toggleActiveTextColor: "#FFFFFF"
+            };
+
+            // Terapkan ke body background
+            document.body.style.backgroundColor = colorSettings.bgBody;
+
+            // Terapkan ke tombol
+            const buttons = document.querySelectorAll('.circle.action-button');
+            buttons.forEach(button => {
+                button.style.backgroundColor = colorSettings.colorButtons;
+                // Jika ada warna teks tombol, terapkan juga
+                if (colorSettings.buttonTextColor) {
+                    const svgs = button.querySelectorAll('svg');
+                    svgs.forEach(svg => {
+                        svg.style.stroke = colorSettings.buttonTextColor;
+                    });
+                }
+            });
+        }
+
+        // Fungsi untuk merender laporan dengan modul yang sesuai
+        async function renderReport() {
+            const pagesContainer = document.getElementById('pagesContainer');
+            pagesContainer.innerHTML = '';
+            
+            currentPage = null;
+            currentPageHeight = 0;
+            pages = [];
+            
+            // Tentukan modul yang digunakan
+            const module = resultData.module || 'balok';
+            let contentBlocks = [];
+            
+            // Gunakan modul yang sesuai
+            if (module === 'balok' && window.balokReport) {
+                contentBlocks = window.balokReport.generateContentBlocks();
+            } else {
+                console.error(`Modul ${module} tidak ditemukan.`);
+                return;
+            }
+            
+            console.log(`Menghasilkan ${contentBlocks.length} blok konten`);
+            
+            for (let i = 0; i < contentBlocks.length; i++) {
+                const blockHtml = contentBlocks[i];
+                const block = createContentBlock(blockHtml);
+                await addBlockToCurrentPage(block);
+            }
+            
+            console.log(`Pagination selesai. Total halaman: ${pages.length}`);
+            
+            const allContent = document.querySelectorAll('.page-content');
+            allContent.forEach(content => {
+                renderMathInElement(content, {
+                    delimiters: [
+                        {left: '$$', right: '$$', display: true},
+                        {left: '\\[', right: '\\]', display: true},
+                        {left: '$', right: '$', display: false},
+                        {left: '\\(', right: '\\)', display: false}
+                    ],
+                    throwOnError: false
+                });
+            });
+        }
+
+        // Jalankan saat halaman dimuat
+        document.addEventListener('DOMContentLoaded', async function() {
+            if (!resultData) {
+                return;
+            }
+            
+            // Terapkan warna
+            applyColorSettings();
+            
+            // Tentukan modul yang digunakan dan load script yang sesuai
+            const module = resultData.module || 'balok';
+            const script = document.createElement('script');
+            script.src = `pdf-${module}.js`;
+            script.onload = async function() {
+                try {
+                    // Set data ke modul
+                    if (window[module + 'Report']) {
+                        window[module + 'Report'].setData(resultData);
+                        // Render report
+                        await renderReport();
+                    } else {
+                        console.error(`Modul ${module} tidak ditemukan.`);
+                    }
+                } catch (error) {
+                    console.error("Error rendering report:", error);
+                    alert("Terjadi kesalahan saat membuat laporan. Silakan coba lagi.");
+                }
+            };
+            document.head.appendChild(script);
+        });
+    </script>
+</body>
+</html>

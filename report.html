@@ -617,7 +617,7 @@
       <div class="report-container">
         <div class="main-header">
           <div class="header-left-group">
-            <button class="circle" aria-label="Kembali" onclick="goBack()" title="Kembali">
+            <button class="circle" aria-label="Kembali" onclick="window.location.href = 'index.html'" title="Kembali">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="m15 18-6-6 6-6"/>
               </svg>
@@ -629,7 +629,7 @@
             </div>
           </div>
           <div class="header-right-group">
-            <button class="btn primary" onclick="exportPDF()">
+            <button class="btn primary" onclick="window.location.href = 'pdf.html'">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                 <polyline points="7 10 12 15 17 10"/>
@@ -717,12 +717,12 @@
   </div>
 
   <!-- Load JavaScript -->
-  <script src="report.js"></script>
   <script src="report-balok.js"></script>
   <script src="report-kolom.js"></script>
   <script src="report-pelat.js"></script>
   <script src="report-fondasi.js"></script>
   <script src="cut-generator.js"></script>
+  <script src="report.js"></script>
   <script>
     // Tunggu hingga DOM siap sebelum menjalankan cut-generator
     document.addEventListener('DOMContentLoaded', function() {
@@ -734,27 +734,19 @@
         console.log("📄 Report page loaded successfully");
     });
 
-    function goBack() {
-        window.history.back();
+    function exportCAD() {
+        if (typeof window.generateCADText === 'function') {
+            const cadText = window.generateCADText();
+            navigator.clipboard.writeText(cadText).then(() => {
+                alert('Text CAD untuk penampang tumpuan berhasil disalin ke clipboard!');
+            }).catch(err => {
+                console.error('Gagal menyalin text: ', err);
+                alert('Gagal menyalin text CAD. Silakan coba lagi.');
+            });
+        } else {
+            alert('Fitur export CAD belum tersedia.');
+        }
     }
-
-    function exportPDF() {
-        alert('Fitur export PDF akan diimplementasikan kemudian.');
-    }
-
-function exportCAD() {
-    if (typeof window.generateCADText === 'function') {
-        const cadText = window.generateCADText();
-        navigator.clipboard.writeText(cadText).then(() => {
-            alert('Text CAD untuk penampang tumpuan berhasil disalin ke clipboard!');
-        }).catch(err => {
-            console.error('Gagal menyalin text: ', err);
-            alert('Gagal menyalin text CAD. Silakan coba lagi.');
-        });
-    } else {
-        alert('Fitur export CAD belum tersedia.');
-    }
-}
   </script>
 </body>
 </html>

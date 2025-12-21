@@ -1316,6 +1316,30 @@ async function handleBalokTests() {
   }
 }
 
+// ======================================================================
+// FUNGSI HANDLE KOLOM TESTS YANG DITAMBAHKAN
+// ======================================================================
+async function handleKolomTests() {
+  const subChoice = await showSubMenu("kolom");
+  
+  switch (subChoice) {
+    case '1': // Desain
+      await runTestKolom("desain", dataKolomDesain);
+      break;
+    case '2': // Evaluasi
+      await runTestKolom("evaluasi", dataKolomEvaluasi);
+      break;
+    case '3': // Keduanya
+      await runTestKolom("desain", dataKolomDesain);
+      await runTestKolom("evaluasi", dataKolomEvaluasi);
+      break;
+    case '4': // Kembali
+      return;
+    default:
+      console.log("❌ Pilihan tidak valid!");
+  }
+}
+
 async function handlePelatTests() {
   const subChoice = await showSubMenu("pelat");
   

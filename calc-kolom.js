@@ -274,6 +274,9 @@ function hitungSemuaKondisi({
 function hitungTulanganKolomCore({
   mode, n_input, Pu, Mu, b, h, d, ds, fc, fy, beta1, phi, D, m
 }){
+  console.log("=== DEBUG hitungTulanganKolomCore ===");
+  console.log("Mode:", mode, "n_input:", n_input, "D:", D, "phi:", phi);
+  
   const phi1 = DEFAULTS.phi1;
   // Sanitasi
   if (b<=0 || h<=0 || d<=0 || fc<=0 || fy<=0) return { kondisi:'invalid' };
@@ -293,6 +296,9 @@ function hitungTulanganKolomCore({
   const at2 = beta1 * ds;
   const e = Pu===0?0:(Mu/Pu)*1000; // Eksentrisitas dalam mm
 
+  console.log("Parameter penting:");
+  console.table({ab, ac, ab1, ab2, at1, at2, e, faktorPhi});
+
   // Hitung semua kondisi
   const semuaKondisi = hitungSemuaKondisi({
     Pu, Mu, b, h, d, ds, fc, fy, beta1, phi1, e, ab, ac, ab1, ab2, at1, at2, faktorPhi
@@ -303,83 +309,132 @@ function hitungTulanganKolomCore({
   let As_tu = 0;
   let kondisi = '';
 
+  console.log("Penentuan kondisi aktif:");
+  console.log("ac:", ac, "ab1:", ab1, "ab2:", ab2, "ab:", ab, "at1:", at1, "at2:", at2);
+
   if (ac > ab1){
     kondisiAktif = semuaKondisi.kondisi1;
-    As_tu = kondisiAktif.As_tu;
+    As_tu = kondisiAktif.As_tu || 0;
     kondisi = 'ac > ab1';
     kondisiAktif.aktif = true;
+    console.log("Kondisi 1 aktif");
   } else if (ab1 > ac && ac > ab2){
     kondisiAktif = semuaKondisi.kondisi2;
-    As_tu = kondisiAktif.As_tu;
+    As_tu = kondisiAktif.As_tu || 0;
     kondisi = 'ab1 > ac > ab2';
     kondisiAktif.aktif = true;
+    console.log("Kondisi 2 aktif");
   } else if (ab2 > ac && ac > ab){
     kondisiAktif = semuaKondisi.kondisi3;
-    As_tu = kondisiAktif.As_tu;
+    As_tu = kondisiAktif.As_tu || 0;
     kondisi = 'ab2 > ac > ab';
     kondisiAktif.aktif = true;
+    console.log("Kondisi 3 aktif");
   } else if (ab > ac && ac > at1){
     kondisiAktif = semuaKondisi.kondisi4;
-    As_tu = kondisiAktif.As_tu;
+    As_tu = kondisiAktif.As_tu || 0;
     kondisi = 'ab > ac > at1';
     kondisiAktif.aktif = true;
+    console.log("Kondisi 4 aktif");
   } else if (at1 > ac && ac > at2){
     kondisiAktif = semuaKondisi.kondisi5;
-    As_tu = kondisiAktif.As_tu;
+    As_tu = kondisiAktif.As_tu || 0;
     kondisi = 'at1 > ac > at2';
     kondisiAktif.aktif = true;
+    console.log("Kondisi 5 aktif");
   } else {
     kondisiAktif = semuaKondisi.kondisi6;
-    As_tu = kondisiAktif.As_tu;
+    As_tu = kondisiAktif.As_tu || 0;
     kondisi = 'at2 > ac';
     kondisiAktif.aktif = true;
+    console.log("Kondisi 6 aktif");
   }
+
+  console.log("Kondisi aktif:", kondisi, "As_tu:", As_tu);
 
   const Ast_u = As_tu;
   const Ast_satu = 0.25 * Math.PI * (D || 0) * (D || 0);
 
-  // mode logic: evaluasi uses provided n_input; desain will compute n
+  console.log("Ast_u:", Ast_u, "Ast_satu:", Ast_satu, "D:", D);
+
+  // PERBAIKAN UTAMA: Logika perhitungan n berdasarkan mode
   let n=0, Ast_i=0, rho=0, rho_dipakai=0, n_terpakai=0;
+  
   if (mode === 'evaluasi'){
-    n = n_input || 0;
-    Ast_i = n * Ast_satu;
-    rho = (Ast_i / (b * h)) * 100;
-    rho_dipakai = rho;
-    n_terpakai = n;
+    console.log("Mode evaluasi - n_input:", n_input);
+    
+    // PERBAIKAN: Jika n_input tidak ada atau 0, hitung kebutuhan n seperti desain
+    if (!n_input || n_input <= 0) {
+      console.warn("⚠️ Mode evaluasi tetapi n_input tidak valid, menghitung kebutuhan n...");
+      
+      // Hitung kebutuhan n seperti mode desain
+      n = Math.ceil(Ast_u / (Ast_satu || 1));
+      n = Math.max(2, n);
+      
+      // Bulatkan ke kelipatan 2
+      if (n % 2 !== 0) n += 1;
+      
+      const n_max_temp = 2 * (m || 1);
+      const n_limited = Math.min(n, n_max_temp);
+      Ast_i = n_limited * Ast_satu;
+      rho = (Ast_i / (b * h)) * 100;
+      rho_dipakai = rho;
+      n_terpakai = n_limited;
+      
+      console.log("n dihitung dari kebutuhan:", n, "n_terpakai:", n_terpakai, "Ast_i:", Ast_i);
+    } else {
+      // Gunakan n_input yang diberikan
+      n = n_input || 0;
+      Ast_i = n * Ast_satu;
+      rho = (Ast_i / (b * h)) * 100;
+      rho_dipakai = rho;
+      n_terpakai = n;
+      console.log("n dari input:", n, "Ast_i:", Ast_i);
+    }
   } else {
-    // desain: target Ast_u then round up
+    // mode desain: target Ast_u then round up
+    console.log("Mode desain - menghitung n dari Ast_u");
     n = Math.ceil(Ast_u / (Ast_satu || 1));
     n = Math.max(2, n);
     
     // MODIFIKASI: Bulatkan n ke atas ke kelipatan 2 khusus untuk mode desain
     if (n % 2 !== 0) n += 1;
     
-    const n_max = 2 * (m || 1);
-    const n_limited = Math.min(n, n_max);
+    const n_max_temp = 2 * (m || 1);
+    const n_limited = Math.min(n, n_max_temp);
     Ast_i = n_limited * Ast_satu;
     rho = (Ast_i / (b * h)) * 100;
     rho_dipakai = Math.max(rho, 0.01);
     n_terpakai = n_limited;
+    
+    console.log("n hasil desain:", n, "n_limited:", n_limited, "Ast_i:", Ast_i);
   }
 
   const n_max = 2 * (m || 1);
   const status = n <= n_max ? 'AMAN' : 'TIDAK AMAN';
 
+  console.log("Hasil akhir:");
+  console.table({
+    mode, n_input, n, n_terpakai, n_max, status,
+    Ast_i, Ast_u, rho,
+    D, Ast_satu
+  });
+
   return {
     kondisi, faktorPhi: faktorPhi,
     e, // nilai eksentrisitas
     ab, ac, ab1, ab2, at1, at2,
-    A1: kondisiAktif.A1, 
-    A2: kondisiAktif.A2, 
+    A1: kondisiAktif.A1 || 0, 
+    A2: kondisiAktif.A2 || 0, 
     As_tu,
     Ast_u, Ast_satu, Ast_i, n, rho, n_terpakai, n_max, status,
     // TAMBAHAN: Kembalikan nilai K, Kmaks, dan status K_melebihi_Kmaks
-    K: kondisiAktif.K, 
-    Kmaks: kondisiAktif.Kmaks, 
-    K_melebihi_Kmaks: kondisiAktif.K_melebihi_Kmaks,
+    K: kondisiAktif.K || 0, 
+    Kmaks: kondisiAktif.Kmaks || 0, 
+    K_melebihi_Kmaks: kondisiAktif.K_melebihi_Kmaks || false,
     // TAMBAHAN: Semua kondisi dan kondisi aktif
     semuaKondisi: semuaKondisi,
-    kondisiAktif: kondisiAktif.nama,
+    kondisiAktif: kondisiAktif.nama || 'tidak diketahui',
     // Variabel tambahan untuk kondisi tertentu
     ap1: kondisiAktif.ap1,
     ap2: kondisiAktif.ap2,
@@ -427,17 +482,18 @@ function hitungBegelCore({Pu, Vu, b, h, d, fc, fy, fyt, phi, Ag, lambda, phi2, m
 
 // ====== KONTROL SISTEM (SYSTEM 4) ======
 function kontrolLenturKolom(hasilTulangan){
-  // checks:
-  // - Ast_i >= Ast_u
-  // - rho >= 1%
-  // - n <= 2*m (n_max)
-  // - K <= Kmaks (kondisi at2>ac)
   if (!hasilTulangan) return {ok:false, detail:'no data'};
   const okAst = (hasilTulangan.Ast_i >= hasilTulangan.Ast_u);
   const okRho = (hasilTulangan.rho >= 1.0);
   const okN = (hasilTulangan.n <= hasilTulangan.n_max);
   // TAMBAHAN: Kontrol K ≤ Kmaks untuk kondisi at2>ac
   const okK = !hasilTulangan.K_melebihi_Kmaks;
+  
+  console.log("=== DEBUG kontrolLenturKolom ===");
+  console.log("okAst:", okAst, "Ast_i:", hasilTulangan.Ast_i, "Ast_u:", hasilTulangan.Ast_u);
+  console.log("okRho:", okRho, "rho:", hasilTulangan.rho);
+  console.log("okN:", okN, "n:", hasilTulangan.n, "n_max:", hasilTulangan.n_max);
+  console.log("okK:", okK, "K:", hasilTulangan.K, "Kmaks:", hasilTulangan.Kmaks);
   
   return {
     ok: okAst && okRho && okN && okK,
@@ -625,6 +681,10 @@ async function calculateKolom(rawInput, options = {}){
   let phi = parsed.tulangan.phi_tul || options.phi || 10;
   const mode = parsed.mode;
 
+  console.log("=== DEBUG calculateKolom ===");
+  console.log("Mode:", mode, "D:", D, "phi:", phi);
+  console.log("n_tul dari parsed:", parsed.tulangan.n_tul);
+
   // Prepare Dimensi
   const Dimensi = hitungKolomDimensi({b: parsed.dimensi.b, h: parsed.dimensi.h, Sb: parsed.dimensi.sb, D, phi, fc: parsed.material.fc});
   const m_val = Math.max(1, Math.floor(Dimensi.m) || 1);
@@ -692,9 +752,44 @@ async function calculateKolom(rawInput, options = {}){
   const ds = DimensiFinal.ds;
   const m = Math.max(1, Math.floor(DimensiFinal.m) || 1);
 
+  console.log("=== PARAMETER FINAL ===");
+  console.table({
+    mode: mode,
+    n_tul: parsed.tulangan.n_tul,
+    D, phi, d, ds, m,
+    Pu: parsed.beban.Pu,
+    Mu: parsed.beban.Mu,
+    b: parsed.dimensi.b,
+    h: parsed.dimensi.h,
+    fc: parsed.material.fc,
+    fy: parsed.material.fy
+  });
+
   // Prepare arguments for tulangan core
   const tulMode = mode; // 'desain' or 'evaluasi'
-  const n_input = (tulMode === 'evaluasi') ? (parsed.tulangan.n_tul || 0) : 0;
+  let n_input = 0;
+  
+  // PERBAIKAN: Logika yang lebih jelas untuk menentukan n_input
+  if (tulMode === 'evaluasi') {
+    // Cek dari beberapa sumber: session storage, parsed.tulangan, options
+    const sessionInput = readSessionInput();
+    if (sessionInput && sessionInput.tulangan && sessionInput.tulangan.n_tul) {
+      n_input = sessionInput.tulangan.n_tul;
+      console.log("n_input dari session storage:", n_input);
+    } else if (parsed.tulangan.n_tul) {
+      n_input = parsed.tulangan.n_tul;
+      console.log("n_input dari parsed input:", n_input);
+    } else if (options.n) {
+      n_input = options.n;
+      console.log("n_input dari options:", n_input);
+    } else {
+      n_input = 0;
+      console.warn("⚠️ n_input tidak ditemukan untuk mode evaluasi, menggunakan 0");
+    }
+  } else {
+    n_input = 0; // Mode desain tidak perlu n_input
+  }
+
   const hasilTul = hitungTulanganKolomCore({
     mode: tulMode,
     n_input,
@@ -713,7 +808,21 @@ async function calculateKolom(rawInput, options = {}){
   });
 
   // Begel calculation — s_pasang comes from session if evaluasi, or options for desain
-  const s_pasang = (tulMode === 'evaluasi') ? (parsed.tulangan.s_tul || (readSessionInput()?.tulangan?.s_tul)) : (options.s || undefined);
+  let s_pasang = undefined;
+  if (tulMode === 'evaluasi') {
+    // Cek dari beberapa sumber
+    const sessionInput = readSessionInput();
+    if (sessionInput && sessionInput.tulangan && sessionInput.tulangan.s_tul) {
+      s_pasang = sessionInput.tulangan.s_tul;
+    } else if (parsed.tulangan.s_tul) {
+      s_pasang = parsed.tulangan.s_tul;
+    } else if (options.s) {
+      s_pasang = options.s;
+    }
+  } else {
+    s_pasang = options.s;
+  }
+
   const begel = hitungBegelCore({
     Pu: parsed.beban.Pu,
     Vu: parsed.beban.Vu,
@@ -766,6 +875,11 @@ async function calculateKolom(rawInput, options = {}){
     kontrol: kontrol,
     rekap: rekap
   };
+
+  console.log("=== FINAL RESULT ===");
+  console.log("Status:", result.status, "Aman:", aman);
+  console.log("Kontrol Lentur:", kontrol_lentur.ok);
+  console.log("Kontrol Geser:", kontrol_geser.ok);
 
   // If options.autoSave true or user requested redirect, call saveResultAndRedirectKolom
   if (options.autoSave){
