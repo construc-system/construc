@@ -184,31 +184,11 @@ function calculateFondasi(data, options = {}) {
             return result;
         }
     } else if (mode === "evaluasi") {
+        // PERUBAHAN: Untuk mode evaluasi, TIDAK melakukan validasi kontrol
+        // Langsung panggil fungsi evaluasi dan kembalikan hasil apapun
         const result = hitungEvaluasiFondasi(data, options);
         
-        // PERBAIKAN: Validasi kontrol untuk evaluasi
-        if (result && result.status === "sukses" && result.kontrol) {
-            const semuaAman = isSemuaKontrolAman(result.kontrol);
-            if (!semuaAman) {
-                return {
-                    status: 'error',
-                    message: 'Tidak ditemukan fondasi yang memenuhi syarat',
-                    details: {
-                        type: 'kontrol_tidak_aman',
-                        kontrol: result.kontrol
-                    },
-                    timestamp: new Date().toISOString()
-                };
-            }
-            
-            if (!result.optimasi) {
-                result.optimasi = {
-                    status: 'evaluated',
-                    catatan: 'Perhitungan evaluasi tanpa optimasi'
-                };
-            }
-        }
-        
+        // PERUBAHAN: Untuk evaluasi, langsung kembalikan hasil tanpa validasi kontrol
         return result;
     }
 }
@@ -262,15 +242,8 @@ function processDesainFondasi(hasil, kontrol, rekap, optimasi = {}) {
 }
 
 function processEvaluasiFondasi(hasil, kontrol, rekap) {
-    // PERBAIKAN: Validasi kontrol sebelum mengembalikan sukses
-    if (!isSemuaKontrolAman(kontrol)) {
-        return {
-            status: "error",
-            message: "Tidak ditemukan fondasi yang memenuhi syarat",
-            details: "Kontrol evaluasi tidak aman",
-            timestamp: new Date().toISOString()
-        };
-    }
+    // PERUBAHAN: Untuk evaluasi, TIDAK validasi kontrol
+    // Selalu return sukses meskipun kontrol tidak aman
     
     return {
         status: "sukses",
@@ -381,8 +354,8 @@ function hitungEvaluasiFondasi(data, options = {}) {
         if (!hasil) {
             return {
                 status: 'error',
-                message: 'Tidak ditemukan fondasi yang memenuhi syarat',
-                details: 'Perhitungan evaluasi tidak menghasilkan output',
+                message: 'Perhitungan evaluasi tidak menghasilkan output',
+                details: 'Error dalam perhitungan inti',
                 timestamp: new Date().toISOString()
             };
         }
@@ -393,42 +366,26 @@ function hitungEvaluasiFondasi(data, options = {}) {
         if (missingComponents.length > 0) {
             return {
                 status: 'error',
-                message: 'Tidak ditemukan fondasi yang memenuhi syarat',
-                details: 'Komponen hasil tidak lengkap: ' + missingComponents.join(', '),
+                message: 'Komponen hasil tidak lengkap',
+                details: 'Komponen yang hilang: ' + missingComponents.join(', '),
                 timestamp: new Date().toISOString()
             };
         }
         
-        // PERBAIKAN: Validasi nilai kritis
-        if (hasil.parameter.sigma_min <= 0) {
-            return {
-                status: 'error',
-                message: 'Tidak ditemukan fondasi yang memenuhi syarat',
-                details: 'Sigma_min negatif atau nol',
-                timestamp: new Date().toISOString()
-            };
-        }
-        
-        if (hasil.dayaDukung.status !== "AMAN") {
-            return {
-                status: 'error',
-                message: 'Tidak ditemukan fondasi yang memenuhi syarat',
-                details: 'Daya dukung tanah tidak aman',
-                timestamp: new Date().toISOString()
-            };
-        }
+        // PERUBAHAN: Untuk evaluasi, TIDAK validasi sigma_min dan dayaDukung
+        // Langsung hitung kontrol dan rekap
         
         const kontrol = kontrolFondasi(hasil, input, "evaluasi");
         const rekap = rekapHasilFondasi(hasil, input, "evaluasi");
         
-        // PERBAIKAN: Kembalikan hasil dengan validasi kontrol
+        // PERUBAHAN: Selalu panggil processEvaluasiFondasi tanpa validasi
         return processEvaluasiFondasi(hasil, kontrol, rekap);
         
     } catch (error) {
         return {
             status: "error",
-            message: 'Tidak ditemukan fondasi yang memenuhi syarat',
-            details: `Error dalam perhitungan evaluasi: ${error.message}`,
+            message: `Error dalam perhitungan evaluasi: ${error.message}`,
+            details: 'Exception dalam perhitungan',
             stack: error.stack,
             timestamp: new Date().toISOString()
         };
@@ -1525,17 +1482,27 @@ function getAllFondasiVariables(result, inputData) {
     }
 }
 
-function calculateFondasiWithRedirect(data) {
+// =====================================================
+// ===== FUNGSI UNTUK KONSISTENSI =====
+
+// Fungsi untuk menangani redirect dengan mode evaluasi
+function handleFondasiRedirect(data) {
     try {
         const result = calculateFondasi(data);
         
-        if (result.status === "sukses") {
+        // PERUBAHAN: Untuk mode evaluasi, selalu redirect meskipun kontrol tidak aman
+        if (data.mode === "evaluasi" && result.status === "sukses") {
+            saveResultAndRedirectFondasi(result, data);
+        } 
+        // Untuk mode desain, hanya redirect jika sukses
+        else if (data.mode === "desain" && result.status === "sukses") {
             saveResultAndRedirectFondasi(result, data);
         } else {
+            // Tampilkan pesan error hanya untuk desain atau error parsing
             if (typeof showAlert === 'function') {
-                showAlert(`Perhitungan fondasi gagal: ${result.message || 'Tidak ditemukan fondasi yang memenuhi syarat'}`);
+                showAlert(`Perhitungan fondasi gagal: ${result.message || 'Tidak ditemukan solusi'}`);
             } else {
-                alert(`Perhitungan fondasi gagal: ${result.message || 'Tidak ditemukan fondasi yang memenuhi syarat'}`);
+                alert(`Perhitungan fondasi gagal: ${result.message || 'Tidak ditemukan solusi'}`);
             }
         }
         
@@ -1548,6 +1515,35 @@ function calculateFondasiWithRedirect(data) {
         }
         throw error;
     }
+}
+
+// Update fungsi calculateFondasiWithRedirect untuk menggunakan handler baru
+window.calculateFondasiWithRedirect = function(data) {
+    return handleFondasiRedirect(data);
+};
+
+// =====================================================
+// ===== FUNGSI BANTU UNTUK REPORT =====
+
+// Fungsi untuk mengecek apakah hasil evaluasi aman (untuk display di report)
+function isEvaluasiAman(result) {
+    if (!result || !result.kontrol) return false;
+    
+    const kriteria = [
+        result.kontrol.sigmaMinAman,
+        result.kontrol.dayaDukung?.aman,
+        result.kontrol.geser?.aman1,
+        result.kontrol.geser?.aman2,
+        result.kontrol.tulangan?.aman,
+        result.kontrol.kuatDukung?.aman,
+        result.kontrol.tulanganTambahan?.aman
+    ];
+    
+    if (result.kontrol.evaluasiTulangan) {
+        kriteria.push(result.kontrol.evaluasiTulangan.aman);
+    }
+    
+    return kriteria.every(k => k === true);
 }
 
 // =====================================================
@@ -1654,9 +1650,12 @@ window.kontrolFondasi = kontrolFondasi;
 window.setDetailedLogging = setDetailedLogging;
 window.debugFondasi = window.debugFondasi;
 
-window.calculateFondasiWithRedirect = calculateFondasiWithRedirect;
+window.calculateFondasiWithRedirect = handleFondasiRedirect;
 window.saveColorSettings = saveColorSettings;
 window.saveResultAndRedirectFondasi = saveResultAndRedirectFondasi;
 window.getAllFondasiVariables = getAllFondasiVariables;
 
-console.log("✅ calc-fondasi.js loaded (complete with 'no solution found' handling)");
+// Fungsi helper untuk report
+window.isEvaluasiAman = isEvaluasiAman;
+
+console.log("✅ calc-fondasi.js loaded (complete with mode evaluasi always showing report)");

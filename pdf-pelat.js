@@ -1,5 +1,3 @@
-[file name]: pdf-pelat.js
-[file content begin]
 (function() {
     let resultData;
 
@@ -11,43 +9,36 @@
     // FUNGSI BARU: Cek Status Pelat Dinamis
     // ==============================================
     function cekStatusPelat() {
-        const kontrolLentur = getData('kontrol.lentur', {});
-        const kontrolBagi = getData('kontrol.bagi', {});
+        const kontrol = getData('kontrol', {});
+        const lentur = kontrol.lentur || {};
+        const bagi = kontrol.bagi || {};
         
         let semuaAman = true;
         
-        // Cek kontrol lentur
-        if (kontrolLentur) {
-            // Cek arah X
-            if (!kontrolLentur.arahX || 
-                !kontrolLentur.arahX.K_aman || 
-                !kontrolLentur.arahX.Md_aman || 
-                !kontrolLentur.arahX.As_terpasang_aman) {
-                semuaAman = false;
-            }
-            
-            // Cek arah Y
-            if (!kontrolLentur.arahY || 
-                !kontrolLentur.arahY.K_aman || 
-                !kontrolLentur.arahY.Md_aman || 
-                !kontrolLentur.arahY.As_terpasang_aman) {
+        // Cek kontrol lentur arah X
+        if (lentur.arahX) {
+            if (!lentur.arahX.K_aman || !lentur.arahX.Md_aman || !lentur.arahX.As_terpasang_aman) {
                 semuaAman = false;
             }
         }
         
-        // Cek kontrol tulangan bagi
-        if (kontrolBagi) {
-            // Cek arah X
-            if (!kontrolBagi.arahX || 
-                !kontrolBagi.arahX.As_aman || 
-                !kontrolBagi.arahX.As_terpasang_aman) {
+        // Cek kontrol lentur arah Y
+        if (lentur.arahY) {
+            if (!lentur.arahY.K_aman || !lentur.arahY.Md_aman || !lentur.arahY.As_terpasang_aman) {
                 semuaAman = false;
             }
-            
-            // Cek arah Y
-            if (!kontrolBagi.arahY || 
-                !kontrolBagi.arahY.As_aman || 
-                !kontrolBagi.arahY.As_terpasang_aman) {
+        }
+        
+        // Cek kontrol tulangan bagi arah X
+        if (bagi.arahX) {
+            if (!bagi.arahX.As_aman || !bagi.arahX.As_terpasang_aman) {
+                semuaAman = false;
+            }
+        }
+        
+        // Cek kontrol tulangan bagi arah Y
+        if (bagi.arahY) {
+            if (!bagi.arahY.As_aman || !bagi.arahY.As_terpasang_aman) {
                 semuaAman = false;
             }
         }
@@ -183,82 +174,77 @@
     }
     
     // Fungsi untuk membuat tabel Data Beban Pelat
-    function createBebanPelatTable() {
-        const inputData = getData('inputData', {});
-        const bebanData = inputData.beban || {};
-        const dimensi = inputData.dimensi || {};
+    function createBebanTable() {
+        const bebanData = getData('inputData.beban', {});
+        const bebanMode = getData('inputData.beban.mode', 'auto');
         
         let rows = [];
         
-        if (bebanData.mode === 'manual') {
-            // Mode manual
+        if (bebanMode === 'manual') {
+            const manual = bebanData.manual || {};
             rows = [
-                { parameter: "<strong>Mode Input</strong>", hasil: "", satuan: "" },
-                { parameter: "Mode beban", hasil: "Manual", satuan: "" },
-                { parameter: "Momen ultimate ($M_u$)", hasil: formatNumber(bebanData.manual?.mu), satuan: "kNm/m" },
-                { parameter: "Tipe tumpuan", hasil: bebanData.manual?.tumpuan_type || 'N/A', satuan: "" }
+                { parameter: "<strong>Beban Manual</strong>", hasil: "", satuan: "" },
+                { parameter: "$M_u$ (Momen terfaktor)", hasil: formatNumber(manual.mu || 'N/A'), satuan: "kNm/m" },
+                { parameter: "Jenis Tumpuan", hasil: manual.tumpuan_type || 'N/A', satuan: "-" }
             ];
         } else {
-            // Mode auto
-            const qu = formatNumber(bebanData.auto?.qu);
-            const pattern = bebanData.auto?.pattern_binary || '0000';
-            const tumpuanType = bebanData.auto?.tumpuan_type || 'N/A';
+            const auto = bebanData.auto || {};
+            const tabelData = getData('data.tabel', {});
+            const jenisPelat = tabelData.jenisPelat === 'satu_arah' ? 'Satu Arah' : 'Dua Arah';
             
             rows = [
-                { parameter: "<strong>Mode Input</strong>", hasil: "", satuan: "" },
-                { parameter: "Mode beban", hasil: "Otomatis (PBI)", satuan: "" },
-                { parameter: "Beban terfaktor ($q_u$)", hasil: qu, satuan: "kN/m²" },
-                { parameter: "Pola tumpuan (binary)", hasil: pattern, satuan: "" },
-                { parameter: "Tipe tumpuan", hasil: tumpuanType, satuan: "" }
+                { parameter: "<strong>Beban Auto</strong>", hasil: "", satuan: "" },
+                { parameter: "$q_u$ (Beban terfaktor)", hasil: formatNumber(auto.qu || 'N/A'), satuan: "kN/m²" },
+                { parameter: "Tipe Tumpuan", hasil: auto.tumpuan_type || 'N/A', satuan: "-" },
+                { parameter: "Jenis Tumpuan", hasil: jenisPelat, satuan: "-" }
             ];
         }
         
         return createThreeColumnTable(rows, false, true);
     }
     
-    // Fungsi untuk membuat tabel perhitungan tulangan pokok
-    function createTulanganPokokTable(data, arah, status, fc, fy, D, h, d, Mu, b = 1000) {
+    // Fungsi untuk membuat tabel perhitungan tulangan pokok pelat
+    function createTulanganPokokTable(data, arah, d, fc, fy, D, h, mode) {
+        const b = 1000; // lebar per meter
+        const phi = 0.9;
+        
         const rows = [
-            { parameter: "$M_u$", hasil: formatNumber(Mu, 3), satuan: 'kNm/m' },
-            { parameter: "$\\displaystyle K = \\frac{M_u}{\\phi b d^2}$", hasil: formatNumber(data.K), satuan: 'MPa' },
-            { parameter: "$K \\le K_{maks}$", isStatus: true, statusHtml: `<span class="${status?.K_aman ? 'status-aman' : 'status-tidak-aman'}">${status?.K_aman ? 'AMAN' : 'TIDAK AMAN'}</span>` },
-            { parameter: "$\\displaystyle a = \\left(1 - \\sqrt{1 - \\frac{2K}{0.85 f'_c}}\\right) d$", hasil: formatNumber(data.a), satuan: 'mm' },
-            { parameter: "$\\displaystyle A_{s1} = \\frac{0.85 f'_c a b}{f_y}$", hasil: formatNumber(data.As1), satuan: 'mm²/m' },
-            { parameter: "$\\displaystyle A_{s2} = \\frac{\\sqrt{f'_c}}{4f_y} b d$", hasil: formatNumber(data.As2), satuan: 'mm²/m' },
-            { parameter: "$\\displaystyle A_{s3} = \\frac{1.4}{f_y} b d$", hasil: formatNumber(data.As3), satuan: 'mm²/m' },
-            { parameter: "$A_{s,perlu} = \\max(A_{s1}, A_{s2}, A_{s3})$", hasil: formatNumber(data.AsDigunakan), satuan: 'mm²/m' },
-            { parameter: "$\\displaystyle s_1 = \\frac{A_s D^2}{A_{s,perlu}}$", hasil: formatNumber(data.s1), satuan: 'mm' },
-            { parameter: "$\\displaystyle s_2 = \\begin{cases} 2h & \\text{(dua arah)} \\\\ 3h & \\text{(satu arah)} \\end{cases}$", hasil: formatNumber(data.s2), satuan: 'mm' },
-            { parameter: "$s_3 = 450$ mm", hasil: "450", satuan: 'mm' },
-            { parameter: "$s = \\min(s_1, s_2, s_3)$", hasil: formatNumber(data.sDigunakan), satuan: 'mm' },
-            { parameter: "$A_{s,terpasang} = \\dfrac{\\pi D^2 / 4 \\times 1000}{s}$", hasil: formatNumber(data.AsTerpasang, 1), satuan: 'mm²/m' },
-            { parameter: "$A_{s,perlu} \\le A_{s,terpasang}$", isStatus: true, statusHtml: `<span class="${status?.As_terpasang_aman ? 'status-aman' : 'status-tidak-aman'}">${status?.As_terpasang_aman ? 'AMAN' : 'TIDAK AMAN'}</span>` },
-            { parameter: "$\\displaystyle a = \\frac{A_{s,terpasang} f_y}{0.85 f'_c b}$", hasil: formatNumber(data.a_desain), satuan: 'mm' },
-            { parameter: "$\\displaystyle M_n = A_{s,terpasang} f_y (d - a/2)$", hasil: formatNumber(data.Mn, 3), satuan: 'kNm/m' },
-            { parameter: "$\\displaystyle M_d = \\phi M_n$", hasil: formatNumber(data.Md, 3), satuan: 'kNm/m' },
-            { parameter: "$M_d \\ge M_u$", isStatus: true, statusHtml: `<span class="${status?.Md_aman ? 'status-aman' : 'status-tidak-aman'}">${status?.Md_aman ? 'AMAN' : 'TIDAK AMAN'}</span>` },
-            { parameter: `<strong>Digunakan Tulangan Pokok ${arah}: D${D}-${formatNumber(data.sDigunakan, 0)}</strong>`, isFullRow: true, hasil: "", satuan: "" }
+            { parameter: `$\\displaystyle K = \\frac{M_u}{\\phi b d^2}$`, hasil: formatNumber(data?.K), satuan: 'MPa' },
+            { parameter: `$\\displaystyle a = \\left(1 - \\sqrt{1 - \\frac{2K}{0.85 f'_c}}\\right) d$`, hasil: formatNumber(data?.a), satuan: 'mm' },
+            { parameter: `$\\displaystyle A_{s1} = \\frac{0.85 f'_c a b}{f_y}$`, hasil: formatNumber(data?.As1), satuan: 'mm²/m' },
+            { parameter: `$\\displaystyle A_{s2} = \\frac{\\sqrt{f'_c}}{4f_y} b d$`, hasil: formatNumber(data?.As2), satuan: 'mm²/m' },
+            { parameter: `$\\displaystyle A_{s3} = \\frac{1.4}{f_y} b d$`, hasil: formatNumber(data?.As3), satuan: 'mm²/m' },
+            { parameter: `$A_{s,perlu} = \\max(A_{s1}, A_{s2}, A_{s3})$`, hasil: formatNumber(data?.AsDigunakan), satuan: 'mm²/m' },
+            { parameter: `$\\displaystyle s_1 = \\frac{0.25 \\pi D^2 \\times b}{A_{s,perlu}}$`, hasil: formatNumber(data?.s1), satuan: 'mm' },
+            { parameter: `$s_2 = ${arah === 'X' ? '2h' : '3h'} = ${arah === 'X' ? 2*h : 3*h}$`, hasil: formatNumber(data?.s2), satuan: 'mm' },
+            { parameter: `$s_3 = 450$`, hasil: formatNumber(data?.s3), satuan: 'mm' },
+            { parameter: `$s_{maks} = \\min(s_1, s_2, s_3)$`, hasil: formatNumber(Math.min(data?.s1 || Infinity, data?.s2 || Infinity, data?.s3 || Infinity)), satuan: 'mm' },
+            { parameter: `$s_{terpasang}$ (dibulatkan kelipatan 25)`, hasil: formatNumber(data?.sDigunakan, 0), satuan: 'mm' },
+            { parameter: `$\\displaystyle A_{s,terpasang} = \\frac{0.25 \\pi D^2 \\times b}{s_{terpasang}}$`, hasil: formatNumber(data?.AsTerpasang, 1), satuan: 'mm²/m' },
+            { parameter: `$\\displaystyle M_n = A_{s,terpasang} \\times f_y \\times (d - a/2)$`, hasil: formatNumber(data?.Mn), satuan: 'kNm/m' },
+            { parameter: `$\\displaystyle M_d = \\phi \\times M_n$`, hasil: formatNumber(data?.Md), satuan: 'kNm/m' },
+            { parameter: `$M_d \\ge M_u$`, isStatus: true, statusHtml: `<span class="${data?.Md >= data?.Mu ? 'status-aman' : 'status-tidak-aman'}">${data?.Md >= data?.Mu ? 'AMAN' : 'TIDAK AMAN'}</span>` },
+            { parameter: `$A_{s,terpasang} \\ge A_{s,perlu}$`, isStatus: true, statusHtml: `<span class="${data?.AsTerpasang >= data?.AsDigunakan ? 'status-aman' : 'status-tidak-aman'}">${data?.AsTerpasang >= data?.AsDigunakan ? 'AMAN' : 'TIDAK AMAN'}</span>` }
         ];
         
         return createThreeColumnTable(rows, true);
     }
     
-    // Fungsi untuk membuat tabel perhitungan tulangan bagi
-    function createTulanganBagiTable(data, arah, status, fc, fy, Db, h, As_pokok, b = 1000) {
+    // Fungsi untuk membuat tabel perhitungan tulangan bagi pelat
+    function createTulanganBagiTable(data, arah, b, h, fc, fy, Db, mode) {
         const rows = [
-            { parameter: "$A_{s,pokok}$", hasil: formatNumber(As_pokok, 1), satuan: 'mm²/m' },
-            { parameter: "$\\displaystyle A_{sb1} = \\frac{A_{s,pokok}}{5}$", hasil: formatNumber(data.Asb1), satuan: 'mm²/m' },
-            { parameter: "$\\displaystyle A_{sb2} = \\begin{cases} 0.002bh & (f_y \\le 350) \\\\ \\left[0.002 - \\frac{f_y - 350}{350000}\\right]bh & (350 < f_y < 420) \\\\ 0.0018bh\\frac{420}{f_y} & (f_y \\ge 420) \\end{cases}$", hasil: formatNumber(data.Asb2), satuan: 'mm²/m' },
-            { parameter: "$A_{sb3} = 0.0014bh$", hasil: formatNumber(data.Asb3), satuan: 'mm²/m' },
-            { parameter: "$A_{sb,perlu} = \\max(A_{sb1}, A_{sb2}, A_{sb3})$", hasil: formatNumber(data.AsbDigunakan), satuan: 'mm²/m' },
-            { parameter: "$\\displaystyle s_1 = \\frac{\\pi D_b^2 / 4 \\times 1000}{A_{sb,perlu}}$", hasil: formatNumber(data.s1), satuan: 'mm' },
-            { parameter: "$s_2 = 5h$", hasil: formatNumber(data.s2), satuan: 'mm' },
-            { parameter: "$s_3 = 450$ mm", hasil: "450", satuan: 'mm' },
-            { parameter: "$s = \\min(s_1, s_2, s_3)$", hasil: formatNumber(data.sDigunakan), satuan: 'mm' },
-            { parameter: "$A_{sb,terpasang} = \\dfrac{\\pi D_b^2 / 4 \\times 1000}{s}$", hasil: formatNumber(data.AsbTerpasang, 1), satuan: 'mm²/m' },
-            { parameter: "$A_{sb,perlu} \\le A_{sb,terpasang}$", isStatus: true, statusHtml: `<span class="${status?.As_terpasang_aman ? 'status-aman' : 'status-tidak-aman'}">${status?.As_terpasang_aman ? 'AMAN' : 'TIDAK AMAN'}</span>` },
-            { parameter: "$\\displaystyle A_{v,u} = \\frac{\\pi D_b^2 s}{4 \\times 1000}$", hasil: formatNumber(data.Av_u, 4), satuan: 'mm²/mm' },
-            { parameter: `<strong>Digunakan Tulangan Bagi ${arah}: D${Db}-${formatNumber(data.sDigunakan, 0)}</strong>`, isFullRow: true, hasil: "", satuan: "" }
+            { parameter: `$\\displaystyle A_{sb1} = \\frac{A_{s,pokok}}{5}$`, hasil: formatNumber(data?.Asb1), satuan: 'mm²/m' },
+            { parameter: `$A_{sb2} = ${fy <= 350 ? '0.002' : fy < 420 ? `(0.002 - (${fy} - 350)/350000)` : '0.0018 × (420/fy)'} \\times b \\times h$`, hasil: formatNumber(data?.Asb2), satuan: 'mm²/m' },
+            { parameter: `$A_{sb3} = 0.0014 \\times b \\times h$`, hasil: formatNumber(data?.Asb3), satuan: 'mm²/m' },
+            { parameter: `$A_{sb,perlu} = \\max(A_{sb1}, A_{sb2}, A_{sb3})$`, hasil: formatNumber(data?.AsbDigunakan), satuan: 'mm²/m' },
+            { parameter: `$\\displaystyle s_1 = \\frac{0.25 \\pi D_b^2 \\times 1000}{A_{sb,perlu}}$`, hasil: formatNumber(data?.s1), satuan: 'mm' },
+            { parameter: `$s_2 = 5h = ${5*h}$`, hasil: formatNumber(data?.s2), satuan: 'mm' },
+            { parameter: `$s_3 = 450$`, hasil: formatNumber(data?.s3), satuan: 'mm' },
+            { parameter: `$s_{maks} = \\min(s_1, s_2, s_3)$`, hasil: formatNumber(Math.min(data?.s1 || Infinity, data?.s2 || Infinity, data?.s3 || Infinity)), satuan: 'mm' },
+            { parameter: `$s_{terpasang}$ (dibulatkan kelipatan 25)`, hasil: formatNumber(data?.sDigunakan, 0), satuan: 'mm' },
+            { parameter: `$\\displaystyle A_{sb,terpasang} = \\frac{0.25 \\pi D_b^2 \\times 1000}{s_{terpasang}}$`, hasil: formatNumber(data?.AsbTerpasang, 1), satuan: 'mm²/m' },
+            { parameter: `$\\displaystyle A_{v,u} = \\frac{\\pi D_b^2 \\times s}{4 \\times 1000}$`, hasil: formatNumber(data?.Av_u, 4), satuan: 'mm²/mm' },
+            { parameter: `$A_{sb,terpasang} \\ge A_{sb,perlu}$`, isStatus: true, statusHtml: `<span class="${data?.AsbTerpasang >= data?.AsbDigunakan ? 'status-aman' : 'status-tidak-aman'}">${data?.AsbTerpasang >= data?.AsbDigunakan ? 'AMAN' : 'TIDAK AMAN'}</span>` }
         ];
         
         return createThreeColumnTable(rows, true);
@@ -267,67 +253,49 @@
     // Fungsi untuk membuat tabel rekapitulasi pelat
     function createRekapitulasiPelatTable() {
         const rekap = getData('rekap.formatted', {});
-        const jenisPelat = getData('data.tabel.jenisPelat', 'dua_arah');
-        const jenisPelatStr = jenisPelat === 'satu_arah' ? 'Pelat Satu Arah' : 'Pelat Dua Arah';
         
         let html = '<table class="rekap-table">';
         html += '<thead>';
         html += '<tr>';
-        html += '<th class="rekap-col-tulangan" rowspan="2">Jenis Tulangan</th>';
-        html += '<th class="rekap-col-tumpuan" colspan="2">Arah X</th>';
-        html += '<th class="rekap-col-lapangan" colspan="2">Arah Y</th>';
-        html += '</tr>';
-        html += '<tr>';
-        html += '<th class="rekap-col-tumpuan">Tulangan</th>';
-        html += '<th class="rekap-col-tumpuan">Spasi</th>';
-        html += '<th class="rekap-col-lapangan">Tulangan</th>';
-        html += '<th class="rekap-col-lapangan">Spasi</th>';
+        html += '<th class="rekap-col-parameter">Parameter</th>';
+        html += '<th class="rekap-col-nilai">Nilai</th>';
         html += '</tr>';
         html += '</thead>';
         html += '<tbody>';
         
-        // Info jenis pelat
-        html += '<tr class="row-merged">';
-        html += '<td class="rekap-col-tulangan text-bold vertical-middle" colspan="5" style="text-align: center;">';
-        html += `<strong>${jenisPelatStr}</strong>`;
-        html += '</td>';
-        html += '</tr>';
-        
-        // Tulangan pokok
         html += '<tr>';
-        html += '<td class="rekap-col-tulangan text-bold vertical-middle">Tulangan Pokok</td>';
-        html += '<td class="rekap-col-tumpuan text-center">' + (rekap.tulangan_pokok_x || 'N/A') + '</td>';
-        html += '<td class="rekap-col-tumpuan text-center">' + formatNumber(getData('data.tulangan.pokokX.sDigunakan', 'N/A'), 0) + ' mm</td>';
-        html += '<td class="rekap-col-lapangan text-center">' + (rekap.tulangan_pokok_y || 'N/A') + '</td>';
-        html += '<td class="rekap-col-lapangan text-center">' + formatNumber(getData('data.tulangan.pokokY.sDigunakan', 'N/A'), 0) + ' mm</td>';
-        html += '</tr>';
-        
-        // Tulangan bagi
-        html += '<tr>';
-        html += '<td class="rekap-col-tulangan text-bold vertical-middle">Tulangan Bagi</td>';
-        html += '<td class="rekap-col-tumpuan text-center">' + (rekap.tulangan_bagi_x || 'N/A') + '</td>';
-        html += '<td class="rekap-col-tumpuan text-center">' + formatNumber(getData('data.tulangan.bagiX.sDigunakan', 'N/A'), 0) + ' mm</td>';
-        html += '<td class="rekap-col-lapangan text-center">' + (rekap.tulangan_bagi_y || 'N/A') + '</td>';
-        html += '<td class="rekap-col-lapangan text-center">' + formatNumber(getData('data.tulangan.bagiY.sDigunakan', 'N/A'), 0) + ' mm</td>';
-        html += '</tr>';
-        
-        // As terpasang
-        html += '<tr class="row-merged">';
-        html += '<td class="rekap-col-tulangan text-bold vertical-middle" colspan="5" style="text-align: center;">';
-        html += '<strong>Luas Tulangan Terpasang</strong>';
-        html += '</td>';
+        html += '<td class="rekap-col-parameter"><strong>Jenis Pelat</strong></td>';
+        html += '<td class="rekap-col-nilai text-center">' + (rekap.jenis_pelat || 'N/A') + '</td>';
         html += '</tr>';
         
         html += '<tr>';
-        html += '<td class="rekap-col-tulangan text-bold vertical-middle">Arah X</td>';
-        html += '<td class="rekap-col-tumpuan text-center" colspan="2">' + (rekap.as_terpasang_x || 'N/A') + '</td>';
-        html += '<td class="rekap-col-lapangan text-center" colspan="2">' + (rekap.asb_terpasang_x || 'N/A') + '</td>';
+        html += '<td class="rekap-col-parameter"><strong>Dimensi Pelat (Lx × Ly × h)</strong></td>';
+        html += '<td class="rekap-col-nilai text-center">' + (rekap.dimensi || 'N/A') + '</td>';
         html += '</tr>';
         
         html += '<tr>';
-        html += '<td class="rekap-col-tulangan text-bold vertical-middle">Arah Y</td>';
-        html += '<td class="rekap-col-tumpuan text-center" colspan="2">' + (rekap.as_terpasang_y || 'N/A') + '</td>';
-        html += '<td class="rekap-col-lapangan text-center" colspan="2">' + (rekap.asb_terpasang_y || 'N/A') + '</td>';
+        html += '<td class="rekap-col-parameter"><strong>Rasio Ly/Lx</strong></td>';
+        html += '<td class="rekap-col-nilai text-center">' + (rekap.rasio_ly_lx || 'N/A') + '</td>';
+        html += '</tr>';
+        
+        html += '<tr>';
+        html += '<td class="rekap-col-parameter"><strong>Tulangan Pokok Arah X</strong></td>';
+        html += '<td class="rekap-col-nilai text-center">' + (rekap.tulangan_pokok_x || 'N/A') + '</td>';
+        html += '</tr>';
+        
+        html += '<tr>';
+        html += '<td class="rekap-col-parameter"><strong>Tulangan Pokok Arah Y</strong></td>';
+        html += '<td class="rekap-col-nilai text-center">' + (rekap.tulangan_pokok_y || 'N/A') + '</td>';
+        html += '</tr>';
+        
+        html += '<tr>';
+        html += '<td class="rekap-col-parameter"><strong>Tulangan Bagi Arah X</strong></td>';
+        html += '<td class="rekap-col-nilai text-center">' + (rekap.tulangan_bagi_x || 'N/A') + '</td>';
+        html += '</tr>';
+        
+        html += '<tr>';
+        html += '<td class="rekap-col-parameter"><strong>Tulangan Bagi Arah Y</strong></td>';
+        html += '<td class="rekap-col-nilai text-center">' + (rekap.tulangan_bagi_y || 'N/A') + '</td>';
         html += '</tr>';
         
         html += '</tbody>';
@@ -335,130 +303,73 @@
         return html;
     }
 
-    // Fungsi untuk mendapatkan informasi tulangan pelat
-    function getTulanganInfoPelat() {
-        const inputData = getData('inputData', {});
-        const mode = getData('mode', 'evaluasi');
-        
-        let D = 'N/A';
-        let Db = 'N/A';
-        
-        // Cek di inputData
-        if (inputData.tulangan) {
-            D = inputData.tulangan.d || 'N/A';
-            Db = inputData.tulangan.db || 'N/A';
-        }
-        
-        // Cek di data hasil perhitungan
-        if (D === 'N/A') {
-            D = getData('rekap.input.tulangan.d', 'N/A');
-        }
-        if (Db === 'N/A') {
-            Db = getData('rekap.input.tulangan.db', 'N/A');
-        }
-        
-        return { D, Db };
-    }
-    
     // ==============================================
     // FUNGSI BARU: Kesimpulan Fleksibel untuk Pelat
     // ==============================================
-    function generateDynamicConclusionPelat() {
+    function generateDynamicConclusion() {
         // Hitung status pelat secara dinamis
         const statusPelat = cekStatusPelat();
         
         const dimensi = getData('inputData.dimensi', {});
         const material = getData('inputData.material', {});
-        const tulanganInfo = getTulanganInfoPelat();
+        const tulangan = getData('inputData.tulangan', {});
+        const rekap = getData('rekap.formatted', {});
         
         // Ambil semua status kontrol
-        const kontrolLentur = getData('kontrol.lentur', {});
-        const kontrolBagi = getData('kontrol.bagi', {});
+        const kontrol = getData('kontrol', {});
+        const lentur = kontrol.lentur || {};
+        const bagi = kontrol.bagi || {};
         
         // Analisis status per komponen
         let masalah = [];
         let rekomendasi = [];
         
-        // Analisis Lentur
-        if (kontrolLentur) {
-            const lenturProblems = [];
-            let lenturCount = 0;
-            
-            // Cek arah X
-            if (kontrolLentur.arahX) {
-                if (!kontrolLentur.arahX.K_aman) {
-                    lenturProblems.push("Kontrol K tidak aman pada arah X");
-                    lenturCount++;
-                }
-                if (!kontrolLentur.arahX.Md_aman) {
-                    lenturProblems.push("Kapasitas momen tidak cukup pada arah X");
-                    lenturCount++;
-                }
-                if (!kontrolLentur.arahX.As_terpasang_aman) {
-                    lenturProblems.push("Luas tulangan pokok tidak memadai pada arah X");
-                    lenturCount++;
-                }
+        // Analisis Lentur Arah X
+        if (lentur.arahX) {
+            const detail = lentur.arahX.detail || {};
+            if (!lentur.arahX.K_aman) {
+                masalah.push(`<span class="problem-item">• Kontrol K tidak aman pada arah X (K = ${formatNumber(detail.K)} > K_maks = ${formatNumber(detail.Kmaks)})</span>`);
             }
-            
-            // Cek arah Y
-            if (kontrolLentur.arahY) {
-                if (!kontrolLentur.arahY.K_aman) {
-                    lenturProblems.push("Kontrol K tidak aman pada arah Y");
-                    lenturCount++;
-                }
-                if (!kontrolLentur.arahY.Md_aman) {
-                    lenturProblems.push("Kapasitas momen tidak cukup pada arah Y");
-                    lenturCount++;
-                }
-                if (!kontrolLentur.arahY.As_terpasang_aman) {
-                    lenturProblems.push("Luas tulangan pokok tidak memadai pada arah Y");
-                    lenturCount++;
-                }
+            if (!lentur.arahX.Md_aman) {
+                masalah.push(`<span class="problem-item">• Kapasitas momen tidak cukup pada arah X (M_d = ${formatNumber(detail.Md)} kNm/m < M_u = ${formatNumber(detail.Mu)} kNm/m)</span>`);
             }
-            
-            if (lenturProblems.length > 0) {
-                masalah.push(`<strong>Masalah pada tulangan pokok (${lenturCount} masalah):</strong>`);
-                masalah.push(...lenturProblems.map(p => `<span class="problem-item">• ${p}</span>`));
-                rekomendasi.push("Perlu penambahan atau perubahan tulangan pokok");
-                rekomendasi.push("Pertimbangkan untuk mengurangi jarak tulangan pokok");
+            if (!lentur.arahX.As_terpasang_aman) {
+                masalah.push(`<span class="problem-item">• Luas tulangan terpasang tidak mencukupi pada arah X (A_s,terpasang = ${formatNumber(detail.As_terpasang)} mm²/m < A_s,perlu = ${formatNumber(detail.As_dibutuhkan)} mm²/m)</span>`);
+            }
+        }
+        
+        // Analisis Lentur Arah Y
+        if (lentur.arahY) {
+            const detail = lentur.arahY.detail || {};
+            if (!lentur.arahY.K_aman) {
+                masalah.push(`<span class="problem-item">• Kontrol K tidak aman pada arah Y (K = ${formatNumber(detail.K)} > K_maks = ${formatNumber(detail.Kmaks)})</span>`);
+            }
+            if (!lentur.arahY.Md_aman) {
+                masalah.push(`<span class="problem-item">• Kapasitas momen tidak cukup pada arah Y (M_d = ${formatNumber(detail.Md)} kNm/m < M_u = ${formatNumber(detail.Mu)} kNm/m)</span>`);
+            }
+            if (!lentur.arahY.As_terpasang_aman) {
+                masalah.push(`<span class="problem-item">• Luas tulangan terpasang tidak mencukupi pada arah Y (A_s,terpasang = ${formatNumber(detail.As_terpasang)} mm²/m < A_s,perlu = ${formatNumber(detail.As_dibutuhkan)} mm²/m)</span>`);
             }
         }
         
         // Analisis Tulangan Bagi
-        if (kontrolBagi) {
-            const bagiProblems = [];
-            let bagiCount = 0;
-            
-            // Cek arah X
-            if (kontrolBagi.arahX) {
-                if (!kontrolBagi.arahX.As_aman) {
-                    bagiProblems.push("Tulangan bagi tidak memenuhi syarat minimum pada arah X");
-                    bagiCount++;
-                }
-                if (!kontrolBagi.arahX.As_terpasang_aman) {
-                    bagiProblems.push("Luas tulangan bagi tidak memadai pada arah X");
-                    bagiCount++;
-                }
-            }
-            
-            // Cek arah Y
-            if (kontrolBagi.arahY) {
-                if (!kontrolBagi.arahY.As_aman) {
-                    bagiProblems.push("Tulangan bagi tidak memenuhi syarat minimum pada arah Y");
-                    bagiCount++;
-                }
-                if (!kontrolBagi.arahY.As_terpasang_aman) {
-                    bagiProblems.push("Luas tulangan bagi tidak memadai pada arah Y");
-                    bagiCount++;
-                }
-            }
-            
-            if (bagiProblems.length > 0) {
-                masalah.push(`<strong>Masalah pada tulangan bagi (${bagiCount} masalah):</strong>`);
-                masalah.push(...bagiProblems.map(p => `<span class="problem-item">• ${p}</span>`));
-                rekomendasi.push("Perlu penambahan atau perubahan tulangan bagi");
-                rekomendasi.push("Pertimbangkan untuk mengurangi jarak tulangan bagi");
-            }
+        if (bagi.arahX && !bagi.arahX.As_terpasang_aman) {
+            masalah.push(`<span class="problem-item">• Tulangan bagi arah X tidak memenuhi persyaratan minimum</span>`);
+        }
+        if (bagi.arahY && !bagi.arahY.As_terpasang_aman) {
+            masalah.push(`<span class="problem-item">• Tulangan bagi arah Y tidak memenuhi persyaratan minimum</span>`);
+        }
+        
+        // Rekomendasi berdasarkan masalah
+        if (masalah.length > 0) {
+            rekomendasi.push("Perlu penambahan atau perubahan tulangan pokok");
+            rekomendasi.push("Pertimbangkan untuk menambah jumlah atau diameter tulangan");
+            rekomendasi.push("Evaluasi ulang dimensi pelat jika masalah berlanjut");
+        } else {
+            rekomendasi.push(`Gunakan tulangan pokok D${tulangan.d} dengan spasi ${rekap.tulangan_pokok_x?.split('-')[1] || 'N/A'} mm`);
+            rekomendasi.push(`Gunakan tulangan bagi D${tulangan.db} dengan spasi ${rekap.tulangan_bagi_x?.split('-')[1] || 'N/A'} mm`);
+            rekomendasi.push(`Pastikan mutu beton mencapai f'c = ${material.fc || 'N/A'} MPa`);
+            rekomendasi.push(`Pastikan mutu baja mencapai fy = ${material.fy || 'N/A'} MPa`);
         }
         
         // Buat HTML kesimpulan dinamis
@@ -471,50 +382,26 @@
                     </h4>
         `;
         
-        // Informasi jenis pelat
-        const jenisPelat = getData('data.tabel.jenisPelat', 'dua_arah');
-        const jenisPelatStr = jenisPelat === 'satu_arah' ? 'Pelat Satu Arah' : 'Pelat Dua Arah';
-        const dimensiPelat = `${dimensi.lx || 'N/A'} × ${dimensi.ly || 'N/A'} mm`;
-        const tebal = dimensi.h || 'N/A';
-        
         // Ringkasan status
         if (statusPelat === 'aman') {
             conclusionHTML += `
                 <p><strong>Status:</strong> <span class="status-aman">SEMUA KONTROL AMAN</span></p>
-                <p>Struktur ${jenisPelatStr.toLowerCase()} dengan dimensi ${dimensiPelat} tebal ${tebal} mm memenuhi semua persyaratan untuk:</p>
+                <p>Struktur pelat ${rekap.jenis_pelat || 'N/A'} dengan dimensi ${dimensi.lx || 'N/A'} × ${dimensi.ly || 'N/A'} × ${dimensi.h || 'N/A'} mm memenuhi semua persyaratan SNI 2847:2019 untuk:</p>
                 <ul>
                     <li>Kuat lentur arah X dan Y</li>
-                    <li>Kebutuhan tulangan pokok dan bagi</li>
-                    <li>Persyaratan spasi tulangan maksimum</li>
-                    <li>Persyaratan detail tulangan minimum</li>
+                    <li>Persyaratan tulangan pokok minimum</li>
+                    <li>Persyaratan tulangan bagi/susut</li>
+                    <li>Persyaratan spasi maksimum tulangan</li>
                 </ul>
             `;
-            
-            // Rekomendasi untuk kondisi aman
-            rekomendasi = [
-                "Gunakan tulangan pokok D" + tulanganInfo.D + " dengan spasi sesuai hasil perhitungan",
-                "Gunakan tulangan bagi D" + tulanganInfo.Db + " dengan spasi sesuai hasil perhitungan",
-                "Pastikan mutu beton mencapai f'c = " + (material.fc || 'N/A') + " MPa",
-                "Pastikan mutu baja mencapai fy = " + (material.fy || 'N/A') + " MPa",
-                "Lakukan pengecoran dengan metode yang sesuai standar",
-                "Pastikan tulangan dipasang dengan selimut beton yang memadai"
-            ];
         } else {
             conclusionHTML += `
                 <p><strong>Status:</strong> <span class="status-tidak-aman">TIDAK AMAN - PERLU PERBAIKAN DESAIN</span></p>
-                <p>${jenisPelatStr} dengan dimensi ${dimensiPelat} tebal ${tebal} mm ditemukan masalah pada beberapa aspek desain:</p>
+                <p>Ditemukan masalah pada beberapa aspek desain:</p>
                 <div style="margin: 8px 0 12px 0; padding: 8px; background-color: #f8f9fa; border-radius: 4px;">
                     ${masalah.length > 0 ? masalah.join('') : '<p class="problem-item">• Terdapat masalah pada satu atau lebih kontrol keamanan</p>'}
                 </div>
             `;
-            
-            // Rekomendasi tambahan untuk kondisi tidak aman
-            if (masalah.length === 0) {
-                rekomendasi.push("Tinjau kembali dimensi pelat: " + dimensiPelat + " tebal " + tebal + " mm");
-                rekomendasi.push("Evaluasi ulang mutu material yang digunakan");
-                rekomendasi.push("Pertimbangkan untuk menggunakan tulangan dengan diameter lebih besar");
-                rekomendasi.push("Periksa kembali konfigurasi tulangan pokok dan bagi");
-            }
         }
         
         // Rekomendasi
@@ -528,8 +415,9 @@
         // Catatan teknis
         conclusionHTML += `
             <p style="margin-top: 8px; font-size: 10pt; color: #666;">
-                <strong>Catatan:</strong> Hasil perhitungan ini berdasarkan PBI 71 N.I-2 (Peraturan Beton Bertulang Indonesia). 
-                Pastikan semua aspek konstruksi sesuai dengan spesifikasi teknis dan dilakukan pengawasan yang memadai.
+                <strong>Catatan:</strong> Hasil perhitungan ini berdasarkan SNI 2847:2019 (Persyaratan Beton Struktural untuk Bangunan Gedung) 
+                dan metode perencanaan pelat dua arah. Pastikan semua aspek konstruksi sesuai dengan spesifikasi teknis 
+                dan dilakukan pengawasan yang memadai.
             </p>
         `;
         
@@ -542,9 +430,9 @@
     }
     
     // ==============================================
-    // FUNGSI UTAMA: Generate Content Blocks Pelat
+    // FUNGSI UTAMA: Generate Content Blocks untuk Pelat
     // ==============================================
-    function generateContentBlocksPelat() {
+    function generateContentBlocks() {
         const blocks = [];
         
         // Gunakan status pelat yang dihitung secara dinamis
@@ -565,134 +453,96 @@
             <h2>A. DATA INPUT DAN PARAMETER</h2>
         `);
         
-        const materialDimensiRows = [
-            { parameter: "$f'_c$ (Kuat tekan beton)", hasil: getData('inputData.material.fc'), satuan: 'MPa' },
-            { parameter: "$f_y$ (Tegangan leleh tulangan)", hasil: getData('inputData.material.fy'), satuan: 'MPa' },
-            { parameter: "$L_x$ (Bentang pendek)", hasil: getData('inputData.dimensi.lx'), satuan: 'mm' },
-            { parameter: "$L_y$ (Bentang panjang)", hasil: getData('inputData.dimensi.ly'), satuan: 'mm' },
+        // Data Material dan Dimensi (GABUNGAN)
+        const dimensiMaterialRows = [
+            { parameter: "$L_x$ (Panjang arah X)", hasil: getData('inputData.dimensi.lx'), satuan: 'mm' },
+            { parameter: "$L_y$ (Panjang arah Y)", hasil: getData('inputData.dimensi.ly'), satuan: 'mm' },
             { parameter: "$h$ (Tebal pelat)", hasil: getData('inputData.dimensi.h'), satuan: 'mm' },
-            { parameter: "$S_b$ (Selimut beton)", hasil: getData('inputData.dimensi.sb'), satuan: 'mm' },
-            { parameter: "$\\lambda$ (Faktor reduksi beban hidup)", hasil: getData('inputData.lanjutan.lambda'), satuan: '-' }
+            { parameter: "$s_b$ (Selimut beton)", hasil: getData('inputData.dimensi.sb'), satuan: 'mm' },
+            { parameter: "$f'_c$ (Kuat tekan beton)", hasil: getData('inputData.material.fc'), satuan: 'MPa' },
+            { parameter: "$f_y$ (Tegangan leleh tulangan)", hasil: getData('inputData.material.fy'), satuan: 'MPa' }
         ];
         
         blocks.push(`
             <div class="section-group">
                 <h3>1. Data Material dan Dimensi</h3>
-                ${createThreeColumnTable(materialDimensiRows, false, true)}
+                ${createThreeColumnTable(dimensiMaterialRows, false, true)}
             </div>
         `);
         
+        // Data Beban
         blocks.push(`
             <div class="section-group">
                 <h3>2. Data Beban</h3>
-                ${createBebanPelatTable()}
+                ${createBebanTable()}
             </div>
         `);
         
-        // Data Tulangan (jika mode evaluasi)
-        const mode = getData('mode', 'evaluasi');
-        const tulanganInfo = getTulanganInfoPelat();
-        
-        if (mode === 'evaluasi') {
-            const tulanganRows = [
-                { parameter: "Diameter tulangan pokok ($D$)", hasil: tulanganInfo.D, satuan: "mm" },
-                { parameter: "Diameter tulangan bagi ($D_b$)", hasil: tulanganInfo.Db, satuan: "mm" }
-            ];
-            
-            const inputTulangan = getData('inputData.tulangan', {});
-            if (inputTulangan.s) {
-                tulanganRows.push({ parameter: "Spasi tulangan pokok", hasil: inputTulangan.s, satuan: "mm" });
-            }
-            if (inputTulangan.sb) {
-                tulanganRows.push({ parameter: "Spasi tulangan bagi", hasil: inputTulangan.sb, satuan: "mm" });
-            }
-            
-            blocks.push(`
-                <div class="section-group">
-                    <h3>3. Data Tulangan Input</h3>
-                    ${createThreeColumnTable(tulanganRows, false, true)}
-                </div>
-            `);
-        } else {
-            // Mode desain: tampilkan hasil optimasi
-            const tulanganRows = [
-                { parameter: "<strong>Hasil Optimasi Tulangan</strong>", hasil: "", satuan: "" },
-                { parameter: "Diameter tulangan pokok ($D$)", hasil: tulanganInfo.D, satuan: "mm" },
-                { parameter: "Diameter tulangan bagi ($D_b$)", hasil: tulanganInfo.Db, satuan: "mm" }
-            ];
-            
-            blocks.push(`
-                <div class="section-group">
-                    <h3>3. Data Tulangan Hasil Desain</h3>
-                    ${createThreeColumnTable(tulanganRows, false, true)}
-                </div>
-            `);
-        }
-        
-        const parameterRows = [
-            { parameter: "$S_n = \\max(25, 1.5D)$", hasil: getData('data.parameter.Sn'), satuan: 'mm' },
-            { parameter: "$d_s = S_b + D/2$", hasil: getData('data.parameter.ds'), satuan: 'mm' },
-            { parameter: "$d_{s2} = S_n + D$", hasil: getData('data.parameter.ds2'), satuan: 'mm' },
-            { parameter: "$d = h - d_s$ (arah X)", hasil: getData('data.parameter.d'), satuan: 'mm' },
-            { parameter: "$d_2 = h - d_{s2}$ (arah Y)", hasil: getData('data.parameter.d2'), satuan: 'mm' },
-            { parameter: "$\\displaystyle \\beta_1 = \\begin{cases} 0.85 & f'_c \\leq 28 \\text{ MPa} \\\\ 0.85 - 0.05\\dfrac{f'_c - 28}{7} & 28 < f'_c < 55 \\text{ MPa} \\\\ 0.65 & f'_c \\geq 55 \\text{ MPa} \\end{cases}$", hasil: getData('data.parameter.beta1'), satuan: '-' },
-            { parameter: "$\\displaystyle K_{\\text{maks}} = \\dfrac{382.5 \\beta_1 f'_c (600 + f_y - 225 \\beta_1)}{(600 + f_y)^2}$", hasil: formatNumber(getData('data.parameter.Kmaks')), satuan: 'MPa' },
-            { parameter: "$\\text{Rasio } L_y/L_x$", hasil: formatNumber(getData('data.geometri.rasioLyLx'), 2), satuan: '-' }
+        // Data Tulangan
+        const tulanganRows = [
+            { parameter: "$D$ (Diameter tulangan pokok)", hasil: getData('inputData.tulangan.d'), satuan: 'mm' },
+            { parameter: "$D_b$ (Diameter tulangan bagi)", hasil: getData('inputData.tulangan.db'), satuan: 'mm' },
+            { parameter: "$s$ (Spasi tulangan pokok - input evaluasi)", hasil: getData('inputData.tulangan.s'), satuan: 'mm' },
+            { parameter: "$s_b$ (Spasi tulangan bagi - input evaluasi)", hasil: getData('inputData.tulangan.sb'), satuan: 'mm' }
         ];
         
         blocks.push(`
             <div class="section-group">
-                <h3>4. Perhitungan Parameter</h3>
+                <h3>3. Data Tulangan</h3>
+                ${createThreeColumnTable(tulanganRows, false, true)}
+            </div>
+        `);
+        
+        // Parameter Perhitungan
+        const data = getData('data', {});
+        const parameter = data.parameter || {};
+        const geometri = data.geometri || {};
+        
+        const parameterRows = [
+            { parameter: "$\\displaystyle \\text{Rasio } L_y/L_x$", hasil: formatNumber(geometri.rasioLyLx, 3), satuan: '-' },
+            { parameter: "$\\displaystyle S_n = \\max(25, 1.5D)$", hasil: formatNumber(parameter.Sn), satuan: 'mm' },
+            { parameter: "$\\displaystyle d_{s} = s_b + D/2$ (dibulatkan kelipatan 5)", hasil: formatNumber(parameter.ds), satuan: 'mm' },
+            { parameter: "$\\displaystyle d = h - d_{s}$ (tinggi efektif arah X)", hasil: formatNumber(parameter.d), satuan: 'mm' },
+            { parameter: "$\\displaystyle d_{s2} = S_n + D$ (dibulatkan kelipatan 5)", hasil: formatNumber(parameter.ds2), satuan: 'mm' },
+            { parameter: "$\\displaystyle d_2 = h - d_{s2}$ (tinggi efektif arah Y)", hasil: formatNumber(parameter.d2), satuan: 'mm' },
+            { parameter: "$\\displaystyle \\beta_1 = $", hasil: formatNumber(parameter.beta1, 3), satuan: '-' },
+            { parameter: "$\\displaystyle K_{maks} = \\dfrac{382.5 \\beta_1 f'_c (600 + f_y - 225 \\beta_1)}{(600 + f_y)^2}$", hasil: formatNumber(parameter.Kmaks, 3), satuan: 'MPa' }
+        ];
+        
+        blocks.push(`
+            <div class="section-group">
+                <h3>4. Parameter Perhitungan</h3>
                 ${createThreeColumnTable(parameterRows)}
             </div>
         `);
         
-        // Informasi jenis pelat dan tumpuan
-        const tabelData = getData('data.tabel', {});
-        const jenisPelat = tabelData.jenisPelat === 'satu_arah' ? 'Satu Arah' : 'Dua Arah';
-        const kondisi = tabelData.kondisi || 'N/A';
-        const tumpuanHuruf = tabelData.tumpuanHuruf || 'N/A';
+        // Informasi Tabel Momen (hanya untuk mode auto)
+        const bebanMode = getData('inputData.beban.mode', 'auto');
+        const tabel = data.tabel || {};
         
-        blocks.push(`
-            <div class="section-group">
-                <h3>5. Informasi Jenis Pelat dan Tumpuan</h3>
-                <table class="three-col-table">
-                    <tr>
-                        <th class="col-param">Parameter</th>
-                        <th class="col-value" style="text-align: center">Data</th>
-                        <th class="col-unit" style="text-align: center">Keterangan</th>
-                    </tr>
-                    <tr>
-                        <td class="col-param">Jenis Pelat</td>
-                        <td class="col-value" style="text-align: center">${jenisPelat}</td>
-                        <td class="col-unit" style="text-align: center">-</td>
-                    </tr>
-                    <tr>
-                        <td class="col-param">Kondisi Tumpuan</td>
-                        <td class="col-value" style="text-align: center">${kondisi}</td>
-                        <td class="col-unit" style="text-align: center">-</td>
-                    </tr>
-                    <tr>
-                        <td class="col-param">Tipe Tumpuan</td>
-                        <td class="col-value" style="text-align: center">${tumpuanHuruf}</td>
-                        <td class="col-unit" style="text-align: center">Kode huruf A-I</td>
-                    </tr>
-                </table>
-            </div>
-        `);
+        if (bebanMode === 'auto') {
+            const tabelRows = [
+                { parameter: "<strong>Informasi Tabel Momen</strong>", hasil: "", satuan: "" },
+                { parameter: "Kondisi Tumpuan", hasil: tabel.kondisi || 'N/A', satuan: '-' },
+                { parameter: "Huruf Tumpuan", hasil: tabel.tumpuanHuruf || 'N/A', satuan: '-' },
+                { parameter: "Jenis Pelat", hasil: tabel.jenisPelat === 'satu_arah' ? 'Satu Arah' : 'Dua Arah', satuan: '-' },
+                { parameter: "$C_{tx}$ (Koefisien momen tumpuan X)", hasil: formatNumber(tabel.Ctx, 3), satuan: '-' },
+                { parameter: "$C_{lx}$ (Koefisien momen lapangan X)", hasil: formatNumber(tabel.Clx, 3), satuan: '-' },
+                { parameter: "$C_{ty}$ (Koefisien momen tumpuan Y)", hasil: formatNumber(tabel.Cty, 3), satuan: '-' },
+                { parameter: "$C_{ly}$ (Koefisien momen lapangan Y)", hasil: formatNumber(tabel.Cly, 3), satuan: '-' }
+            ];
+            
+            blocks.push(`
+                <div class="section-group">
+                    <h3>5. Koefisien Momen dari Tabel</h3>
+                    ${createThreeColumnTable(tabelRows, false, true)}
+                </div>
+            `);
+        }
         
-        // Data momen
-        const momen = getData('data.momen', {});
-        
-        blocks.push(`
-            <div class="header-content-group">
-                <h2>B. MOMEN PERHITUNGAN</h2>
-                <p class="note">Momen ultimate berdasarkan PBI 71 N.I-2 (Tabel 3.3.3.A)</p>
-            </div>
-        `);
-        
+        // Momen Hasil Perhitungan
+        const momen = data.momen || {};
         const momenRows = [
-            { parameter: "<strong>Momen Ultimate (kNm/m)</strong>", hasil: "", satuan: "" },
             { parameter: "$M_{tx}$ (Momen tumpuan arah X)", hasil: formatNumber(momen.Mtx, 3), satuan: 'kNm/m' },
             { parameter: "$M_{lx}$ (Momen lapangan arah X)", hasil: formatNumber(momen.Mlx, 3), satuan: 'kNm/m' },
             { parameter: "$M_{ty}$ (Momen tumpuan arah Y)", hasil: formatNumber(momen.Mty, 3), satuan: 'kNm/m' },
@@ -700,147 +550,107 @@
         ];
         
         blocks.push(`
+            <h2>B. PERHITUNGAN MOMEN DAN TULANGAN</h2>
             <div class="section-group">
+                <h3>1. Momen Hasil Perhitungan</h3>
                 ${createThreeColumnTable(momenRows, false, true)}
             </div>
         `);
         
-        // Koefisien momen (jika mode auto)
-        const bebanMode = getData('inputData.beban.mode', 'auto');
-        if (bebanMode === 'auto') {
-            const koefRows = [
-                { parameter: "<strong>Koefisien Momen (%)</strong>", hasil: "", satuan: "" },
-                { parameter: "$C_{tx}$", hasil: formatNumber(tabelData.Ctx, 1), satuan: '%' },
-                { parameter: "$C_{lx}$", hasil: formatNumber(tabelData.Clx, 1), satuan: '%' },
-                { parameter: "$C_{ty}$", hasil: formatNumber(tabelData.Cty, 1), satuan: '%' },
-                { parameter: "$C_{ly}$", hasil: formatNumber(tabelData.Cly, 1), satuan: '%' }
-            ];
-            
-            blocks.push(`
-                <div class="section-group">
-                    <h3>Koefisien Momen dari Tabel 3.3.3.A PBI</h3>
-                    ${createThreeColumnTable(koefRows, false, true)}
-                </div>
-            `);
-        }
+        // Tulangan Pokok Arah X
+        const tulanganData = data.tulangan || {};
+        const pokokX = tulanganData.pokokX || {};
+        const pokokY = tulanganData.pokokY || {};
+        const bagiX = tulanganData.bagiX || {};
+        const bagiY = tulanganData.bagiY || {};
         
-        const headerC = `
-            <div class="header-content-group keep-together">
-                <h2>C. PERHITUNGAN TULANGAN POKOK</h2>
-                <p class="note">Tulangan pokok dipasang untuk menahan momen lentur</p>
-            </div>
-        `;
-        
-        blocks.push(headerC);
-        
-        const fc = parseFloat(getData('inputData.material.fc', 20));
-        const fy = parseFloat(getData('inputData.material.fy', 300));
-        const D = parseFloat(tulanganInfo.D);
-        const h = parseFloat(getData('inputData.dimensi.h', 100));
-        const d = parseFloat(getData('data.parameter.d', 80));
-        const d2 = parseFloat(getData('data.parameter.d2', 75));
-        
-        // Tulangan pokok arah X (gunakan momen maksimum antara Mtx dan Mlx)
-        const momenX = Math.max(momen.Mtx || 0, momen.Mlx || 0);
-        const pokokX = getData('data.tulangan.pokokX', {});
-        const statusPokokX = getData('kontrol.lentur.arahX', {});
+        const inputData = getData('inputData', {});
+        const fc = inputData.material?.fc || 20;
+        const fy = inputData.material?.fy || 300;
+        const D = inputData.tulangan?.d || 10;
+        const Db = inputData.tulangan?.db || 8;
+        const h = inputData.dimensi?.h || 120;
+        const mode = inputData.mode || 'evaluasi';
         
         blocks.push(`
             <div class="section-group">
-                <h3>1. Arah X ($M_u = ${formatNumber(momenX, 3)} \\text{ kNm/m}$)</h3>
-                ${createTulanganPokokTable(pokokX, "X", statusPokokX, fc, fy, D, h, d, momenX)}
+                <h3>2. Tulangan Pokok Arah X</h3>
+                <p class="note">Direncanakan untuk momen maksimum arah X: $M_u = ${formatNumber(Math.max(momen.Mtx || 0, momen.Mlx || 0), 3)} \\text{ kNm/m}$</p>
+                ${createTulanganPokokTable(pokokX, 'X', parameter.d, fc, fy, D, h, mode)}
             </div>
         `);
         
-        // Tulangan pokok arah Y (gunakan momen maksimum antara Mty dan Mly)
-        const momenY = Math.max(momen.Mty || 0, momen.Mly || 0);
-        const pokokY = getData('data.tulangan.pokokY', {});
-        const statusPokokY = getData('kontrol.lentur.arahY', {});
-        
+        // Tulangan Pokok Arah Y
         blocks.push(`
             <div class="section-group">
-                <h3>2. Arah Y ($M_u = ${formatNumber(momenY, 3)} \\text{ kNm/m}$)</h3>
-                ${createTulanganPokokTable(pokokY, "Y", statusPokokY, fc, fy, D, h, d2, momenY)}
+                <h3>3. Tulangan Pokok Arah Y</h3>
+                <p class="note">Direncanakan untuk momen maksimum arah Y: $M_u = ${formatNumber(Math.max(momen.Mty || 0, momen.Mly || 0), 3)} \\text{ kNm/m}$</p>
+                ${createTulanganPokokTable(pokokY, 'Y', parameter.d2, fc, fy, D, h, mode)}
             </div>
         `);
         
-        const headerD = `
-            <div class="header-content-group keep-together">
-                <h2>D. PERHITUNGAN TULANGAN BAGI</h2>
-                <p class="note">Tulangan bagi dipasang untuk menahan susut dan suhu</p>
-            </div>
-        `;
-        
-        blocks.push(headerD);
-        
-        const Db = parseFloat(tulanganInfo.Db);
-        const bagiX = getData('data.tulangan.bagiX', {});
-        const statusBagiX = getData('kontrol.bagi.arahX', {});
-        
+        // Tulangan Bagi Arah X
         blocks.push(`
             <div class="section-group">
-                <h3>1. Arah X (terkait tulangan pokok arah X)</h3>
-                ${createTulanganBagiTable(bagiX, "X", statusBagiX, fc, fy, Db, h, pokokX.AsDigunakan || 0)}
+                <h3>4. Tulangan Bagi/Susut Arah X</h3>
+                ${createTulanganBagiTable(bagiX, 'X', 1000, h, fc, fy, Db, mode)}
             </div>
         `);
         
-        const bagiY = getData('data.tulangan.bagiY', {});
-        const statusBagiY = getData('kontrol.bagi.arahY', {});
-        
+        // Tulangan Bagi Arah Y
         blocks.push(`
             <div class="section-group">
-                <h3>2. Arah Y (terkait tulangan pokok arah Y)</h3>
-                ${createTulanganBagiTable(bagiY, "Y", statusBagiY, fc, fy, Db, h, pokokY.AsDigunakan || 0)}
+                <h3>5. Tulangan Bagi/Susut Arah Y</h3>
+                ${createTulanganBagiTable(bagiY, 'Y', 1000, h, fc, fy, Db, mode)}
             </div>
         `);
         
-        const headerE = `
-            <div class="header-content-group">
-                <h2>E. REKAPITULASI HASIL DESAIN</h2>
-            </div>
-        `;
-        
-        const contentE1 = `
+        // Rekapitulasi
+        blocks.push(`
+            <h2>C. REKAPITULASI HASIL DESAIN</h2>
             <div class="section-group">
-                <h3>1. Tulangan Terpasang</h3>
+                <h3>1. Rekapitulasi Tulangan</h3>
                 ${createRekapitulasiPelatTable()}
             </div>
-        `;
+        `);
         
-        blocks.push(headerE + contentE1);
+        // Kontrol Keamanan
+        const kontrol = getData('kontrol', {});
+        const lentur = kontrol.lentur || {};
+        const tulanganBagi = kontrol.bagi || {};
         
         const kontrolRows = [
             { 
-                parameter: "$K \\le K_{maks}$ (Arah X)", 
-                statusHtml: `<span class="${getData('kontrol.lentur.arahX.K_aman', false) ? 'status-aman' : 'status-tidak-aman'}">${getData('kontrol.lentur.arahX.K_aman', false) ? 'AMAN' : 'TIDAK AMAN'}</span>`
+                parameter: "Kontrol $K$ arah X", 
+                statusHtml: `<span class="${lentur.arahX?.K_aman ? 'status-aman' : 'status-tidak-aman'}">${lentur.arahX?.K_aman ? 'AMAN' : 'TIDAK AMAN'}</span>`
             },
             { 
-                parameter: "$M_d \\ge M_u$ (Arah X)", 
-                statusHtml: `<span class="${getData('kontrol.lentur.arahX.Md_aman', false) ? 'status-aman' : 'status-tidak-aman'}">${getData('kontrol.lentur.arahX.Md_aman', false) ? 'AMAN' : 'TIDAK AMAN'}</span>`
+                parameter: "Kontrol $M_d \\ge M_u$ arah X", 
+                statusHtml: `<span class="${lentur.arahX?.Md_aman ? 'status-aman' : 'status-tidak-aman'}">${lentur.arahX?.Md_aman ? 'AMAN' : 'TIDAK AMAN'}</span>`
             },
             { 
-                parameter: "$A_{s,perlu} \\le A_{s,terpasang}$ (Arah X)", 
-                statusHtml: `<span class="${getData('kontrol.lentur.arahX.As_terpasang_aman', false) ? 'status-aman' : 'status-tidak-aman'}">${getData('kontrol.lentur.arahX.As_terpasang_aman', false) ? 'AMAN' : 'TIDAK AMAN'}</span>`
+                parameter: "Kontrol $A_{s,terpasang} \\ge A_{s,perlu}$ arah X", 
+                statusHtml: `<span class="${lentur.arahX?.As_terpasang_aman ? 'status-aman' : 'status-tidak-aman'}">${lentur.arahX?.As_terpasang_aman ? 'AMAN' : 'TIDAK AMAN'}</span>`
             },
             { 
-                parameter: "$K \\le K_{maks}$ (Arah Y)", 
-                statusHtml: `<span class="${getData('kontrol.lentur.arahY.K_aman', false) ? 'status-aman' : 'status-tidak-aman'}">${getData('kontrol.lentur.arahY.K_aman', false) ? 'AMAN' : 'TIDAK AMAN'}</span>`
+                parameter: "Kontrol $K$ arah Y", 
+                statusHtml: `<span class="${lentur.arahY?.K_aman ? 'status-aman' : 'status-tidak-aman'}">${lentur.arahY?.K_aman ? 'AMAN' : 'TIDAK AMAN'}</span>`
             },
             { 
-                parameter: "$M_d \\ge M_u$ (Arah Y)", 
-                statusHtml: `<span class="${getData('kontrol.lentur.arahY.Md_aman', false) ? 'status-aman' : 'status-tidak-aman'}">${getData('kontrol.lentur.arahY.Md_aman', false) ? 'AMAN' : 'TIDAK AMAN'}</span>`
+                parameter: "Kontrol $M_d \\ge M_u$ arah Y", 
+                statusHtml: `<span class="${lentur.arahY?.Md_aman ? 'status-aman' : 'status-tidak-aman'}">${lentur.arahY?.Md_aman ? 'AMAN' : 'TIDAK AMAN'}</span>`
             },
             { 
-                parameter: "$A_{s,perlu} \\le A_{s,terpasang}$ (Arah Y)", 
-                statusHtml: `<span class="${getData('kontrol.lentur.arahY.As_terpasang_aman', false) ? 'status-aman' : 'status-tidak-aman'}">${getData('kontrol.lentur.arahY.As_terpasang_aman', false) ? 'AMAN' : 'TIDAK AMAN'}</span>`
+                parameter: "Kontrol $A_{s,terpasang} \\ge A_{s,perlu}$ arah Y", 
+                statusHtml: `<span class="${lentur.arahY?.As_terpasang_aman ? 'status-aman' : 'status-tidak-aman'}">${lentur.arahY?.As_terpasang_aman ? 'AMAN' : 'TIDAK AMAN'}</span>`
             },
             { 
-                parameter: "Tulangan bagi (Arah X)", 
-                statusHtml: `<span class="${getData('kontrol.bagi.arahX.As_terpasang_aman', false) ? 'status-aman' : 'status-tidak-aman'}">${getData('kontrol.bagi.arahX.As_terpasang_aman', false) ? 'AMAN' : 'TIDAK AMAN'}</span>`
+                parameter: "Kontrol tulangan bagi arah X", 
+                statusHtml: `<span class="${tulanganBagi.arahX?.As_terpasang_aman ? 'status-aman' : 'status-tidak-aman'}">${tulanganBagi.arahX?.As_terpasang_aman ? 'AMAN' : 'TIDAK AMAN'}</span>`
             },
             { 
-                parameter: "Tulangan bagi (Arah Y)", 
-                statusHtml: `<span class="${getData('kontrol.bagi.arahY.As_terpasang_aman', false) ? 'status-aman' : 'status-tidak-aman'}">${getData('kontrol.bagi.arahY.As_terpasang_aman', false) ? 'AMAN' : 'TIDAK AMAN'}</span>`
+                parameter: "Kontrol tulangan bagi arah Y", 
+                statusHtml: `<span class="${tulanganBagi.arahY?.As_terpasang_aman ? 'status-aman' : 'status-tidak-aman'}">${tulanganBagi.arahY?.As_terpasang_aman ? 'AMAN' : 'TIDAK AMAN'}</span>`
             }
         ];
         
@@ -852,19 +662,19 @@
         `);
         
         // Gunakan fungsi baru untuk kesimpulan dinamis
-        blocks.push(generateDynamicConclusionPelat());
+        blocks.push(generateDynamicConclusion());
         
         // Referensi
         blocks.push(`
             <p class="note" style="margin-top: 10px;">
-                <strong>Referensi:</strong> PBI 71 N.I-2 (Peraturan Beton Bertulang Indonesia) - Tabel 3.3.3.A
+                <strong>Referensi:</strong> SNI 2847:2019 (Persyaratan Beton Struktural untuk Bangunan Gedung)
             </p>
         `);
         
         return blocks;
     }
 
-    // Helper function untuk format timestamp (sama seperti di pdf.html)
+    // Fungsi untuk memformat tanggal (sama dengan pdf-balok.js)
     function formatTimestampFull(timestamp) {
         if (!timestamp) {
             const now = new Date();
@@ -892,11 +702,10 @@
     // Ekspos fungsi-fungsi yang diperlukan
     window.pelatReport = {
         setData: setData,
-        generateContentBlocks: generateContentBlocksPelat,
+        generateContentBlocks: generateContentBlocks,
         cekStatusPelat: cekStatusPelat,
         formatNumber: formatNumber,
         getData: getData,
         formatTimestampFull: formatTimestampFull
     };
 })();
-[file content end]

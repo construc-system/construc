@@ -863,3 +863,628 @@ sendToCalculation: async function(data) {
     return variablesList.join('\n');
   }
 };
+// ========== AUTOFILL FUNCTION ==========
+
+// Helper function untuk escape HTML (jika belum ada)
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Helper function untuk menampilkan notifikasi autofill
+function showAutofillNotification(moduleName) {
+    let notification = document.getElementById('autofillNotification');
+    if (!notification) {
+        notification = document.createElement('div');
+        notification.id = 'autofillNotification';
+        notification.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--color-buttons);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            z-index: 9999;
+            font-weight: bold;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            font-family: 'Inter', sans-serif;
+        `;
+        document.body.appendChild(notification);
+    }
+    
+    notification.textContent = `Autofill ${moduleName} berhasil! Data testing telah diisi.`;
+    notification.style.opacity = '1';
+    
+    setTimeout(() => {
+        notification.style.opacity = '0';
+    }, 2000);
+    
+    console.log(`✅ Autofill ${moduleName} selesai`);
+}
+
+// Autofill untuk mode desain pelat dengan beban auto
+window.autofillPelatDesainAuto = function() {
+    console.log("🔄 Mengisi data testing untuk modul Pelat (Desain - Auto)...");
+    
+    const testData = {
+        "dimensi": {
+            "ly": "6",
+            "lx": "4",
+            "h": "120",
+            "sb": "20"
+        },
+        "beban": {
+            "mode": "auto",
+            "auto": {
+                "qu": "10",
+                "tumpuan_type": "Terjepit Penuh",
+                "pattern_binary": "0000"
+            },
+            "manual": {
+                "mu": "12.16"
+            }
+        },
+        "material": {
+            "fc": "20",
+            "fy": "300"
+        },
+        "lanjutan": {}
+    };
+
+    // Isi Data Material
+    document.getElementById('quickFc').value = testData.material.fc;
+    document.getElementById('quickFy').value = testData.material.fy;
+    
+    // Pastikan form sudah dirender
+    const formContainer = document.getElementById('moduleForm');
+    if (!formContainer.innerHTML.trim()) {
+        console.log("⚠️ Form belum dirender, render ulang...");
+        window.modules.pelat.render(formContainer, 'desain');
+    }
+    
+    // Pastikan mode beban adalah auto
+    if (window.bebanMode && window.bebanMode.pelat && window.bebanMode.pelat.desain !== 'auto') {
+        // Klik tombol auto untuk mengubah mode
+        const autoBtn = document.querySelector('#bebanCard .toggle-btn[data-beban-mode="auto"]');
+        if (autoBtn) {
+            autoBtn.click();
+            // Tunggu sejenak agar form ter-render ulang
+            setTimeout(() => {
+                fillPelatDesainAutoData(testData);
+            }, 100);
+            return;
+        }
+    }
+    
+    fillPelatDesainAutoData(testData);
+};
+
+function fillPelatDesainAutoData(testData) {
+    // Isi Data Dimensi
+    const dimensiFields = ['ly', 'lx', 'h', 'sb'];
+    dimensiFields.forEach(field => {
+        const input = document.querySelector(`input[data-key="${field}"]`);
+        if (input && testData.dimensi[field]) {
+            input.value = testData.dimensi[field];
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+    });
+    
+    // Isi Data Beban Auto
+    const quInput = document.querySelector(`input[data-key="qu"]`);
+    if (quInput && testData.beban.auto.qu) {
+        quInput.value = testData.beban.auto.qu;
+        quInput.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    
+    // Isi dropdown tumpuan
+    const dropdownSelected = document.getElementById('bebanTumpuanDropdownSelected');
+    if (dropdownSelected && testData.beban.auto.tumpuan_type) {
+        dropdownSelected.querySelector('span').textContent = testData.beban.auto.tumpuan_type;
+        // Update state
+        if (window.formState && window.formState.pelat && window.formState.pelat.desain) {
+            window.formState.pelat.desain['beban_tp'] = testData.beban.auto.tumpuan_type;
+        }
+    }
+    
+    // Set pattern boxes sesuai dengan pattern_binary
+    const patternBinary = testData.beban.auto.pattern_binary;
+    if (patternBinary && patternBinary.length === 4) {
+        const patternMap = {
+            '0': {left: false, top: false, right: false, bottom: false},
+            '1': {left: true, top: true, right: true, bottom: true}
+        };
+        
+        // Inisialisasi pattern_boxes di state
+        if (window.formState && window.formState.pelat && window.formState.pelat.desain) {
+            window.formState.pelat.desain['pattern_boxes'] = patternMap[patternBinary[0]]; // Sesuaikan jika perlu
+        }
+        
+        // Update tampilan pattern boxes
+        setTimeout(() => {
+            const patternBoxes = document.querySelectorAll('.pattern-box-clickable');
+            patternBoxes.forEach(box => {
+                const boxType = box.classList.contains('pattern-box-top') ? 'top' :
+                              box.classList.contains('pattern-box-left') ? 'left' :
+                              box.classList.contains('pattern-box-right') ? 'right' :
+                              box.classList.contains('pattern-box-bottom') ? 'bottom' : null;
+                
+                if (boxType) {
+                    const index = boxType === 'left' ? 0 : 
+                                 boxType === 'top' ? 1 : 
+                                 boxType === 'right' ? 2 : 3;
+                    
+                    const shouldBePlain = patternBinary[index] === '1';
+                    if (shouldBePlain) {
+                        box.classList.add('pattern-box-plain');
+                    } else {
+                        box.classList.remove('pattern-box-plain');
+                    }
+                }
+            });
+        }, 200);
+    }
+    
+    // Update formState secara manual
+    if (window.formState && window.formState.pelat && window.formState.pelat.desain) {
+        window.formState.pelat.desain = {
+            ...window.formState.pelat.desain,
+            ...testData.dimensi,
+            qu: testData.beban.auto.qu,
+            beban_tp: testData.beban.auto.tumpuan_type,
+            pattern_boxes: {
+                left: patternBinary[0] === '1',
+                top: patternBinary[1] === '1',
+                right: patternBinary[2] === '1',
+                bottom: patternBinary[3] === '1'
+            }
+        };
+    }
+    
+    // Tampilkan notifikasi
+    showAutofillNotification("Pelat (Desain - Auto)");
+}
+
+// Autofill untuk mode desain pelat dengan beban manual
+window.autofillPelatDesainManual = function() {
+    console.log("🔄 Mengisi data testing untuk modul Pelat (Desain - Manual)...");
+    
+    const testData = {
+        "dimensi": {
+            "ly": "5",
+            "lx": "3",
+            "h": "150",
+            "sb": "25"
+        },
+        "beban": {
+            "mode": "manual",
+            "auto": {
+                "qu": "0",
+                "tumpuan_type": "",
+                "pattern_binary": "0000"
+            },
+            "manual": {
+                "mu": "15.5"
+            }
+        },
+        "material": {
+            "fc": "25",
+            "fy": "400"
+        },
+        "lanjutan": {
+            "lambda": "1"
+        }
+    };
+
+    // Isi Data Material
+    document.getElementById('quickFc').value = testData.material.fc;
+    document.getElementById('quickFy').value = testData.material.fy;
+    
+    // Pastikan form sudah dirender
+    const formContainer = document.getElementById('moduleForm');
+    if (!formContainer.innerHTML.trim()) {
+        console.log("⚠️ Form belum dirender, render ulang...");
+        window.modules.pelat.render(formContainer, 'desain');
+    }
+    
+    // Pastikan mode beban adalah manual
+    if (window.bebanMode && window.bebanMode.pelat && window.bebanMode.pelat.desain !== 'manual') {
+        // Klik tombol manual untuk mengubah mode
+        const manualBtn = document.querySelector('#bebanCard .toggle-btn[data-beban-mode="manual"]');
+        if (manualBtn) {
+            manualBtn.click();
+            // Tunggu sejenak agar form ter-render ulang
+            setTimeout(() => {
+                fillPelatDesainManualData(testData);
+            }, 100);
+            return;
+        }
+    }
+    
+    fillPelatDesainManualData(testData);
+};
+
+function fillPelatDesainManualData(testData) {
+    // Isi Data Dimensi
+    const dimensiFields = ['ly', 'lx', 'h', 'sb'];
+    dimensiFields.forEach(field => {
+        const input = document.querySelector(`input[data-key="${field}"]`);
+        if (input && testData.dimensi[field]) {
+            input.value = testData.dimensi[field];
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+    });
+    
+    // Isi Data Beban Manual
+    const muInput = document.querySelector(`input[data-key="mu"]`);
+    if (muInput && testData.beban.manual.mu) {
+        muInput.value = testData.beban.manual.mu;
+        muInput.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    
+    // Isi dropdown tumpuan manual (Satu Arah)
+    const dropdownSelected = document.getElementById('bebanTumpuanManualDropdownSelected');
+    if (dropdownSelected) {
+        dropdownSelected.querySelector('span').textContent = "Satu Arah";
+        // Update state
+        if (window.formState && window.formState.pelat && window.formState.pelat.desain) {
+            window.formState.pelat.desain['beban_tp_manual'] = "Satu Arah";
+        }
+    }
+    
+    // Isi Data Lanjutan
+    const lambdaInput = document.querySelector(`input[data-key="lambda"]`);
+    if (lambdaInput && testData.lanjutan.lambda) {
+        lambdaInput.value = testData.lanjutan.lambda;
+        lambdaInput.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    
+    // Update formState secara manual
+    if (window.formState && window.formState.pelat && window.formState.pelat.desain) {
+        window.formState.pelat.desain = {
+            ...window.formState.pelat.desain,
+            ...testData.dimensi,
+            mu: testData.beban.manual.mu,
+            beban_tp_manual: "Satu Arah",
+            lambda: testData.lanjutan.lambda
+        };
+    }
+    
+    // Tampilkan notifikasi
+    showAutofillNotification("Pelat (Desain - Manual)");
+}
+
+// Autofill untuk mode evaluasi pelat dengan beban auto
+window.autofillPelatEvaluasiAuto = function() {
+    console.log("🔄 Mengisi data testing untuk modul Pelat (Evaluasi - Auto)...");
+    
+    const testData = {
+        "dimensi": {
+            "ly": "6",
+            "lx": "4",
+            "h": "120",
+            "sb": "20"
+        },
+        "beban": {
+            "mode": "auto",
+            "auto": {
+                "qu": "10",
+                "tumpuan_type": "Terjepit Penuh",
+                "pattern_binary": "0000"
+            },
+            "manual": {
+                "mu": "12.16"
+            }
+        },
+        "material": {
+            "fc": "20",
+            "fy": "300"
+        },
+        "lanjutan": {},
+        "tulangan": {
+            "d": "10",
+            "db": "8",
+            "s": "155",
+            "sb": "200"
+        }
+    };
+
+    // Isi Data Material
+    document.getElementById('quickFc').value = testData.material.fc;
+    document.getElementById('quickFy').value = testData.material.fy;
+    
+    // Pastikan form sudah dirender
+    const formContainer = document.getElementById('moduleForm');
+    if (!formContainer.innerHTML.trim()) {
+        console.log("⚠️ Form belum dirender, render ulang...");
+        window.modules.pelat.render(formContainer, 'evaluasi');
+    }
+    
+    // Pastikan mode beban adalah auto
+    if (window.bebanMode && window.bebanMode.pelat && window.bebanMode.pelat.evaluasi !== 'auto') {
+        // Klik tombol auto untuk mengubah mode
+        const autoBtn = document.querySelector('#bebanCard .toggle-btn[data-beban-mode="auto"]');
+        if (autoBtn) {
+            autoBtn.click();
+            // Tunggu sejenak agar form ter-render ulang
+            setTimeout(() => {
+                fillPelatEvaluasiAutoData(testData);
+            }, 100);
+            return;
+        }
+    }
+    
+    fillPelatEvaluasiAutoData(testData);
+};
+
+function fillPelatEvaluasiAutoData(testData) {
+    // Isi Data Dimensi
+    const dimensiFields = ['ly', 'lx', 'h', 'sb'];
+    dimensiFields.forEach(field => {
+        const input = document.querySelector(`input[data-key="${field}"]`);
+        if (input && testData.dimensi[field]) {
+            input.value = testData.dimensi[field];
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+    });
+    
+    // Isi Data Beban Auto
+    const quInput = document.querySelector(`input[data-key="qu"]`);
+    if (quInput && testData.beban.auto.qu) {
+        quInput.value = testData.beban.auto.qu;
+        quInput.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    
+    // Isi dropdown tumpuan
+    const dropdownSelected = document.getElementById('bebanTumpuanDropdownSelected');
+    if (dropdownSelected && testData.beban.auto.tumpuan_type) {
+        dropdownSelected.querySelector('span').textContent = testData.beban.auto.tumpuan_type;
+        // Update state
+        if (window.formState && window.formState.pelat && window.formState.pelat.evaluasi) {
+            window.formState.pelat.evaluasi['beban_tp'] = testData.beban.auto.tumpuan_type;
+        }
+    }
+    
+    // Set pattern boxes
+    const patternBinary = testData.beban.auto.pattern_binary;
+    if (patternBinary && patternBinary.length === 4) {
+        setTimeout(() => {
+            const patternBoxes = document.querySelectorAll('.pattern-box-clickable');
+            patternBoxes.forEach(box => {
+                const boxType = box.classList.contains('pattern-box-top') ? 'top' :
+                              box.classList.contains('pattern-box-left') ? 'left' :
+                              box.classList.contains('pattern-box-right') ? 'right' :
+                              box.classList.contains('pattern-box-bottom') ? 'bottom' : null;
+                
+                if (boxType) {
+                    const index = boxType === 'left' ? 0 : 
+                                 boxType === 'top' ? 1 : 
+                                 boxType === 'right' ? 2 : 3;
+                    
+                    const shouldBePlain = patternBinary[index] === '1';
+                    if (shouldBePlain) {
+                        box.classList.add('pattern-box-plain');
+                    } else {
+                        box.classList.remove('pattern-box-plain');
+                    }
+                }
+            });
+        }, 200);
+    }
+    
+    // Isi Data Tulangan
+    const tulanganFields = ['d', 'db', 's'];
+    tulanganFields.forEach(field => {
+        const input = document.querySelector(`input[data-key="${field}"]`);
+        if (input && testData.tulangan[field]) {
+            input.value = testData.tulangan[field];
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+    });
+    
+    // Isi sb (jarak tulangan bagi)
+    const sbTulanganInput = document.querySelector(`input[data-key="sb_tulangan"]`);
+    if (sbTulanganInput && testData.tulangan.sb) {
+        sbTulanganInput.value = testData.tulangan.sb;
+        sbTulanganInput.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    
+    // Update formState secara manual
+    if (window.formState && window.formState.pelat && window.formState.pelat.evaluasi) {
+        window.formState.pelat.evaluasi = {
+            ...window.formState.pelat.evaluasi,
+            ...testData.dimensi,
+            qu: testData.beban.auto.qu,
+            beban_tp: testData.beban.auto.tumpuan_type,
+            pattern_boxes: {
+                left: patternBinary[0] === '1',
+                top: patternBinary[1] === '1',
+                right: patternBinary[2] === '1',
+                bottom: patternBinary[3] === '1'
+            },
+            d: testData.tulangan.d,
+            db: testData.tulangan.db,
+            s: testData.tulangan.s,
+            sb_tulangan: testData.tulangan.sb
+        };
+    }
+    
+    // Tampilkan notifikasi
+    showAutofillNotification("Pelat (Evaluasi - Auto)");
+}
+
+// Autofill untuk mode evaluasi pelat dengan beban manual
+window.autofillPelatEvaluasiManual = function() {
+    console.log("🔄 Mengisi data testing untuk modul Pelat (Evaluasi - Manual)...");
+    
+    const testData = {
+        "dimensi": {
+            "ly": "5",
+            "lx": "3",
+            "h": "150",
+            "sb": "25"
+        },
+        "beban": {
+            "mode": "manual",
+            "auto": {
+                "qu": "0",
+                "tumpuan_type": "",
+                "pattern_binary": "0000"
+            },
+            "manual": {
+                "mu": "15.5"
+            }
+        },
+        "material": {
+            "fc": "25",
+            "fy": "400"
+        },
+        "lanjutan": {
+            "lambda": "1"
+        },
+        "tulangan": {
+            "d": "13",
+            "db": "10",
+            "s": "175",
+            "sb": "225"
+        }
+    };
+
+    // Isi Data Material
+    document.getElementById('quickFc').value = testData.material.fc;
+    document.getElementById('quickFy').value = testData.material.fy;
+    
+    // Pastikan form sudah dirender
+    const formContainer = document.getElementById('moduleForm');
+    if (!formContainer.innerHTML.trim()) {
+        console.log("⚠️ Form belum dirender, render ulang...");
+        window.modules.pelat.render(formContainer, 'evaluasi');
+    }
+    
+    // Pastikan mode beban adalah manual
+    if (window.bebanMode && window.bebanMode.pelat && window.bebanMode.pelat.evaluasi !== 'manual') {
+        // Klik tombol manual untuk mengubah mode
+        const manualBtn = document.querySelector('#bebanCard .toggle-btn[data-beban-mode="manual"]');
+        if (manualBtn) {
+            manualBtn.click();
+            // Tunggu sejenak agar form ter-render ulang
+            setTimeout(() => {
+                fillPelatEvaluasiManualData(testData);
+            }, 100);
+            return;
+        }
+    }
+    
+    fillPelatEvaluasiManualData(testData);
+};
+
+function fillPelatEvaluasiManualData(testData) {
+    // Isi Data Dimensi
+    const dimensiFields = ['ly', 'lx', 'h', 'sb'];
+    dimensiFields.forEach(field => {
+        const input = document.querySelector(`input[data-key="${field}"]`);
+        if (input && testData.dimensi[field]) {
+            input.value = testData.dimensi[field];
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+    });
+    
+    // Isi Data Beban Manual
+    const muInput = document.querySelector(`input[data-key="mu"]`);
+    if (muInput && testData.beban.manual.mu) {
+        muInput.value = testData.beban.manual.mu;
+        muInput.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    
+    // Isi dropdown tumpuan manual (Satu Arah)
+    const dropdownSelected = document.getElementById('bebanTumpuanManualDropdownSelected');
+    if (dropdownSelected) {
+        dropdownSelected.querySelector('span').textContent = "Satu Arah";
+        // Update state
+        if (window.formState && window.formState.pelat && window.formState.pelat.evaluasi) {
+            window.formState.pelat.evaluasi['beban_tp_manual'] = "Satu Arah";
+        }
+    }
+    
+    // Isi Data Lanjutan
+    const lambdaInput = document.querySelector(`input[data-key="lambda"]`);
+    if (lambdaInput && testData.lanjutan.lambda) {
+        lambdaInput.value = testData.lanjutan.lambda;
+        lambdaInput.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    
+    // Isi Data Tulangan
+    const tulanganFields = ['d', 'db', 's'];
+    tulanganFields.forEach(field => {
+        const input = document.querySelector(`input[data-key="${field}"]`);
+        if (input && testData.tulangan[field]) {
+            input.value = testData.tulangan[field];
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+    });
+    
+    // Isi sb (jarak tulangan bagi)
+    const sbTulanganInput = document.querySelector(`input[data-key="sb_tulangan"]`);
+    if (sbTulanganInput && testData.tulangan.sb) {
+        sbTulanganInput.value = testData.tulangan.sb;
+        sbTulanganInput.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    
+    // Update formState secara manual
+    if (window.formState && window.formState.pelat && window.formState.pelat.evaluasi) {
+        window.formState.pelat.evaluasi = {
+            ...window.formState.pelat.evaluasi,
+            ...testData.dimensi,
+            mu: testData.beban.manual.mu,
+            beban_tp_manual: "Satu Arah",
+            lambda: testData.lanjutan.lambda,
+            d: testData.tulangan.d,
+            db: testData.tulangan.db,
+            s: testData.tulangan.s,
+            sb_tulangan: testData.tulangan.sb
+        };
+    }
+    
+    // Tampilkan notifikasi
+    showAutofillNotification("Pelat (Evaluasi - Manual)");
+}
+
+// Fungsi utama autofill yang akan dipanggil dari index.html
+window.autofillPelat = function() {
+    // Cek mode aktif (desain/evaluasi)
+    const activeModeBtn = document.querySelector('.mode-toggle button.active');
+    const activeMode = activeModeBtn ? activeModeBtn.getAttribute('data-mode') : 'desain';
+    
+    // Cek mode beban aktif (auto/manual)
+    const currentBebanMode = window.bebanMode && window.bebanMode.pelat && 
+                            window.bebanMode.pelat[activeMode] ? 
+                            window.bebanMode.pelat[activeMode] : 'auto';
+    
+    console.log(`Mode aktif: ${activeMode}, Mode beban: ${currentBebanMode}`);
+    
+    if (activeMode === 'desain') {
+        if (currentBebanMode === 'auto') {
+            window.autofillPelatDesainAuto();
+        } else {
+            window.autofillPelatDesainManual();
+        }
+    } else if (activeMode === 'evaluasi') {
+        if (currentBebanMode === 'auto') {
+            window.autofillPelatEvaluasiAuto();
+        } else {
+            window.autofillPelatEvaluasiManual();
+        }
+    }
+};
+
+// Fungsi autofill default untuk pelat (jika dipanggil dari index.html dengan fungsi lama)
+window.autofillPelatDefault = function() {
+    // Default ke desain auto
+    window.autofillPelatDesainAuto();
+};

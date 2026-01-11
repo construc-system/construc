@@ -413,12 +413,23 @@ function renderParameterDasarKolom(data, rekap, getStepNumber) {
         );
     }
     
-    // Kondisi yang digunakan
-    if (tulangan.kondisiAktif) {
+    // KONDISI YANG DIGUNAKAN - DITAMBAHKAN DI SINI (SETELAH FAKTOR REDUKSI)
+    // PERUBAHAN: Hanya menampilkan kondisi tanpa penjelasan tambahan
+    if (tulangan.kondisi) {
         html += renderStepKolom(
             getStepNumber(),
             'Kondisi Perhitungan yang Digunakan',
-            tulangan.kondisiAktif
+            tulangan.kondisi
+        );
+    }
+    
+    // TAMBAHAN: Jika ada informasi minimum yang diterapkan
+    if (tulangan.minimum_diterapkan && tulangan.minimum_detail) {
+        html += renderStepKolom(
+            getStepNumber(),
+            'Penerapan Persyaratan Minimum',
+            `<span style="color: #e67e22;">${tulangan.minimum_detail.alasan || 'Persyaratan minimum diterapkan'}</span><br>
+             <small>Hasil setelah penyesuaian: ${tulangan.minimum_detail.setelah || 'Tidak tersedia'}</small>`
         );
     }
     
@@ -718,8 +729,29 @@ function showError(message) {
     }, 5000);
 }
 
+// Update judul laporan berdasarkan modul
+function updateReportTitle(result) {
+    const titleElement = document.getElementById('reportTitle');
+    if (!titleElement) return;
+    
+    let title = 'Laporan Perhitungan Struktur';
+    
+    if (result.inputData?.module === 'kolom') {
+        title = 'Laporan Perhitungan Kolom';
+    } else if (result.inputData?.module === 'balok') {
+        title = 'Laporan Perhitungan Balok';
+    }
+    
+    if (result.inputData?.mode) {
+        title += ` - Mode ${result.inputData.mode === 'desain' ? 'Desain' : 'Evaluasi'}`;
+    }
+    
+    titleElement.textContent = title;
+}
+
 // Ekspos fungsi ke window
 window.renderKolomReport = renderKolomReport;
 window.exportCADKolom = exportCADKolom;
+window.updateReportTitle = updateReportTitle;
 
 console.log("✅ report-kolom.js loaded successfully");

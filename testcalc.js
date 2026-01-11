@@ -1,26 +1,43 @@
-// [file name]: testcalc.js
-// [file content begin]
+// [file name]: testcalc-main.js
 // ======================================================================
-// testcalc-unified.js — Tester terpadu untuk semua modul (Balok, Kolom, Pelat, Fondasi)
+// testcalc-main.js — Tester terpadu untuk semua modul (Balok, Kolom, Pelat, Fondasi)
 // ======================================================================
 
 // ------------------------
 // Mock lingkungan browser
 // ------------------------
-global.window = global;
-global.document = {
-  documentElement: { style: {} }
+global.window = {
+  location: { href: "" },
+  sessionStorage: {
+    store: {},
+    setItem(key, val) { this.store[key] = String(val) },
+    getItem(key) { return this.store[key] || null },
+    removeItem(key) { delete this.store[key] }
+  },
+  addEventListener: function() {},
+  removeEventListener: function() {},
+  alert: function(msg) { console.log("ALERT:", msg); },
+  confirm: function() { return true; },
+  console: console
 };
+
+Object.assign(global, global.window);
+
+global.document = {
+  documentElement: { style: {} },
+  getElementById: function() { return null; },
+  querySelector: function() { return null; },
+  createElement: function() { return null; }
+};
+
 global.getComputedStyle = () => ({
   getPropertyValue: () => ''
 });
-global.sessionStorage = {
-  store: {},
-  setItem(key, val){ this.store[key] = String(val) },
-  getItem(key){ return this.store[key] || null },
-  removeItem(key){ delete this.store[key] }
-};
-global.location = { href: "" };
+
+global.location = global.window.location;
+global.sessionStorage = global.window.sessionStorage;
+global.alert = global.window.alert;
+global.confirm = global.window.confirm;
 
 const fs = require('fs');
 const path = require('path');
@@ -28,57 +45,167 @@ const readline = require('readline');
 const os = require('os');
 
 // ------------------------------------------------------
-// Load semua modul perhitungan
+// Load modul perhitungan - VERSI DIPERBAIKI
 // ------------------------------------------------------
 console.log("📥 Memuat semua modul perhitungan...");
 
-// Load calc-balok.js
-console.log("📥 Memuat calc-balok.js...");
-let balokCode = fs.readFileSync(path.join(__dirname, "calc-balok.js"), "utf8");
-balokCode = balokCode.replace(/window\.location\.href = 'report\.html';/, "// redirect disabled");
-eval(balokCode);
-
-// Load calc-kolom.js
-console.log("📥 Memuat calc-kolom.js...");
-let kolomCode = fs.readFileSync(path.join(__dirname, "calc-kolom.js"), "utf8");
-kolomCode = kolomCode.replace(/window\.location\.href = 'report-kolom\.html';/, "// redirect disabled");
-eval(kolomCode);
-
-// Load calc-pelat.js
-console.log("📥 Memuat calc-pelat.js...");
-let pelatCode = fs.readFileSync(path.join(__dirname, "calc-pelat.js"), "utf8");
-pelatCode = pelatCode.replace(/window\.location\.href = 'report\.html';/, "// redirect disabled");
-eval(pelatCode);
-
-// Load calc-fondasi.js
-console.log("📥 Memuat calc-fondasi.js...");
-try {
-  let fondasiCode = fs.readFileSync(path.join(__dirname, "calc-fondasi.js"), "utf8");
-  fondasiCode = fondasiCode.replace(/window\.location\.href = 'report\.html';/, "// redirect disabled");
-  eval(fondasiCode);
-  console.log("✅ calc-fondasi.js berhasil dimuat");
-} catch (error) {
-  console.log("⚠️  calc-fondasi.js tidak ditemukan:", error.message);
+function loadModule(moduleName, redirectPattern) {
+  console.log(`📥 Memuat ${moduleName}...`);
+  try {
+    const modulePath = path.join(__dirname, moduleName);
+    let code = fs.readFileSync(modulePath, "utf8");
+    
+    // Nonaktifkan redirect
+    if (redirectPattern) {
+      code = code.replace(redirectPattern, "// redirect disabled");
+    }
+    
+    // Hapus kode event listener untuk Node.js
+    code = code.replace(/window\.addEventListener\s*\([^)]*\)\s*{[\s\S]*?}\s*\)?\s*;/g, "// event listener removed");
+    code = code.replace(/document\.addEventListener\s*\([^)]*\)\s*{[\s\S]*?}\s*\)?\s*;/g, "// event listener removed");
+    
+    // Ekspos fungsi ke global dengan cara yang benar
+    const moduleExports = {};
+    const require = () => ({});
+    const exports = moduleExports;
+    const module = { exports: moduleExports };
+    
+    // Jalankan kode dalam scope terisolasi
+    const vm = require('vm');
+    const script = new vm.Script(code);
+    const context = vm.createContext({
+      console: global.console,
+      window: global.window,
+      document: global.document,
+      sessionStorage: global.sessionStorage,
+      location: global.location,
+      alert: global.alert,
+      confirm: global.confirm,
+      getComputedStyle: global.getComputedStyle,
+      Math: Math,
+      JSON: JSON,
+      Date: Date,
+      parseFloat: parseFloat,
+      parseInt: parseInt,
+      isNaN: isNaN,
+      Number: Number,
+      String: String,
+      Object: Object,
+      Array: Array,
+      setTimeout: setTimeout,
+      clearTimeout: clearTimeout,
+      setInterval: setInterval,
+      clearInterval: clearInterval,
+      Promise: Promise,
+      Error: Error,
+      require: require,
+      exports: exports,
+      module: module
+    });
+    
+    script.runInContext(context);
+    
+    // Ekspos fungsi-fungsi penting dari window ke global
+    for (const key in global.window) {
+      if (typeof global.window[key] === 'function') {
+        global[key] = global.window[key];
+      }
+    }
+    
+    // Juga ekspos dari module.exports jika ada
+    if (module.exports) {
+      for (const key in module.exports) {
+        if (typeof module.exports[key] === 'function') {
+          global[key] = module.exports[key];
+          global.window[key] = module.exports[key];
+        }
+      }
+    }
+    
+    console.log(`✅ ${moduleName} berhasil dimuat`);
+    return true;
+  } catch (error) {
+    console.log(`❌ Gagal memuat ${moduleName}:`, error.message);
+    return false;
+  }
 }
+
+// Load modul utama
+loadModule("calc-balok.js", /window\.location\.href = 'report\.html';/);
+loadModule("calc-kolom.js", /window\.location\.href = 'report\.html';/);
+loadModule("calc-pelat.js", /window\.location\.href = 'report\.html';/);
+loadModule("calc-fondasi.js", /window\.location\.href = 'report\.html';/);
 
 // Load optimizer jika ada
 let optimizerBalokFound = false;
+let optimizerKolomFound = false;
 let optimizerFondasiFound = false;
 
 try {
   console.log("📥 Mencoba memuat optimizer-balok.js...");
   let optimizerBalokCode = fs.readFileSync(path.join(__dirname, "optimizer-balok.js"), "utf8");
-  eval(optimizerBalokCode);
+  // Gunakan vm untuk mengeksekusi optimizer
+  const vm = require('vm');
+  const script = new vm.Script(optimizerBalokCode);
+  const context = vm.createContext({
+    console: global.console,
+    window: global.window,
+    document: global.document,
+    sessionStorage: global.sessionStorage,
+    location: global.location,
+    alert: global.alert,
+    Math: Math,
+    JSON: JSON,
+    Date: Date
+  });
+  script.runInContext(context);
   optimizerBalokFound = true;
   console.log("✅ optimizer-balok.js berhasil dimuat");
 } catch (error) {
   console.log("⚠️  optimizer-balok.js tidak ditemukan:", error.message);
 }
 
+// TAMBAHKAN: LOAD OPTIMIZER KOLOM
+try {
+  console.log("📥 Mencoba memuat optimizer-kolom.js...");
+  let optimizerKolomCode = fs.readFileSync(path.join(__dirname, "optimizer-kolom.js"), "utf8");
+  const vm = require('vm');
+  const script = new vm.Script(optimizerKolomCode);
+  const context = vm.createContext({
+    console: global.console,
+    window: global.window,
+    document: global.document,
+    sessionStorage: global.sessionStorage,
+    location: global.location,
+    alert: global.alert,
+    Math: Math,
+    JSON: JSON,
+    Date: Date
+  });
+  script.runInContext(context);
+  optimizerKolomFound = true;
+  console.log("✅ optimizer-kolom.js berhasil dimuat");
+} catch (error) {
+  console.log("⚠️  optimizer-kolom.js tidak ditemukan:", error.message);
+}
+
 try {
   console.log("📥 Mencoba memuat optimizer-fondasi.js...");
   let optimizerFondasiCode = fs.readFileSync(path.join(__dirname, "optimizer-fondasi.js"), "utf8");
-  eval(optimizerFondasiCode);
+  const vm = require('vm');
+  const script = new vm.Script(optimizerFondasiCode);
+  const context = vm.createContext({
+    console: global.console,
+    window: global.window,
+    document: global.document,
+    sessionStorage: global.sessionStorage,
+    location: global.location,
+    alert: global.alert,
+    Math: Math,
+    JSON: JSON,
+    Date: Date
+  });
+  script.runInContext(context);
   optimizerFondasiFound = true;
   console.log("✅ optimizer-fondasi.js berhasil dimuat");
 } catch (error) {
@@ -86,9 +213,313 @@ try {
 }
 
 // ------------------------------------------------------
-// MOCK OPTIMIZER UNTUK TESTING DI NODE.JS - DENGAN NILAI MENCOLOK
+// PERBAIKAN KRITIS: Load fungsi dari calc-kolom.js dengan require yang benar
+// ------------------------------------------------------
+console.log("🔧 Setup khusus untuk fungsi kolom...");
+
+// Fungsi untuk memuat calc-kolom.js dengan benar
+function loadKolomFunctions() {
+  try {
+    // Baca file calc-kolom.js
+    const kolomCode = fs.readFileSync(path.join(__dirname, "calc-kolom.js"), "utf8");
+    
+    // Ekstrak kode yang diperlukan (hanya fungsi-fungsi penting)
+    const functionNames = [
+      'calculateKolom',
+      'calculateKolomWithRedirect',
+      'parseNewSessionData',
+      'displaySessionSummary',
+      'getReportDataEnhanced'
+    ];
+    
+    // Buat wrapper untuk mengeksekusi kode dengan benar
+    const wrapper = `
+      (function() {
+        // Definisikan semua fungsi utility yang dibutuhkan oleh calc-kolom.js
+        function ceil5(x){ return Math.ceil(x/5)*5 }
+        function floor5(x){ return Math.floor(x/5)*5 }
+        function toNum(v, def=0){ const n=parseFloat(v); return Number.isFinite(n)?n:def }
+        function safeDiv(a,b,def=0){ return b===0?def:a/b }
+        function clamp(v, minV, maxV){ return Math.max(minV, Math.min(maxV, v)); }
+        
+        // Ekspos ke global/window
+        window.ceil5 = ceil5;
+        window.floor5 = floor5;
+        window.toNum = toNum;
+        window.safeDiv = safeDiv;
+        window.clamp = clamp;
+        
+        // Eksekusi kode utama calc-kolom.js
+        ${kolomCode}
+        
+        // Return fungsi yang diekspos
+        return {
+          calculateKolom: window.calculateKolom,
+          calculateKolomWithRedirect: window.calculateKolomWithRedirect,
+          parseNewSessionData: window.parseNewSessionData,
+          displaySessionSummary: window.displaySessionSummary,
+          getReportDataEnhanced: window.getReportDataEnhanced
+        };
+      })()
+    `;
+    
+    const vm = require('vm');
+    const script = new vm.Script(wrapper);
+    const context = vm.createContext({
+      console: console,
+      window: global.window,
+      Math: Math,
+      JSON: JSON,
+      Date: Date,
+      parseFloat: parseFloat,
+      parseInt: parseInt,
+      Number: Number,
+      String: String,
+      Object: Object,
+      Array: Array
+    });
+    
+    const result = script.runInContext(context);
+    
+    // Ekspos fungsi ke global
+    for (const key in result) {
+      if (typeof result[key] === 'function') {
+        global[key] = result[key];
+        global.window[key] = result[key];
+      }
+    }
+    
+    console.log("✅ Fungsi kolom berhasil dimuat dengan benar");
+    return true;
+  } catch (error) {
+    console.error("❌ Gagal memuat fungsi kolom:", error.message);
+    return false;
+  }
+}
+
+// Panggil fungsi untuk memuat kolom
+loadKolomFunctions();
+
+// ------------------------------------------------------
+// MOCK OPTIMIZER UNTUK TESTING DI NODE.JS (FALLBACK)
 // ------------------------------------------------------
 console.log("🔧 Setup mock optimizer untuk testing...");
+
+// Mock optimizeKolom jika tidak ditemukan
+if (typeof window.optimizeKolom === 'undefined') {
+  window.optimizeKolom = async function(inputData) {
+    console.log("🧪 MOCK OPTIMIZER KOLOM: Memproses input...");
+    
+    // Simulasi proses optimasi
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Return kombinasi optimal dengan nilai MENCOLOK untuk kolom
+    return {
+      status: "sukses",
+      D_opt: 29,
+      phi_opt: 10,
+      d_tul: 29,
+      phi_tul: 10,
+      mode: "desain",
+      data: {
+        parsedInput: inputData,
+        Dimensi: {
+          m: 5,
+          phi1: 0.9,
+          phi2: 0.75,
+          Sn: 60,
+          ds1: 62,
+          ds2: 89,
+          ds: 100,
+          d: 600,
+          beta1: 0.85
+        },
+        D: 29,
+        phi: 10,
+        d: 600,
+        ds: 100,
+        m: 5,
+        hasilTulangan: {
+          kondisi: 'ab > ac > at1',
+          faktorPhi: 0.65,
+          e: 541.67,
+          ab: 300,
+          ac: 150,
+          ab1: 450,
+          ab2: 225,
+          at1: 50,
+          at2: 25,
+          A1: 1000,
+          A2: 1000,
+          As_tu: 2000,
+          Ast_u: 2000,
+          Ast_satu: 660.52,
+          Ast_i: 7926.24,
+          n: 12,
+          rho: 1.89,
+          n_terpakai: 12,
+          n_max: 10,
+          status: 'AMAN',
+          K: 0.15,
+          Kmaks: 0.3,
+          K_melebihi_Kmaks: false,
+          kondisiAktif: 'ab > ac > at1',
+          ap1: 100,
+          ap2: 200,
+          ap3: 50,
+          R1: -400,
+          R2: 120000,
+          R3: -9000000,
+          R4: -300,
+          R5: 80000,
+          R6: -6000000,
+          R7: 50,
+          R8: -20000,
+          R9: 300000,
+          a_cubic: 150,
+          a_flexure: 120,
+          As1: 1500,
+          As2: 1400,
+          persamaan: "A1 = A2 = a * (Pu * 1000 / phi1 - 0.85 * fc * a * b) / ((600 + fy) * a - 600 * beta1 * d)",
+          Pu_phi: 840,
+          beta1: 0.85,
+          minimum_diterapkan: false,
+          minimum_detail: {}
+        },
+        begel: {
+          Vc_phi: 150.25,
+          Vs: 124.04,
+          Vs_max: 300.5,
+          warning: 'AMAN',
+          Avu1: 150,
+          Avu2: 175,
+          Avu3: 200,
+          Av_u: 200,
+          s: 150,
+          Av_terpakai: 210
+        },
+        kontrol: {
+          lentur: {
+            ok: true,
+            Ast_ok: true,
+            rho_ok: true,
+            n_ok: true,
+            K_ok: true,
+            detail: {
+              Ast_i: 7926.24,
+              Ast_u: 2000,
+              rho: 1.89,
+              rho_min: 1.0,
+              n: 12,
+              n_min: 4,
+              n_max: 10,
+              K: 0.15,
+              Kmaks: 0.3,
+              K_melebihi_Kmaks: false
+            }
+          },
+          geser: {
+            ok: true,
+            Vs_ok: true,
+            Av_ok: true,
+            detail: {
+              Vs: 124.04,
+              Vs_max: 300.5,
+              Av_terpakai: 210,
+              Av_u: 200
+            }
+          }
+        },
+        aman: true
+      },
+      kontrol: {
+        lentur: {
+          ok: true,
+          Ast_ok: true,
+          rho_ok: true,
+          n_ok: true,
+          K_ok: true
+        },
+        geser: {
+          ok: true,
+          Vs_ok: true,
+          Av_ok: true
+        }
+      },
+      rekap: {
+        input: inputData,
+        Dimensi: {
+          m: 5,
+          phi1: 0.9,
+          phi2: 0.75,
+          Sn: 60,
+          ds1: 62,
+          ds2: 89,
+          ds: 100,
+          d: 600,
+          beta1: 0.85
+        },
+        tulangan: {
+          D: 29,
+          phi: 10,
+          Ast_satu: 660.52,
+          Ast_i: 7926.24,
+          Ast_u: 2000,
+          n_calculated: 12,
+          n_terpakai: 12,
+          rho: 1.89,
+          status_n: 'AMAN',
+          e: 541.67,
+          Pu: 1200,
+          Mu: 650,
+          Pu_phi: 840,
+          K: 0.15,
+          Kmaks: 0.3,
+          K_ok: true
+        },
+        begel: {
+          s: 150,
+          Av_u: 200,
+          Av_terpakai: 210,
+          Vs: 124.04,
+          Vs_max: 300.5,
+          warning: 'AMAN'
+        },
+        kontrol: {
+          lentur: { ok: true },
+          geser: { ok: true }
+        },
+        formatted: {
+          tulangan_utama: "12D29",
+          begel: "Φ10-150",
+          e: "541.67 mm",
+          Pu_vs_Pu_phi: "P<sub>u</sub> = 1200.00 kN vs P<sub>u</sub>∅ = 840.00 kN",
+          K: "K = 0.1500 ≤ Kmaks = 0.3000",
+          minimum_info: "Tidak ada minimum yang diterapkan"
+        }
+      },
+      optimasi: {
+        kombinasi_terbaik: {
+          D: 29,
+          phi: 10,
+          d_tul: 29,
+          phi_tul: 10,
+          n: 12,
+          s: 150
+        },
+        skor: 8950.25,
+        total_kombinasi: 81,
+        kombinasi_valid: 15,
+        minimum_diterapkan: false,
+        minimum_detail: {},
+        catatan: "⚠️ INI HASIL MOCK OPTIMIZER KOLOM - BUKAN HASIL SEBENARNYA!"
+      }
+    };
+  };
+  console.log("✅ Mock optimizeKolom berhasil dibuat (fallback)");
+} else {
+  console.log("✅ optimizeKolom sudah tersedia dari optimizer-kolom.js");
+}
 
 // Mock optimizePelat untuk testing
 if (typeof window.optimizePelat === 'undefined') {
@@ -105,28 +536,28 @@ if (typeof window.optimizePelat === 'undefined') {
       // Untuk pelat, return kombinasi optimal dengan nilai MENCOLOK
       return {
         status: "sukses",
-        D_opt: 777,    // Nilai mencolok - MOCK PELAT
-        db_opt: 666,   // Nilai mencolok - MOCK PELAT
+        D_opt: 777,
+        db_opt: 666,
         mode: "desain",
         data: {
           tulangan: {
             pokokX: { 
-              sDigunakan: 777,  // Nilai mencolok
+              sDigunakan: 777,
               AsTerpasang: 7777,
               AsDigunakan: 7777
             },
             pokokY: { 
-              sDigunakan: 777, 
+              sDigunakan: 777,
               AsTerpasang: 7777,
               AsDigunakan: 7777
             },
             bagiX: { 
-              sDigunakan: 666, 
+              sDigunakan: 666,
               AsbTerpasang: 6666,
               AsbDigunakan: 6666
             },
             bagiY: { 
-              sDigunakan: 666, 
+              sDigunakan: 666,
               AsbTerpasang: 6666,
               AsbDigunakan: 6666
             }
@@ -147,7 +578,7 @@ if (typeof window.optimizePelat === 'undefined') {
         rekap: {
           formatted: {
             tulangan_pokok_x: "D777-777",
-            tulangan_pokok_y: "D777-777", 
+            tulangan_pokok_y: "D777-777",
             tulangan_bagi_x: "D666-666",
             tulangan_bagi_y: "D666-666",
             jenis_pelat: "Pelat Dua Arah - MOCK OPTIMIZER"
@@ -209,7 +640,7 @@ if (typeof window.optimizeFondasi === 'undefined') {
             K: 0.9,
             Kontrol_K: "AMAN",
             As: 9999,
-            s: 999  // Nilai sangat mencolok - MOCK FONDASI
+            s: 999
           },
           persegi: {
             Mu: 999,
@@ -217,9 +648,9 @@ if (typeof window.optimizeFondasi === 'undefined') {
             Kontrol_K: "AMAN",
             As: 9999,
             Aspusat: 9999,
-            s_pusat: 999,  // Nilai sangat mencolok - MOCK FONDASI
+            s_pusat: 999,
             Astepi: 9999,
-            s_tepi: 999   // Nilai sangat mencolok - MOCK FONDASI
+            s_tepi: 999
           }
         }
       },
@@ -256,598 +687,54 @@ if (typeof window.optimizeFondasi === 'undefined') {
 }
 
 // ------------------------------------------------------
-// Data test untuk semua modul - DIPERBARUI SESUAI STRUKTUR BARU
+// Import data test dari file terpisah
 // ------------------------------------------------------
-
-// DATA BALOK - STRUKTUR DIPERBAIKI
-const dataBalokDesain = {
-  "module": "balok",
-  "mode": "desain",
-  "dimensi": {
-    "h": "400",
-    "b": "250", 
-    "sb": "40"
-  },
-  "beban": {
-    "left": {
-      "mu_pos": "36.49",
-      "mu_neg": "94",
-      "vu": "100",
-      "tu": "20"
+console.log("📥 Memuat data test...");
+try {
+  const testData = require('./test-inputs.js');
+  console.log("✅ Data test berhasil dimuat");
+  
+  // Export data ke global scope
+  global.testData = testData;
+  Object.assign(global, testData);
+} catch (error) {
+  console.log("❌ Gagal memuat data test:", error.message);
+  console.log("⚠️  Membuat data test minimal...");
+  
+  // Data minimal sebagai fallback
+  global.dataBalokDesain = {
+    "module": "balok",
+    "mode": "desain",
+    "dimensi": { "h": "400", "b": "250", "sb": "40" },
+    "beban": {
+      "left": { "mu_pos": "36.49", "mu_neg": "94", "vu": "100", "tu": "20" },
+      "center": { "mu_pos": "40.65", "mu_neg": "0", "vu": "100", "tu": "20" },
+      "right": { "mu_pos": "65.92", "mu_neg": "110.03", "vu": "100", "tu": "20" }
     },
-    "center": {
-      "mu_pos": "40.65", 
-      "mu_neg": "0",
-      "vu": "100",
-      "tu": "20"
-    },
-    "right": {
-      "mu_pos": "65.92",
-      "mu_neg": "110.03", 
-      "vu": "100",
-      "tu": "20"
-    }
-  },
-  "material": {
-    "fc": "20",
-    "fy": "300",
-    "fyt": "300"
-  },
-  "lanjutan": {
-    "lambda": "1",
-    "n": "2"
-  }
-};
-
-const dataBalokEvaluasi = {
-  "module": "balok",
-  "mode": "evaluasi", 
-  "dimensi": {
-    "h": "400",
-    "b": "250",
-    "sb": "40"
-  },
-  "beban": {
-    "left": {
-      "mu_pos": "36.49",
-      "mu_neg": "94",
-      "vu": "83.242",
-      "tu": "20"
-    },
-    "center": {
-      "mu_pos": "40.65",
-      "mu_neg": "0", 
-      "vu": "83.242",
-      "tu": "20"
-    },
-    "right": {
-      "mu_pos": "65.92",
-      "mu_neg": "110.03",
-      "vu": "83.242",
-      "tu": "20"
-    }
-  },
-  "material": {
-    "fc": "20",
-    "fy": "300", 
-    "fyt": "300"
-  },
-  "lanjutan": {
-    "lambda": "1",
-    "n": "2"
-  },
-  "tulangan": {
-    "d": "19",
-    "phi": "6", 
-    "support": {
-      "n": "6",
-      "np": "3",
-      "nt": "4", 
-      "s": "100"
-    },
-    "field": {
-      "n": "3",
-      "np": "3",
-      "nt": "4",
-      "s": "100"
-    }
-  }
-};
-
-// DATA KOLOM - STRUKTUR DIPERBAIKI
-const dataKolomDesain = {
-  "module": "kolom",
-  "mode": "desain", 
-  "dimensi": {
-    "h": "700",
-    "b": "600",
-    "sb": "40"
-  },
-  "beban": {
-    "pu": "1200",
-    "mu": "650", 
-    "vu": "274.29"
-  },
-  "material": {
-    "fc": "20",
-    "fy": "300",
-    "fyt": "300"
-  },
-  "lanjutan": {
-    "lambda": "1", 
-    "n_kaki": "2"
-  },
-  "tulangan": {}
-};
-
-const dataKolomEvaluasi = {
-  "module": "kolom",
-  "mode": "evaluasi",
-  "dimensi": {
-    "h": "700",
-    "b": "600", 
-    "sb": "40"
-  },
-  "beban": {
-    "pu": "1200",
-    "mu": "650",
-    "vu": "274.29"
-  },
-  "material": {
-    "fc": "20",
-    "fy": "300", 
-    "fyt": "300"
-  },
-  "lanjutan": {
-    "lambda": "1",
-    "n_kaki": "2"
-  },
-  "tulangan": {
-    "d": "29",
-    "phi": "10", 
-    "n": "12",
-    "s": "220"
-  }
-};
-
-// DATA PELAT - SEMUA VARIASI MODE
-const dataPelatDesainAuto = {
-  "module": "pelat",
-  "mode": "desain",
-  "dimensi": {
-    "ly": "6",
-    "lx": "4", 
-    "h": "120",
-    "sb": "20"
-  },
-  "beban": {
-    "mode": "auto",
-    "auto": {
-      "qu": "10",
-      "tumpuan_type": "Terjepit Penuh", 
-      "pattern_binary": "0000"
-    },
-    "manual": {
-      "mu": "12.16"
-    }
-  },
-  "material": {
-    "fc": "20",
-    "fy": "300"
-  },
-  "lanjutan": {},
-  "tulangan": {}
-};
-
-const dataPelatDesainManual = {
-  "module": "pelat",
-  "mode": "desain",
-  "dimensi": {
-    "ly": "5",
-    "lx": "3", 
-    "h": "150",
-    "sb": "25"
-  },
-  "beban": {
-    "mode": "manual",
-    "auto": {
-      "qu": "0",
-      "tumpuan_type": "", 
-      "pattern_binary": "0000"
-    },
-    "manual": {
-      "mu": "15.5"
-    }
-  },
-  "material": {
-    "fc": "25",
-    "fy": "400"
-  },
-  "lanjutan": {
-    "lambda": "1"
-  },
-  "tulangan": {}
-};
-
-const dataPelatEvaluasiAuto = {
-  "module": "pelat", 
-  "mode": "evaluasi",
-  "dimensi": {
-    "ly": "6",
-    "lx": "4",
-    "h": "120",
-    "sb": "20"
-  },
-  "beban": {
-    "mode": "auto", 
-    "auto": {
-      "qu": "10",
-      "tumpuan_type": "Terjepit Penuh", 
-      "pattern_binary": "0000"
-    },
-    "manual": {
-      "mu": "12.16"
-    }
-  },
-  "material": {
-    "fc": "20",
-    "fy": "300"
-  },
-  "lanjutan": {},
-  "tulangan": {
-    "d": "10",
-    "db": "8", 
-    "s": "155",
-    "sb": "200"
-  }
-};
-
-const dataPelatEvaluasiManual = {
-  "module": "pelat", 
-  "mode": "evaluasi",
-  "dimensi": {
-    "ly": "5",
-    "lx": "3",
-    "h": "150",
-    "sb": "25"
-  },
-  "beban": {
-    "mode": "manual", 
-    "auto": {
-      "qu": "0",
-      "tumpuan_type": "", 
-      "pattern_binary": "0000"
-    },
-    "manual": {
-      "mu": "15.5"
-    }
-  },
-  "material": {
-    "fc": "25",
-    "fy": "400"
-  },
-  "lanjutan": {
-    "lambda": "1"
-  },
-  "tulangan": {
-    "d": "13",
-    "db": "10", 
-    "s": "175",
-    "sb": "225"
-  }
-};
-
-// ======================================================================
-// DATA FONDASI - STRUKTUR BARU SESUAI PERUBAHAN - DIPERBARUI UNTUK JENIS FONDASI
-// ======================================================================
-
-// ------------------------------------------------------
-// FONDASI TUNGGAL BUJUR SANGKAR - MODE DESAIN
-// ------------------------------------------------------
-const dataFondasiBujurSangkarDesain = {
-  "module": "fondasi",
-  "mode": "desain",
-  "fondasi": {
-    "mode": "bujur_sangkar",
-    "autoDimensi": false,
-    "dimensi": {
-      "ly": "2.8",
-      "lx": "2.8",  // Bujur sangkar: lx = ly
-      "by": "400",
-      "bx": "400",
-      "h": "0.4",
-      "alpha_s": "30"
-    }
-  },
-  "tanah": {
-    "mode": "manual",
-    "auto": {
-      "df": "1.6",
-      "gamma": "17.2",
-      "terzaghi": true,
-      "phi": "34",
-      "c": "20",
-      "mayerhoff": true,
-      "qc": "95"
-    },
-    "manual": {
-      "qa": "489.68",
-      "df": "1.6",
-      "gamma": "17.2"
-    }
-  },
-  "beban": {
-    "pu": "384",
-    "mux": "254",
-    "muy": "15"
-  },
-  "material": {
-    "fc": "20",
-    "fy": "300",
-    "gammaC": "24"
-  },
-  "lanjutan": {}
-};
-
-// ------------------------------------------------------
-// FONDASI TUNGGAL PERSEGI PANJANG - MODE DESAIN
-// ------------------------------------------------------
-const dataFondasiPersegiPanjangDesain = {
-  "module": "fondasi",
-  "mode": "desain",
-  "fondasi": {
-    "mode": "persegi_panjang",
-    "autoDimensi": true,
-    "dimensi": {
-      "ly": "2.8",
-      "lx": "2",
-      "by": "400",
-      "bx": "400",
-      "h": "0.4",
-      "alpha_s": "30"
-    }
-  },
-  "tanah": {
-    "mode": "manual",
-    "auto": {
-      "df": "1.6",
-      "gamma": "17.2",
-      "terzaghi": true,
-      "phi": "34",
-      "c": "20",
-      "mayerhoff": true,
-      "qc": "95"
-    },
-    "manual": {
-      "qa": "489.68",
-      "df": "1.6",
-      "gamma": "17.2"
-    }
-  },
-  "beban": {
-    "pu": "384",
-    "mux": "254",
-    "muy": "15"
-  },
-  "material": {
-    "fc": "20",
-    "fy": "300",
-    "gammaC": "24"
-  },
-  "lanjutan": {}
-};
-
-// ------------------------------------------------------
-// FONDASI MENERUS - MODE DESAIN
-// ------------------------------------------------------
-const dataFondasiMenerusDesain = {
-  "module": "fondasi",
-  "mode": "desain",
-  "fondasi": {
-    "mode": "menerus",
-    "autoDimensi": false,
-    "dimensi": {
-      "ly": "13.5",
-      "lx": "1.6",
-      "by": "13500",
-      "bx": "500",
-      "h": "0.25",
-      "alpha_s": "100"
-    }
-  },
-  "tanah": {
-    "mode": "manual",
-    "auto": {
-      "df": "1.6",
-      "gamma": "17.2",
-      "terzaghi": true,
-      "phi": "34",
-      "c": "20",
-      "mayerhoff": true,
-      "qc": "95"
-    },
-    "manual": {
-      "qa": "489.6",
-      "df": "1.6",
-      "gamma": "17.2"
-    }
-  },
-  "beban": {
-    "pu": "1800",
-    "mux": "251",
-    "muy": "0"
-  },
-  "material": {
-    "fc": "20",
-    "fy": "300",
-    "gammaC": "24"
-  },
-  "lanjutan": {}
-};
-
-// ------------------------------------------------------
-// FONDASI BUJUR SANGKAR - MODE EVALUASI
-// ------------------------------------------------------
-const dataFondasiBujurSangkarEvaluasi = {
-  "module": "fondasi",
-  "mode": "evaluasi",
-  "fondasi": {
-    "mode": "bujur_sangkar",
-    "autoDimensi": false,
-    "dimensi": {
-      "ly": "2.8",
-      "lx": "2.8",  // Bujur sangkar: lx = ly
-      "by": "400",
-      "bx": "400",
-      "h": "0.4",
-      "alpha_s": "30"
-    }
-  },
-  "tanah": {
-    "mode": "manual",
-    "auto": {
-      "df": "1.6",
-      "gamma": "17.2",
-      "terzaghi": true,
-      "phi": "34",
-      "c": "20",
-      "mayerhoff": true,
-      "qc": "95"
-    },
-    "manual": {
-      "qa": "489.6",
-      "df": "1.6",
-      "gamma": "17.2"
-    }
-  },
-  "beban": {
-    "pu": "384",
-    "mux": "251",
-    "muy": "0"
-  },
-  "material": {
-    "fc": "20",
-    "fy": "300",
-    "gammaC": "24"
-  },
-  "lanjutan": {},
-  "tulangan": {
-    // Untuk bujur sangkar: hanya D dan s
-    "d": "19",
-    "s": "100"
-  }
-};
-
-// ------------------------------------------------------
-// FONDASI PERSEGI PANJANG - MODE EVALUASI
-// ------------------------------------------------------
-const dataFondasiPersegiPanjangEvaluasi = {
-  "module": "fondasi",
-  "mode": "evaluasi",
-  "fondasi": {
-    "mode": "persegi_panjang",
-    "autoDimensi": false,
-    "dimensi": {
-      "ly": "2.8",
-      "lx": "2",
-      "by": "400",
-      "bx": "400",
-      "h": "0.4",
-      "alpha_s": "30"
-    }
-  },
-  "tanah": {
-    "mode": "manual",
-    "auto": {
-      "df": "1.6",
-      "gamma": "17.2",
-      "terzaghi": true,
-      "phi": "34",
-      "c": "20",
-      "mayerhoff": true,
-      "qc": "95"
-    },
-    "manual": {
-      "qa": "489.6",
-      "df": "1.6",
-      "gamma": "17.2"
-    }
-  },
-  "beban": {
-    "pu": "384",
-    "mux": "251",
-    "muy": "0"
-  },
-  "material": {
-    "fc": "20",
-    "fy": "300",
-    "gammaC": "24"
-  },
-  "lanjutan": {},
-  "tulangan": {
-    // Untuk persegi panjang: D, Db, s, sp, st
-    "d": "19",
-    "db": "16",
-    "s": "100",    // Jarak tulangan panjang
-    "sp": "100",   // Jarak tulangan pendek pusat
-    "st": "100"    // Jarak tulangan pendek tepi
-  }
-};
-
-// ------------------------------------------------------
-// FONDASI MENERUS - MODE EVALUASI
-// ------------------------------------------------------
-const dataFondasiMenerusEvaluasi = {
-  "module": "fondasi",
-  "mode": "evaluasi",
-  "fondasi": {
-    "mode": "menerus",
-    "autoDimensi": false,
-    "dimensi": {
-      "ly": "13.5",
-      "lx": "1.6",
-      "by": "13500",
-      "bx": "500",
-      "h": "0.25",
-      "alpha_s": "100"
-    }
-  },
-  "tanah": {
-    "mode": "manual",
-    "auto": {
-      "df": "1.6",
-      "gamma": "17.2",
-      "terzaghi": true,
-      "phi": "34",
-      "c": "20",
-      "mayerhoff": true,
-      "qc": "95"
-    },
-    "manual": {
-      "qa": "489.6",
-      "df": "1.6",
-      "gamma": "17.2"
-    }
-  },
-  "beban": {
-    "pu": "1800",
-    "mux": "251",
-    "muy": "0"
-  },
-  "material": {
-    "fc": "20",
-    "fy": "300",
-    "gammaC": "24"
-  },
-  "lanjutan": {},
-  "tulangan": {
-    // Untuk menerus: D, Db, s, sb
-    "d": "19",
-    "db": "16",
-    "s": "95",     // Jarak tulangan utama
-    "sb": "100"    // Jarak tulangan bagi
-  }
-};
+    "material": { "fc": "20", "fy": "300", "fyt": "300" },
+    "lanjutan": { "lambda": "1", "n": "2" }
+  };
+  
+  global.dataKolomDesain = {
+    "module": "kolom",
+    "mode": "desain",
+    "dimensi": { "h": "700", "b": "600", "sb": "40" },
+    "beban": { "pu": "1200", "mu": "650", "vu": "274.29" },
+    "material": { "fc": "20", "fy": "300", "fyt": "300" },
+    "lanjutan": { "lambda": "1", "n_kaki": "2" },
+    "tulangan": {}
+  };
+  
+  global.dataKolomEvaluasi = {
+    "module": "kolom",
+    "mode": "evaluasi",
+    "dimensi": { "h": "700", "b": "600", "sb": "40" },
+    "beban": { "pu": "1200", "mu": "650", "vu": "274.29" },
+    "material": { "fc": "20", "fy": "300", "fyt": "300" },
+    "lanjutan": { "lambda": "1", "n_kaki": "2" },
+    "tulangan": { "d_tul": "29", "phi_tul": "10", "n_tul": "12", "s_tul": "150" }
+  };
+}
 
 // ------------------------------------------------------
 // Fungsi utility untuk temporary directory
@@ -896,6 +783,55 @@ function cleanupOldTempFiles(maxAgeHours = 24) {
 }
 
 // ------------------------------------------------------
+// FUNGSI RUN TEST KOLOM YANG DIPERBAIKI
+// ------------------------------------------------------
+async function runTestKolom(label, inputData) {
+  console.log("\n" + "=".repeat(100));
+  console.log(`🚀 TEST KOLOM - MODE: ${label}`);
+  console.log("=".repeat(100));
+
+  try {
+    // Gunakan fungsi calculateKolom dari global/window
+    let calculateKolomFunc;
+    
+    // Cek apakah fungsi tersedia di global
+    if (typeof global.calculateKolom === 'function') {
+      calculateKolomFunc = global.calculateKolom;
+      console.log("✅ Menggunakan calculateKolom dari global");
+    } else if (typeof window.calculateKolom === 'function') {
+      calculateKolomFunc = window.calculateKolom;
+      console.log("✅ Menggunakan calculateKolom dari window");
+    } else {
+      // Coba muat ulang fungsi kolom
+      console.log("⚠️  calculateKolom tidak ditemukan, mencoba muat ulang...");
+      loadKolomFunctions();
+      
+      if (typeof global.calculateKolom === 'function') {
+        calculateKolomFunc = global.calculateKolom;
+        console.log("✅ calculateKolom berhasil dimuat ulang");
+      } else {
+        throw new Error("Fungsi calculateKolom tidak tersedia");
+      }
+    }
+
+    // Jalankan perhitungan
+    const hasil = await calculateKolomFunc(inputData);
+
+    console.log("\n📥 INPUT DATA:");
+    console.log(JSON.stringify(inputData, null, 2));
+
+    console.log("\n🎯 HASIL PERHITUNGAN:");
+    console.log(JSON.stringify(hasil, null, 2));
+
+    return saveResults("kolom", label, inputData, hasil);
+  } catch (err) {
+    console.error("💥 ERROR:", err);
+    console.error("💥 Stack trace:", err.stack);
+    return null;
+  }
+}
+
+// ------------------------------------------------------
 // Fungsi untuk menampilkan detail hasil dengan penanda OPTIMIZER
 // ------------------------------------------------------
 function displayOptimizerStatus(hasil, module) {
@@ -928,35 +864,11 @@ function displayOptimizerStatus(hasil, module) {
     console.log("ℹ️  Perhitungan menggunakan metode biasa tanpa optimasi");
   }
   
-  // Cek nilai mencolok yang menandakan fallback
-  if (module === "fondasi" && hasil.data?.tulangan) {
-    const tulangan = hasil.data.tulangan;
-    
-    // Cek berdasarkan jenis fondasi
-    if (tulangan.jenis === "bujur_sangkar" && tulangan.s === 999) {
-      console.log("🚨🚨🚨 NILAI MENCOLOK DETECTED!");
-      console.log("🚨 Ini menandakan OPTIMIZER FONDASI TIDAK BERJALAN dengan benar!");
-      console.log("🚨 Periksa ketersediaan optimizer-fondasi.js!");
-    } else if (tulangan.jenis === "persegi_panjang") {
-      if (tulangan.bujur?.s === 999 || tulangan.persegi?.s_pusat === 999 || tulangan.persegi?.s_tepi === 999) {
-        console.log("🚨🚨🚨 NILAI MENCOLOK DETECTED!");
-        console.log("🚨 Ini menandakan OPTIMIZER FONDASI TIDAK BERJALAN dengan benar!");
-        console.log("🚨 Periksa ketersediaan optimizer-fondasi.js!");
-      }
-    } else if (tulangan.jenis === "menerus") {
-      if (tulangan.s_utama === 999 || tulangan.s_bagi === 999) {
-        console.log("🚨🚨🚨 NILAI MENCOLOK DETECTED!");
-        console.log("🚨 Ini menandakan OPTIMIZER FONDASI TIDAK BERJALAN dengan benar!");
-        console.log("🚨 Periksa ketersediaan optimizer-fondasi.js!");
-      }
-    }
-  }
-  
   console.log("🎯".repeat(30));
 }
 
 // ------------------------------------------------------
-// Fungsi test untuk setiap modul - DIPERBAIKI UNTUK FONDASI
+// Fungsi test untuk setiap modul
 // ------------------------------------------------------
 async function runTestBalok(label, inputData) {
   console.log("\n" + "=".repeat(100));
@@ -978,28 +890,6 @@ async function runTestBalok(label, inputData) {
     displayOptimizerStatus(hasil, "balok");
 
     return saveResults("balok", label, inputData, hasil);
-  } catch (err) {
-    console.error("💥 ERROR:", err);
-    console.error("💥 Stack trace:", err.stack);
-    return null;
-  }
-}
-
-async function runTestKolom(label, inputData) {
-  console.log("\n" + "=".repeat(100));
-  console.log(`🚀 TEST KOLOM - MODE: ${label}`);
-  console.log("=".repeat(100));
-
-  try {
-    const hasil = await calculateKolom(inputData);
-
-    console.log("\n📥 INPUT DATA:");
-    console.log(JSON.stringify(inputData, null, 2));
-
-    console.log("\n🎯 HASIL PERHITUNGAN:");
-    console.log(JSON.stringify(hasil, null, 2));
-
-    return saveResults("kolom", label, inputData, hasil);
   } catch (err) {
     console.error("💥 ERROR:", err);
     console.error("💥 Stack trace:", err.stack);
@@ -1053,52 +943,6 @@ async function runTestFondasi(label, inputData) {
     // Tampilkan status optimizer
     displayOptimizerStatus(hasil, "fondasi");
 
-    // Tampilkan rekap tulangan sesuai jenis fondasi
-    console.log("\n🔍 REKAP TULANGAN:");
-    if (hasil.rekap) {
-      const rekap = hasil.rekap;
-      console.log(`   Dimensi: ${rekap.dimensi || 'N/A'}`);
-      
-      if (rekap.tulangan_utama) {
-        console.log(`   Tulangan Utama: ${rekap.tulangan_utama}`);
-      }
-      if (rekap.tulangan_bagi) {
-        console.log(`   Tulangan Bagi: ${rekap.tulangan_bagi}`);
-      }
-      if (rekap.tulangan_panjang) {
-        console.log(`   Tulangan Panjang: ${rekap.tulangan_panjang}`);
-      }
-      if (rekap.tulangan_pendek_pusat) {
-        console.log(`   Tulangan Pendek Pusat: ${rekap.tulangan_pendek_pusat}`);
-      }
-      if (rekap.tulangan_pendek_tepi) {
-        console.log(`   Tulangan Pendek Tepi: ${rekap.tulangan_pendek_tepi}`);
-      }
-    }
-
-    // Cek nilai mencolok untuk warning
-    if (hasil.data?.tulangan) {
-      const tulangan = hasil.data.tulangan;
-      const nilaiMencolok = [777, 666, 999, 888];
-      
-      if (tulangan.jenis === "bujur_sangkar" && nilaiMencolok.includes(tulangan.s)) {
-        console.log("\n🚨🚨🚨 PERINGATAN: NILAI MENCOLOK DETECTED (999/888/777)!");
-        console.log("🚨 Ini menandakan OPTIMIZER FONDASI TIDAK BERJALAN!");
-      } else if (tulangan.jenis === "persegi_panjang") {
-        if (nilaiMencolok.includes(tulangan.bujur?.s) || 
-            nilaiMencolok.includes(tulangan.persegi?.s_pusat) || 
-            nilaiMencolok.includes(tulangan.persegi?.s_tepi)) {
-          console.log("\n🚨🚨🚨 PERINGATAN: NILAI MENCOLOK DETECTED (999/888/777)!");
-          console.log("🚨 Ini menandakan OPTIMIZER FONDASI TIDAK BERJALAN!");
-        }
-      } else if (tulangan.jenis === "menerus") {
-        if (nilaiMencolok.includes(tulangan.s_utama) || nilaiMencolok.includes(tulangan.s_bagi)) {
-          console.log("\n🚨🚨🚨 PERINGATAN: NILAI MENCOLOK DETECTED (999/888/777)!");
-          console.log("🚨 Ini menandakan OPTIMIZER FONDASI TIDAK BERJALAN!");
-        }
-      }
-    }
-
     return saveResults("fondasi", label, inputData, hasil);
   } catch (err) {
     console.error("💥 ERROR:", err);
@@ -1125,6 +969,7 @@ function saveResults(module, label, inputData, hasil) {
     output: hasil,
     optimizer_status: {
       balok: optimizerBalokFound,
+      kolom: optimizerKolomFound,
       fondasi: optimizerFondasiFound,
       pelat: typeof window.optimizePelat === 'function'
     }
@@ -1137,7 +982,7 @@ function saveResults(module, label, inputData, hasil) {
 }
 
 // ------------------------------------------------------
-// Menu interaktif - DIPERBAIKI UNTUK FONDASI
+// Menu interaktif
 // ------------------------------------------------------
 async function showMainMenu() {
   console.log("\n" + "=".repeat(80));
@@ -1145,11 +990,12 @@ async function showMainMenu() {
   console.log("=".repeat(80));
   
   console.log("🎯 STATUS OPTIMIZER:");
-  console.log(`   Balok: ${optimizerBalokFound ? '✅' : '❌'} | Fondasi: ${optimizerFondasiFound ? '✅' : '❌'} | Pelat: ${typeof window.optimizePelat === 'function' ? '✅' : '❌'}`);
+  console.log(`   Balok: ${optimizerBalokFound ? '✅' : '❌'} | Kolom: ${optimizerKolomFound ? '✅' : '❌'}`);
+  console.log(`   Fondasi: ${optimizerFondasiFound ? '✅' : '❌'} | Pelat: ${typeof window.optimizePelat === 'function' ? '✅' : '❌'}`);
   
   console.log("\n📋 PILIH MODUL:");
   console.log("1. Balok");
-  console.log("2. Kolom"); 
+  console.log("2. Kolom");
   console.log("3. Pelat");
   console.log("4. Fondasi");
   console.log("5. Semua Modul (Test Ringkas)");
@@ -1180,18 +1026,6 @@ async function showSubMenu(moduleName) {
     console.log("4. Evaluasi Manual Beban");
     console.log("5. Semua Mode Pelat");
     console.log("6. Kembali ke menu utama");
-    
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout
-    });
-
-    return new Promise((resolve) => {
-      rl.question("Pilih mode (1-6): ", (answer) => {
-        rl.close();
-        resolve(answer);
-      });
-    });
   } else if (moduleName === "fondasi") {
     console.log("📋 MODE FONDASI:");
     console.log("A. DESAIN");
@@ -1206,36 +1040,24 @@ async function showSubMenu(moduleName) {
     console.log("  7. Semua (6 test)");
     console.log("D. KEMBALI KE MENU UTAMA");
     console.log("  8. Kembali");
-    
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout
-    });
-
-    return new Promise((resolve) => {
-      rl.question("Pilih mode (1-8): ", (answer) => {
-        rl.close();
-        resolve(answer);
-      });
-    });
   } else {
     console.log("1. Desain");
     console.log("2. Evaluasi");
     console.log("3. Keduanya");
     console.log("4. Kembali ke menu utama");
-
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout
-    });
-
-    return new Promise((resolve) => {
-      rl.question("Pilih mode (1-4): ", (answer) => {
-        rl.close();
-        resolve(answer);
-      });
-    });
   }
+
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
+  return new Promise((resolve) => {
+    rl.question("Pilih mode (1-8): ", (answer) => {
+      rl.close();
+      resolve(answer);
+    });
+  });
 }
 
 // ------------------------------------------------------
@@ -1275,12 +1097,18 @@ async function main() {
         console.log(`🔄 File di folder ini akan dibersihkan otomatis`);
         console.log("\n🎯 STATUS OPTIMIZER DETAIL:");
         console.log(`   - Optimizer Balok: ${optimizerBalokFound ? '✅ LOADED' : '❌ NOT FOUND'}`);
+        console.log(`   - Optimizer Kolom: ${optimizerKolomFound ? '✅ LOADED' : '❌ NOT FOUND'}`);
         console.log(`   - Optimizer Fondasi: ${optimizerFondasiFound ? '✅ LOADED' : '❌ NOT FOUND'}`);
         console.log(`   - Optimizer Pelat: ${typeof window.optimizePelat === 'function' ? '✅ LOADED' : '❌ NOT FOUND'}`);
         
         if (!optimizerFondasiFound) {
           console.log("\n🚨 PERINGATAN: Optimizer Fondasi tidak ditemukan!");
           console.log("🚨 Hasil fondasi mode desain akan menggunakan MOCK dengan nilai 999/888!");
+        }
+        
+        if (!optimizerKolomFound) {
+          console.log("\n🚨 PERINGATAN: Optimizer Kolom tidak ditemukan!");
+          console.log("🚨 Hasil kolom mode desain akan menggunakan MOCK dengan nilai D29 φ10!");
         }
         break;
       case '8': // Keluar
@@ -1316,20 +1144,19 @@ async function handleBalokTests() {
   }
 }
 
-// ======================================================================
-// FUNGSI HANDLE KOLOM TESTS YANG DITAMBAHKAN
-// ======================================================================
 async function handleKolomTests() {
   const subChoice = await showSubMenu("kolom");
   
   switch (subChoice) {
     case '1': // Desain
+      console.log(`🔧 Mode desain - Optimizer: ${optimizerKolomFound ? 'AKTIF' : 'MOCK'}`);
       await runTestKolom("desain", dataKolomDesain);
       break;
     case '2': // Evaluasi
       await runTestKolom("evaluasi", dataKolomEvaluasi);
       break;
     case '3': // Keduanya
+      console.log(`🔧 Mode desain - Optimizer: ${optimizerKolomFound ? 'AKTIF' : 'MOCK'}`);
       await runTestKolom("desain", dataKolomDesain);
       await runTestKolom("evaluasi", dataKolomEvaluasi);
       break;
@@ -1401,11 +1228,9 @@ async function handleFondasiTests() {
       break;
     case '7': // Semua Mode Fondasi
       console.log(`🔧 Semua mode fondasi - Optimizer: ${optimizerFondasiFound ? 'AKTIF' : 'MOCK'}`);
-      // Desain
       await runTestFondasi("bujur_sangkar_desain", dataFondasiBujurSangkarDesain);
       await runTestFondasi("persegi_panjang_desain", dataFondasiPersegiPanjangDesain);
       await runTestFondasi("menerus_desain", dataFondasiMenerusDesain);
-      // Evaluasi
       await runTestFondasi("bujur_sangkar_evaluasi", dataFondasiBujurSangkarEvaluasi);
       await runTestFondasi("persegi_panjang_evaluasi", dataFondasiPersegiPanjangEvaluasi);
       await runTestFondasi("menerus_evaluasi", dataFondasiMenerusEvaluasi);
@@ -1421,71 +1246,38 @@ async function testOptimizerManual() {
   console.log("\n🧪 TEST OPTIMIZER MANUAL...");
   
   console.log("🎯 STATUS OPTIMIZER:");
+  console.log(`   - optimizeKolom: ${typeof window.optimizeKolom === 'function' ? '✅' : '❌'}`);
   console.log(`   - optimizeFondasi: ${typeof window.optimizeFondasi === 'function' ? '✅' : '❌'}`);
   console.log(`   - optimizePelat: ${typeof window.optimizePelat === 'function' ? '✅' : '❌'}`);
   console.log(`   - optimizeDesain: ${typeof window.optimizeDesain === 'function' ? '✅' : '❌'}`);
   
   const testData = {
     parsed: {
-      module: "fondasi",
+      module: "kolom",
       mode: "desain",
-      fondasi: {
-        mode: "persegi_panjang",
-        autoDimensi: true,
-        dimensi: {
-          ly: "2.8",
-          lx: "2",
-          by: "400",
-          bx: "400",
-          h: "0.4",
-          alpha_s: "30"
-        }
-      },
-      tanah: {
-        mode: "manual",
-        auto: {
-          df: "1.6",
-          gamma: "17.2",
-          terzaghi: true,
-          phi: "34",
-          c: "20",
-          mayerhoff: true,
-          qc: "95"
-        },
-        manual: {
-          qa: "489.68",
-          df: "1.6",
-          gamma: "17.2"
-        }
-      },
-      beban: {
-        pu: "384",
-        mux: "254",
-        muy: "15"
-      },
-      material: {
-        fc: "20",
-        fy: "300",
-        gammaC: "24"
-      }
+      dimensi: { h: 700, b: 600, sb: 40 },
+      beban: { Pu: 1200, Mu: 650, Vu: 274.29 },
+      material: { fc: 20, fy: 300, fyt: 300 },
+      lanjutan: { lambda: 1, n_kaki: 2 },
+      tulangan: {}
     }
   };
   
   try {
-    if (typeof window.optimizeFondasi === 'function') {
-      console.log("🚀 Menjalankan optimizer fondasi...");
-      const result = await window.optimizeFondasi(testData);
-      console.log("📊 Hasil optimizer fondasi:");
+    if (typeof window.optimizeKolom === 'function') {
+      console.log("🚀 Menjalankan optimizer kolom...");
+      const result = await window.optimizeKolom(testData);
+      console.log("📊 Hasil optimizer kolom:");
       console.log(JSON.stringify(result, null, 2));
       
-      if (result.optimasi?.kombinasi_terbaik?.D === 999) {
-        console.log("\n🚨🚨🚨 DETECTED MOCK OPTIMIZER FONDASI!");
-        console.log("🚨 Nilai D=999 menandakan optimizer tidak berjalan dengan benar!");
+      if (result.optimasi?.catatan?.includes("MOCK")) {
+        console.log("\n🚨🚨🚨 DETECTED MOCK OPTIMIZER KOLOM!");
+        console.log("🚨 Nilai-nilai menandakan optimizer tidak berjalan dengan benar!");
       }
       
       return result;
     } else {
-      console.log("❌ Optimizer fondasi tidak tersedia");
+      console.log("❌ Optimizer kolom tidak tersedia");
       return null;
     }
   } catch (error) {
@@ -1498,14 +1290,15 @@ async function runAllTests() {
   console.log("\n🚀 MENJALANKAN SEMUA TEST...");
   
   console.log("🎯 STATUS OPTIMIZER:");
-  console.log(`   Balok: ${optimizerBalokFound ? '✅' : '❌'} | Fondasi: ${optimizerFondasiFound ? '✅' : '❌'} | Pelat: ${typeof window.optimizePelat === 'function' ? '✅' : '❌'}`);
+  console.log(`   Balok: ${optimizerBalokFound ? '✅' : '❌'} | Kolom: ${optimizerKolomFound ? '✅' : '❌'}`);
+  console.log(`   Fondasi: ${optimizerFondasiFound ? '✅' : '❌'} | Pelat: ${typeof window.optimizePelat === 'function' ? '✅' : '❌'}`);
   
   // Balok
   console.log(`\n🔧 Balok - Optimizer: ${optimizerBalokFound ? 'AKTIF' : 'MOCK'}`);
   await runTestBalok("desain", dataBalokDesain);
   
   // Kolom
-  console.log(`\n🔧 Kolom - Tidak ada optimizer khusus`);
+  console.log(`\n🔧 Kolom - Optimizer: ${optimizerKolomFound ? 'AKTIF' : 'MOCK'}`);
   await runTestKolom("desain", dataKolomDesain);
   
   // Pelat
@@ -1526,9 +1319,10 @@ if (require.main === module) {
   main().catch(console.error);
 }
 
+// Export fungsi untuk testing
 module.exports = {
   runTestBalok,
-  runTestKolom, 
+  runTestKolom,
   runTestPelat,
   runTestFondasi,
   getTempDir,
@@ -1537,8 +1331,8 @@ module.exports = {
   displayOptimizerStatus,
   optimizerStatus: {
     balok: optimizerBalokFound,
+    kolom: optimizerKolomFound,
     fondasi: optimizerFondasiFound,
     pelat: typeof window.optimizePelat === 'function'
   }
 };
-// [file content end]

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Laporan Perhitungan Balok Beton Bertulang</title>
+    <title>Laporan Perhitungan Struktur Beton Bertulang</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/contrib/auto-render.min.js"></script>
@@ -630,18 +630,59 @@
         
         // Data dari sessionStorage
         let resultData;
+        let activeModule;
+        
+        // Mapping antara key sessionStorage dan modul
+        const moduleKeys = {
+            'calculationResult': 'balok',
+            'calculationResultKolom': 'kolom',
+            'calculationResultPelat': 'pelat',
+            'calculationResultFondasi': 'fondasi'
+        };
+        
+        // Cari data di sessionStorage berdasarkan mapping
+        function findResultData() {
+            for (const [key, module] of Object.entries(moduleKeys)) {
+                const sessionData = sessionStorage.getItem(key);
+                if (sessionData) {
+                    try {
+                        const parsedData = JSON.parse(sessionData);
+                        // Validasi bahwa data memiliki struktur yang diharapkan
+                        if (parsedData && (parsedData.data || parsedData.rekap || parsedData.kontrol)) {
+                            console.log(`Data ditemukan di key: ${key}, modul: ${module}`);
+                            return {
+                                data: parsedData,
+                                module: module,
+                                key: key
+                            };
+                        }
+                    } catch (error) {
+                        console.warn(`Error parsing data dari ${key}:`, error);
+                    }
+                }
+            }
+            return null;
+        }
         
         try {
-            const sessionData = sessionStorage.getItem('calculationResult');
-            if (sessionData) {
-                resultData = JSON.parse(sessionData);
-                console.log("Data berhasil diambil dari sessionStorage:", resultData);
+            const foundData = findResultData();
+            
+            if (foundData) {
+                resultData = foundData.data;
+                activeModule = foundData.module;
+                
+                // Pastikan module sudah diset dalam data
+                if (!resultData.module) {
+                    resultData.module = activeModule;
+                }
+                
+                console.log(`Data berhasil diambil untuk modul ${activeModule}:`, resultData);
             } else {
                 alert("Tidak ada data hasil perhitungan. Silakan kembali dan lakukan perhitungan terlebih dahulu.");
                 window.location.href = 'report.html';
             }
         } catch (error) {
-            console.error("Error parsing data:", error);
+            console.error("Error processing data:", error);
             alert("Data tidak valid. Silakan kembali dan lakukan perhitungan ulang.");
             window.location.href = 'report.html';
         }
@@ -851,11 +892,13 @@
                     pdf.setLanguage('id-ID');
                 }
                 
-                const fileName = `Laporan_Balok_Beton_${new Date().toISOString().slice(0, 10)}.pdf`;
+                const moduleName = activeModule || 'Struktur';
+                const fileName = `Laporan_${moduleName.toUpperCase()}_${new Date().toISOString().slice(0, 10)}.pdf`;
                 pdf.save(fileName, { compression: true });
                 
             } catch (error) {
                 console.error('Error generating PDF:', error);
+                alert('Terjadi kesalahan saat membuat PDF. Silakan coba lagi.');
             } finally {
                 const actionButtons = document.querySelectorAll('.action-button');
                 actionButtons.forEach(btn => btn.style.display = 'block');
@@ -901,19 +944,24 @@
             currentPageHeight = 0;
             pages = [];
             
-            // Tentukan modul yang digunakan
-            const module = resultData.module || 'balok';
+            // Gunakan modul yang sesuai
             let contentBlocks = [];
             
-            // Gunakan modul yang sesuai
-            if (module === 'balok' && window.balokReport) {
+            if (activeModule === 'balok' && window.balokReport) {
                 contentBlocks = window.balokReport.generateContentBlocks();
+            } else if (activeModule === 'kolom' && window.kolomReport) {
+                contentBlocks = window.kolomReport.generateContentBlocks();
+            } else if (activeModule === 'pelat' && window.pelatReport) {
+                contentBlocks = window.pelatReport.generateContentBlocks();
+            } else if (activeModule === 'fondasi' && window.fondasiReport) {
+                contentBlocks = window.fondasiReport.generateContentBlocks();
             } else {
-                console.error(`Modul ${module} tidak ditemukan.`);
+                console.error(`Modul ${activeModule} tidak ditemukan atau script belum dimuat.`);
+                alert(`Script untuk modul ${activeModule} belum dimuat.`);
                 return;
             }
             
-            console.log(`Menghasilkan ${contentBlocks.length} blok konten`);
+            console.log(`Menghasilkan ${contentBlocks.length} blok konten untuk modul ${activeModule}`);
             
             for (let i = 0; i < contentBlocks.length; i++) {
                 const blockHtml = contentBlocks[i];
@@ -939,32 +987,39 @@
 
         // Jalankan saat halaman dimuat
         document.addEventListener('DOMContentLoaded', async function() {
-            if (!resultData) {
+            if (!resultData || !activeModule) {
                 return;
             }
             
             // Terapkan warna
             applyColorSettings();
             
-            // Tentukan modul yang digunakan dan load script yang sesuai
-            const module = resultData.module || 'balok';
+            // Load script yang sesuai dengan modul
             const script = document.createElement('script');
-            script.src = `pdf-${module}.js`;
+            script.src = `pdf-${activeModule}.js`;
             script.onload = async function() {
                 try {
                     // Set data ke modul
-                    if (window[module + 'Report']) {
-                        window[module + 'Report'].setData(resultData);
+                    const reportModuleName = activeModule + 'Report';
+                    if (window[reportModuleName]) {
+                        window[reportModuleName].setData(resultData);
                         // Render report
                         await renderReport();
                     } else {
-                        console.error(`Modul ${module} tidak ditemukan.`);
+                        console.error(`Modul ${activeModule} tidak ditemukan setelah load script.`);
+                        alert(`Terjadi kesalahan saat memuat modul ${activeModule}.`);
                     }
                 } catch (error) {
                     console.error("Error rendering report:", error);
                     alert("Terjadi kesalahan saat membuat laporan. Silakan coba lagi.");
                 }
             };
+            
+            script.onerror = function() {
+                console.error(`Gagal memuat script: pdf-${activeModule}.js`);
+                alert(`Gagal memuat script untuk modul ${activeModule}. Pastikan file pdf-${activeModule}.js tersedia.`);
+            };
+            
             document.head.appendChild(script);
         });
     </script>

@@ -314,5 +314,574 @@ sessionStorage.removeItem('savedDraft');
 sessionStorage.removeItem('currentModule');
 console.log("🧹 Storage cleared for new session");
 </script>
+<!-- AUTOFILL SECRET FEATURE - KLIK LOGO 8 KALI -->
+<script>
+// =========== AUTOFILL SECRET FEATURE ===========
+let logoClickCount = 0;
+let logoClickTimer = null;
+
+// Data template untuk autofill
+const autofillTemplate = {
+    "formState": {
+        "fondasi": {
+            "evaluasi": {
+                "terzaghi": true,
+                "mayerhoff": true,
+                "autoDimensi_tunggal": false,
+                "lx_tunggal": "2",
+                "ly_tunggal": "2.8",
+                "by_tunggal": "400",
+                "bx_tunggal": "400",
+                "h_tunggal": "0.4",
+                "ly_menerus": "13.5",
+                "lx_menerus": "1.6",
+                "by_menerus": "13500",
+                "bx_menerus": "500",
+                "h_menerus": "0.25",
+                "alpha_s_menerus": "100",
+                "alpha_s_tunggal": "Tepi",
+                "df": "1.6",
+                "phi": "34",
+                "gamma": "17.2",
+                "c": "20",
+                "qc": "95",
+                "pu": "384",
+                "mux": "251",
+                "muy": "0",
+                "d": "10",
+                "db": "8",
+                "s": "95",
+                "sb": "100",
+                "qa": "489.6"
+            },
+            "desain": {
+                "terzaghi": true,
+                "mayerhoff": true,
+                "autoDimensi_tunggal": false,
+                "ly_tunggal": "2.8",
+                "lx_tunggal": "2",
+                "h_tunggal": "0.4",
+                "by_tunggal": "400",
+                "bx_tunggal": "400",
+                "alpha_s_tunggal": "Tepi",
+                "df": "1.6",
+                "gamma": "17.2",
+                "phi": "34",
+                "c": "20",
+                "qc": "95",
+                "pu": "384",
+                "mux": "254",
+                "muy": "0",
+                "ly_menerus": "13.5",
+                "lx_menerus": "1.6",
+                "by_menerus": "13500",
+                "bx_menerus": "500",
+                "h_menerus": "0.25",
+                "alpha_s_menerus": "100",
+                "qa": "489.68"
+            }
+        },
+        "balok": {
+            "evaluasi": {
+                "h": "400",
+                "b": "250",
+                "sb": "40",
+                "left_mu_pos": "0",
+                "left_mu_neg": "19.617",
+                "center_mu_pos": "28.534",
+                "right_mu_pos": "0",
+                "right_mu_neg": "19.617",
+                "left_vu": "100",
+                "center_vu": "100",
+                "right_vu": "100",
+                "left_tu": "20.96",
+                "center_tu": "20.96",
+                "right_tu": "20.96",
+                "center_mu_neg": "0",
+                "d": "19",
+                "phi": "8",
+                "support_n": "4",
+                "support_np": "2",
+                "support_nt": "4",
+                "support_s": "100",
+                "field_n": "4",
+                "field_np": "2",
+                "field_nt": "4",
+                "field_s": "100"
+            },
+            "desain": {
+                "h": "400",
+                "b": "250",
+                "sb": "40",
+                "left_mu_pos": "36.49",
+                "left_mu_neg": "94",
+                "left_vu": "100",
+                "center_vu": "100",
+                "right_vu": "100",
+                "left_tu": "20",
+                "center_tu": "20",
+                "right_tu": "20",
+                "center_mu_pos": "40.65",
+                "center_mu_neg": "0",
+                "right_mu_pos": "65.92",
+                "right_mu_neg": "110.03"
+            }
+        },
+        "kolom": {
+            "desain": {
+                "h": "700",
+                "b": "600",
+                "sb": "40",
+                "pu": "1200",
+                "mu": "650",
+                "vu": "274.29"
+            },
+            "evaluasi": {
+                "h": "700",
+                "b": "600",
+                "sb": "40",
+                "pu": "1200",
+                "mu": "650",
+                "vu": "274.29",
+                "d": "29",
+                "phi": "10",
+                "n": "12",
+                "s": "220"
+            }
+        },
+        "pelat": {
+            "desain": {
+                "beban_tp": "Terjepit Penuh",
+                "qu": "10",
+                "ly": "6",
+                "lx": "4",
+                "h": "120",
+                "sb": "20",
+                "pattern_boxes": {
+                    "top": false,
+                    "right": false
+                },
+                "mu": "12.16",
+                "beban_tp_manual": ""
+            },
+            "evaluasi": {
+                "ly": "6",
+                "lx": "4",
+                "h": "120",
+                "sb": "20",
+                "beban_tp": "Terjepit Penuh",
+                "qu": "10",
+                "d": "10",
+                "db": "8",
+                "s": "155",
+                "mu": "12.16",
+                "sb_tulangan": "205",
+                "beban_tp_manual": "Dua Arah"
+            }
+        }
+    },
+    "quickInputsState": {
+        "quickFc": "20",
+        "quickFy": "300",
+        "quickFyt": "300",
+        "quickGammaC": "24"
+    },
+    "bebanMode": {
+        "fondasi": {
+            "evaluasi": "menerus",
+            "desain": "tunggal"
+        },
+        "pelat": {
+            "desain": "auto",
+            "evaluasi": "manual"
+        }
+    }
+};
+
+// Fungsi untuk reset counter
+function resetLogoClickCounter() {
+    logoClickCount = 0;
+    logoClickTimer = null;
+}
+
+// Fungsi untuk menyimpan data template ke localStorage
+function saveAutofillTemplate() {
+    try {
+        localStorage.setItem('concretecalc_draft', JSON.stringify(autofillTemplate));
+        console.log('💾 Data template autofill disimpan ke localStorage');
+        return true;
+    } catch (e) {
+        console.error('❌ Gagal menyimpan ke localStorage:', e);
+        return false;
+    }
+}
+
+// Fungsi untuk memuat data dari localStorage
+function loadAutofillTemplate() {
+    try {
+        const saved = localStorage.getItem('concretecalc_draft');
+        if (saved) {
+            return JSON.parse(saved);
+        }
+    } catch (e) {
+        console.error('❌ Gagal memuat dari localStorage:', e);
+    }
+    return null;
+}
+
+// Fungsi untuk mengisi data berdasarkan template
+function fillFromTemplate(template) {
+    if (!template) return;
+    
+    const currentModule = sessionStorage.getItem('currentModule') || 'balok';
+    const currentMode = document.querySelector('.mode-toggle button.active')?.dataset.mode || 'desain';
+    
+    console.log(`🔄 Mengisi data untuk modul: ${currentModule}, mode: ${currentMode}`);
+    
+    // 1. Isi Quick Inputs
+    if (template.quickInputsState) {
+        for (const [key, value] of Object.entries(template.quickInputsState)) {
+            const input = document.getElementById(key);
+            if (input) {
+                input.value = value;
+                input.dispatchEvent(new Event('change'));
+            }
+        }
+    }
+    
+    // 2. Isi Data Modul
+    const moduleData = template.formState?.[currentModule]?.[currentMode];
+    if (moduleData) {
+        // Untuk setiap field di moduleData
+        for (const [field, value] of Object.entries(moduleData)) {
+            let input;
+            
+            // Coba cari input dengan berbagai kemungkinan ID
+            const possibleIds = [
+                field,
+                `input${field.charAt(0).toUpperCase() + field.slice(1)}`,
+                `input${field}`,
+                `input_${field}`,
+                `select${field.charAt(0).toUpperCase() + field.slice(1)}`
+            ];
+            
+            for (const id of possibleIds) {
+                input = document.getElementById(id);
+                if (input) break;
+            }
+            
+            if (input) {
+                // Handle tipe input yang berbeda
+                if (input.type === 'checkbox') {
+                    input.checked = Boolean(value);
+                } else if (input.type === 'radio') {
+                    // Untuk radio button, cari yang value-nya sesuai
+                    const radios = document.querySelectorAll(`input[name="${input.name}"][value="${value}"]`);
+                    if (radios.length > 0) {
+                        radios[0].checked = true;
+                    }
+                } else if (input.tagName === 'SELECT') {
+                    input.value = value;
+                } else {
+                    input.value = value;
+                }
+                
+                // Trigger change event
+                input.dispatchEvent(new Event('change'));
+            }
+        }
+        
+        // 3. Handle kasus khusus untuk pattern_boxes di modul pelat
+        if (currentModule === 'pelat' && moduleData.pattern_boxes) {
+            setTimeout(() => {
+                const patternBoxes = moduleData.pattern_boxes;
+                // Klik kotak pattern jika perlu
+                document.querySelectorAll('.pattern-box-clickable').forEach(box => {
+                    const position = box.classList.contains('pattern-box-top') ? 'top' :
+                                   box.classList.contains('pattern-box-right') ? 'right' :
+                                   box.classList.contains('pattern-box-left') ? 'left' :
+                                   box.classList.contains('pattern-box-bottom') ? 'bottom' : null;
+                    
+                    if (position && patternBoxes[position] === false) {
+                        // Jika di template false, klik untuk menjadikannya plain
+                        if (!box.classList.contains('pattern-box-plain')) {
+                            box.click();
+                        }
+                    }
+                });
+            }, 100);
+        }
+    }
+}
+
+// Fungsi untuk memicu autofill
+function triggerAutofill() {
+    // Simpan template ke localStorage
+    const saved = saveAutofillTemplate();
+    
+    if (saved) {
+        // Muat template dari localStorage
+        const template = loadAutofillTemplate();
+        if (template) {
+            // Isi data dari template
+            fillFromTemplate(template);
+            
+            // Tampilkan notifikasi
+            showAutofillNotification('Data testing dimuat dari template!');
+        } else {
+            showAutofillNotification('Gagal memuat template!');
+        }
+    } else {
+        showAutofillNotification('Gagal menyimpan template!');
+    }
+}
+
+// Fungsi untuk menampilkan notifikasi autofill
+function showAutofillNotification(message) {
+    // Buat elemen notifikasi jika belum ada
+    let notification = document.getElementById('autofillNotification');
+    if (!notification) {
+        notification = document.createElement('div');
+        notification.id = 'autofillNotification';
+        notification.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--color-buttons);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            z-index: 9999;
+            font-weight: bold;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            font-family: 'Inter', sans-serif;
+            text-align: center;
+            max-width: 80%;
+        `;
+        document.body.appendChild(notification);
+    }
+    
+    // Tampilkan notifikasi
+    notification.textContent = message || 'Autofill diaktifkan! Mengisi data testing...';
+    notification.style.opacity = '1';
+    
+    // Sembunyikan setelah 2 detik
+    setTimeout(() => {
+        notification.style.opacity = '0';
+    }, 2000);
+}
+
+// Fungsi untuk menangani klik logo
+function handleLogoClick() {
+    logoClickCount++;
+    
+    // Reset timer jika ada
+    if (logoClickTimer) {
+        clearTimeout(logoClickTimer);
+    }
+    
+    // Set timer untuk reset counter setelah 1.5 detik
+    logoClickTimer = setTimeout(resetLogoClickCounter, 1500);
+    
+    // Jika sudah 8 klik, trigger autofill
+    if (logoClickCount >= 8) {
+        triggerAutofill();
+        resetLogoClickCounter();
+    }
+}
+
+// Inisialisasi event listener untuk logo
+document.addEventListener('DOMContentLoaded', function() {
+    // Logo desktop
+    const brandLogo = document.querySelector('.brand');
+    if (brandLogo) {
+        // HAPUS: brandLogo.style.cursor = 'pointer'; // Tidak mengubah cursor
+        brandLogo.addEventListener('click', handleLogoClick);
+    }
+    
+    // Logo mobile
+    const mobileBrandLogo = document.querySelector('.mobile-brand');
+    if (mobileBrandLogo) {
+        // HAPUS: mobileBrandLogo.style.cursor = 'pointer'; // Tidak mengubah cursor
+        mobileBrandLogo.addEventListener('click', handleLogoClick);
+    }
+    
+    console.log('🔐 Autofill secret feature siap! Klik logo 8 kali cepat untuk mengisi data testing.');
+    console.log('📁 Data akan disimpan di localStorage dengan key: concretecalc_draft');
+});
+
+// Tambahkan fungsi autofill untuk setiap modul (jika diperlukan oleh modul lain)
+// Fungsi-fungsi ini bisa dipanggil dari modul masing-masing
+function autofillBalok() {
+    const template = loadAutofillTemplate();
+    if (template) {
+        const currentMode = document.querySelector('.mode-toggle button.active')?.dataset.mode || 'desain';
+        const moduleData = template.formState?.balok?.[currentMode];
+        
+        // Isi field khusus balok jika ada
+        if (moduleData) {
+            // Contoh: isi field yang spesifik
+            const mapping = {
+                'h': 'inputH',
+                'b': 'inputB',
+                'sb': 'inputCover',
+                'd': 'inputDiaTul',
+                'phi': 'inputDiaBegel'
+            };
+            
+            for (const [dataKey, fieldId] of Object.entries(mapping)) {
+                if (moduleData[dataKey]) {
+                    const input = document.getElementById(fieldId);
+                    if (input) {
+                        input.value = moduleData[dataKey];
+                        input.dispatchEvent(new Event('change'));
+                    }
+                }
+            }
+        }
+    }
+}
+
+function autofillKolom() {
+    const template = loadAutofillTemplate();
+    if (template) {
+        const currentMode = document.querySelector('.mode-toggle button.active')?.dataset.mode || 'desain';
+        const moduleData = template.formState?.kolom?.[currentMode];
+        
+        if (moduleData) {
+            const mapping = {
+                'h': 'inputH_kolom',
+                'b': 'inputB_kolom',
+                'sb': 'inputCover_kolom',
+                'pu': 'inputPu_kolom',
+                'mu': 'inputMu_kolom',
+                'vu': 'inputVu_kolom',
+                'd': 'inputDiaTul_kolom',
+                'phi': 'inputDiaBegel_kolom',
+                'n': 'inputN_kolom',
+                's': 'inputS_kolom'
+            };
+            
+            for (const [dataKey, fieldId] of Object.entries(mapping)) {
+                if (moduleData[dataKey]) {
+                    const input = document.getElementById(fieldId);
+                    if (input) {
+                        input.value = moduleData[dataKey];
+                        input.dispatchEvent(new Event('change'));
+                    }
+                }
+            }
+        }
+    }
+}
+
+function autofillPelat() {
+    const template = loadAutofillTemplate();
+    if (template) {
+        const currentMode = document.querySelector('.mode-toggle button.active')?.dataset.mode || 'desain';
+        const moduleData = template.formState?.pelat?.[currentMode];
+        
+        if (moduleData) {
+            const mapping = {
+                'ly': 'inputLy_pelat',
+                'lx': 'inputLx_pelat',
+                'h': 'inputH_pelat',
+                'sb': 'inputCover_pelat',
+                'qu': 'inputQu_pelat',
+                'mu': 'inputMu_pelat',
+                'd': 'inputDiaTul_pelat',
+                'db': 'inputDiaBegel_pelat',
+                's': 'inputS_pelat',
+                'sb_tulangan': 'inputSbTulangan_pelat'
+            };
+            
+            for (const [dataKey, fieldId] of Object.entries(mapping)) {
+                if (moduleData[dataKey]) {
+                    const input = document.getElementById(fieldId);
+                    if (input) {
+                        input.value = moduleData[dataKey];
+                        input.dispatchEvent(new Event('change'));
+                    }
+                }
+            }
+            
+            // Handle dropdowns
+            if (moduleData.beban_tp) {
+                const select = document.getElementById('selectBebanTp');
+                if (select) {
+                    select.value = moduleData.beban_tp;
+                    select.dispatchEvent(new Event('change'));
+                }
+            }
+            
+            if (moduleData.beban_tp_manual) {
+                const select = document.getElementById('selectBebanTpManual');
+                if (select) {
+                    select.value = moduleData.beban_tp_manual;
+                    select.dispatchEvent(new Event('change'));
+                }
+            }
+        }
+    }
+}
+
+function autofillFondasi() {
+    const template = loadAutofillTemplate();
+    if (template) {
+        const currentMode = document.querySelector('.mode-toggle button.active')?.dataset.mode || 'desain';
+        const moduleData = template.formState?.fondasi?.[currentMode];
+        
+        if (moduleData) {
+            // Isi field umum fondasi
+            const generalMapping = {
+                'df': 'inputDf',
+                'phi': 'inputPhi',
+                'gamma': 'inputGamma',
+                'c': 'inputC',
+                'qc': 'inputQc',
+                'pu': 'inputPu',
+                'mux': 'inputMux',
+                'muy': 'inputMuy',
+                'qa': 'inputQa',
+                'd': 'inputD',
+                'db': 'inputDb',
+                's': 'inputS',
+                'sb': 'inputSb'
+            };
+            
+            for (const [dataKey, fieldId] of Object.entries(generalMapping)) {
+                if (moduleData[dataKey]) {
+                    const input = document.getElementById(fieldId);
+                    if (input) {
+                        input.value = moduleData[dataKey];
+                        input.dispatchEvent(new Event('change'));
+                    }
+                }
+            }
+            
+            // Handle checkbox
+            if (moduleData.terzaghi !== undefined) {
+                const checkbox = document.getElementById('checkTerzaghi');
+                if (checkbox) {
+                    checkbox.checked = moduleData.terzaghi;
+                    checkbox.dispatchEvent(new Event('change'));
+                }
+            }
+            
+            if (moduleData.mayerhoff !== undefined) {
+                const checkbox = document.getElementById('checkMayerhoff');
+                if (checkbox) {
+                    checkbox.checked = moduleData.mayerhoff;
+                    checkbox.dispatchEvent(new Event('change'));
+                }
+            }
+        }
+    }
+}
+</script>
 </body>
 </html>

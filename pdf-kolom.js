@@ -1,5 +1,4 @@
-[file name]: pdf-kolom.js
-[file content begin]
+// pdf-kolom.js
 (function() {
     let resultData;
 
@@ -14,61 +13,113 @@
         const kontrolLentur = getData('kontrol.lentur', {});
         const kontrolGeser = getData('kontrol.geser', {});
         
-        if (!kontrolLentur || !kontrolGeser) return 'tidak aman';
+        let semuaAman = true;
         
-        // TAMBAHAN: Periksa juga K_ok untuk kontrol lentur
-        const semuaKontrolLentur = kontrolLentur.Ast_ok && kontrolLentur.rho_ok && 
-                                  kontrolLentur.n_ok && kontrolLentur.K_ok;
-        const semuaKontrolGeser = kontrolGeser.Vs_ok && kontrolGeser.Av_ok;
+        // Cek kontrol lentur
+        if (kontrolLentur) {
+            if (!kontrolLentur.Ast_ok || !kontrolLentur.rho_ok || !kontrolLentur.n_ok || !kontrolLentur.K_ok) {
+                semuaAman = false;
+            }
+        }
         
-        return (semuaKontrolLentur && semuaKontrolGeser) ? 'aman' : 'tidak aman';
+        // Cek kontrol geser
+        if (kontrolGeser) {
+            if (!kontrolGeser.Vs_ok || !kontrolGeser.Av_ok) {
+                semuaAman = false;
+            }
+        }
+        
+        return semuaAman ? 'aman' : 'tidak aman';
     }
 
-    // Fungsi helper untuk mengambil data dengan fallback ke N/A
+    // Fungsi helper untuk mengambil data dengan fallback ke sessionStorage
     function getData(path, defaultValue = 'N/A') {
         try {
+            // Coba ambil dari resultData terlebih dahulu
             const keys = path.split('.');
             let value = resultData;
             for (const key of keys) {
                 if (value && typeof value === 'object' && key in value) {
                     value = value[key];
                 } else {
-                    return defaultValue;
+                    value = undefined;
+                    break;
                 }
             }
-            return value !== undefined && value !== null ? value : defaultValue;
+            
+            // Jika ditemukan di resultData, kembalikan
+            if (value !== undefined && value !== null && value !== 'N/A') {
+                return value;
+            }
+            
+            // Jika tidak ditemukan, coba ambil dari sessionStorage
+            const sessionData = sessionStorage.getItem('calculationResultKolom');
+            if (sessionData) {
+                const parsedData = JSON.parse(sessionData);
+                let sessionValue = parsedData;
+                for (const key of keys) {
+                    if (sessionValue && typeof sessionValue === 'object' && key in sessionValue) {
+                        sessionValue = sessionValue[key];
+                    } else {
+                        sessionValue = undefined;
+                        break;
+                    }
+                }
+                
+                if (sessionValue !== undefined && sessionValue !== null && sessionValue !== 'N/A') {
+                    return sessionValue;
+                }
+            }
+            
+            return defaultValue;
         } catch (error) {
             console.warn(`Error getting data for path ${path}:`, error);
             return defaultValue;
         }
     }
-    
-    // Fungsi untuk memformat angka
-    function formatNumber(num, decimals = 2) {
+
+    // Fungsi untuk memformat angka dengan desimal fleksibel
+    function formatNumber(num, decimals = null) {
         if (num === null || num === undefined || num === 'N/A' || isNaN(num)) return 'N/A';
+        
         const numFloat = parseFloat(num);
         
-        if (decimals === 0) {
-            return Math.round(numFloat).toString();
+        // Jika decimals diberikan secara eksplisit, gunakan itu
+        if (decimals !== null) {
+            if (decimals === 0) {
+                return Math.round(numFloat).toString();
+            }
+            return numFloat.toFixed(decimals);
         }
         
-        return numFloat.toFixed(decimals);
+        // Cek apakah angka sudah bulat (tanpa desimal)
+        if (Number.isInteger(numFloat)) {
+            return numFloat.toString();
+        }
+        
+        // Ambil bagian integer dan desimal
+        const numStr = numFloat.toString();
+        const parts = numStr.split('.');
+        const integerPart = Math.abs(parseInt(parts[0]));
+        
+        // Tentukan jumlah digit desimal berdasarkan aturan:
+        // - Jika bagian integer hanya 1 digit, tampilkan 3 digit desimal
+        // - Jika bagian integer lebih dari 1 digit, tampilkan 2 digit desimal
+        let targetDecimals;
+        if (integerPart <= 9) { // 0-9 (termasuk angka negatif yang diambil absolut)
+            targetDecimals = 3;
+        } else {
+            targetDecimals = 2;
+        }
+        
+        // Pastikan tidak menampilkan trailing zeros yang tidak perlu
+        const formatted = numFloat.toFixed(targetDecimals);
+        return formatted.replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
     }
 
-    // Fungsi untuk memformat timestamp (sama seperti di pdf.html)
+    // Fungsi untuk memformat tanggal
     function formatTimestampFull(timestamp) {
-        if (!timestamp) {
-            const now = new Date();
-            const day = now.getDate();
-            const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni",
-                               "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
-            const month = monthNames[now.getMonth()];
-            const year = now.getFullYear();
-            const hours = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            return `${day} ${month} ${year} pukul ${hours}.${minutes}`;
-        }
-        
+        if (!timestamp) return 'N/A';
         const date = new Date(timestamp);
         const day = date.getDate();
         const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni",
@@ -80,7 +131,7 @@
         return `${day} ${month} ${year} pukul ${hours}.${minutes}`;
     }
 
-    // Fungsi untuk membuat tabel 3 kolom (sama seperti di pdf-balok.js)
+    // Fungsi untuk membuat tabel 3 kolom
     function createThreeColumnTable(rows, withStatus = false, isDataTable = false) {
         let html = '<table class="three-col-table">';
         
@@ -99,7 +150,7 @@
         }
         
         rows.forEach(row => {
-            const isHeader = row.parameter.includes('<strong>') && !row.hasil;
+            const isHeader = row.parameter && row.parameter.includes('<strong>') && !row.hasil;
             const rowClass = isHeader ? 'header-row' : '';
             
             if (row.isFullRow) {
@@ -175,539 +226,290 @@
         html += '</table>';
         return html;
     }
-    
-    // ==============================================
-    // FUNGSI KHUSUS KOLOM: Tabel Data Beban Kolom
-    // ==============================================
-    function createBebanTableKolom() {
-        const bebanData = getData('inputData.beban', {});
+
+    // Fungsi untuk membuat tabel data material dan dimensi (DIPERBAIKI)
+    function createMaterialDimensiTable() {
+        const material = getData('data.parsedInput.material', {});
+        const dimensi = getData('data.parsedInput.dimensi', {});
+        const lanjutan = getData('data.parsedInput.lanjutan', {});
         
         const rows = [
-            { parameter: "<strong>Beban Aksial dan Momen</strong>", hasil: "", satuan: "" },
-            { parameter: "$P_u$ (Beban aksial tekan)", hasil: formatNumber(bebanData.Pu), satuan: "kN" },
-            { parameter: "$M_u$ (Momen lentur)", hasil: formatNumber(bebanData.Mu), satuan: "kNm" },
-            { parameter: "$V_u$ (Gaya geser)", hasil: formatNumber(bebanData.Vu), satuan: "kN" }
+            { parameter: "$f'_c$ (Kuat tekan beton)", hasil: formatNumber(material.fc), satuan: 'MPa' },
+            { parameter: "$f_y$ (Tegangan leleh tulangan lentur)", hasil: formatNumber(material.fy), satuan: 'MPa' },
+            { parameter: "$f_{yt}$ (Tegangan leleh tulangan geser)", hasil: formatNumber(material.fyt || material.fy), satuan: 'MPa' },
+            { parameter: "$h$ (Tinggi kolom)", hasil: formatNumber(dimensi.h, 0), satuan: 'mm' },
+            { parameter: "$b$ (Lebar kolom)", hasil: formatNumber(dimensi.b, 0), satuan: 'mm' },
+            { parameter: "$s_b$ (Selimut beton)", hasil: formatNumber(dimensi.sb, 0), satuan: 'mm' },
+            { parameter: "$\\lambda$ (Faktor reduksi untuk beton ringan)", hasil: formatNumber(lanjutan.lambda || 1), satuan: '-' },
+            { parameter: "$n_{kaki}$ (Jumlah kaki sengkang)", hasil: formatNumber(lanjutan.n_kaki || 2, 0), satuan: 'kaki' }
         ];
         
         return createThreeColumnTable(rows, false, true);
     }
-    
-    // ==============================================
-    // FUNGSI KHUSUS KOLOM: Tabel Data Tulangan Kolom
-    // ==============================================
-    function createTulanganTableKolom() {
-        let tulanganRows = [];
-        const mode = getData('mode', 'N/A');
-        
-        // Data tulangan dari hasil perhitungan
-        const tulanganResult = getData('rekap.tulangan', {});
-        
-        // Data dasar
-        tulanganRows.push(
-            { parameter: "<strong>Data Tulangan Utama</strong>", hasil: "", satuan: "" },
-            { parameter: "$D$ (Diameter tulangan utama)", hasil: tulanganResult.D || 'N/A', satuan: "mm" },
-            { parameter: "$\\phi$ (Diameter sengkang/begel)", hasil: tulanganResult.phi || 'N/A', satuan: "mm" },
-            { parameter: "$n_{terpasang}$ (Jumlah tulangan)", hasil: tulanganResult.n_terpakai || 'N/A', satuan: "batang" },
-            { parameter: "$A_{st,terpasang}$ (Luas tulangan terpasang)", hasil: formatNumber(tulanganResult.Ast_i), satuan: "mm²" }
-        );
-        
-        // Untuk mode evaluasi: tampilkan data input tambahan
-        if (mode === 'evaluasi') {
-            const inputTulangan = getData('inputData.tulangan', {});
-            
-            if (inputTulangan.n_tul) {
-                tulanganRows.push({ 
-                    parameter: "&nbsp;&nbsp;$n_{input}$ (Jumlah tulangan input)", 
-                    hasil: inputTulangan.n_tul, 
-                    satuan: "batang" 
-                });
-            }
-            
-            if (inputTulangan.s_tul) {
-                tulanganRows.push({ 
-                    parameter: "&nbsp;&nbsp;$s_{input}$ (Jarak sengkang input)", 
-                    hasil: inputTulangan.s_tul, 
-                    satuan: "mm" 
-                });
-            }
-        }
-        
-        // Untuk mode desain: tampilkan s dari hasil perhitungan begel
-        if (mode === 'desain') {
-            const begelResult = getData('rekap.begel', {});
-            tulanganRows.push({ 
-                parameter: "&nbsp;&nbsp;$s_{hasil}$ (Jarak sengkang hasil)", 
-                hasil: formatNumber(begelResult.s, 0), 
-                satuan: "mm" 
-            });
-        }
-        
-        return createThreeColumnTable(tulanganRows, false, true);
-    }
-    
-    // ==============================================
-    // FUNGSI KHUSUS KOLOM: Tabel Parameter Dimensi
-    // ==============================================
-    function createParameterDimensiTable() {
-        const dimensiData = getData('data.Dimensi', {});
-        const tulanganResult = getData('rekap.tulangan', {});
+
+    // Fungsi untuk membuat tabel data beban (DIPERBAIKI)
+    function createBebanTable() {
+        const beban = getData('data.parsedInput.beban', {});
         
         const rows = [
-            { parameter: "$\\phi_1$ (Faktor reduksi lentur)", hasil: dimensiData.phi1 || 'N/A', satuan: "-" },
-            { parameter: "$\\phi_2$ (Faktor reduksi geser)", hasil: dimensiData.phi2 || 'N/A', satuan: "-" },
-            { parameter: "$S_n$ (Spasi minimum antar tulangan)", hasil: formatNumber(dimensiData.Sn), satuan: "mm" },
-            { parameter: "$d_{s1}$ (Jarak tulangan ke sisi terdekat)", hasil: formatNumber(dimensiData.ds1), satuan: "mm" },
-            { parameter: "$d_{s2}$ (Spasi bersih antar tulangan)", hasil: formatNumber(dimensiData.ds2), satuan: "mm" },
-            { parameter: "$d_s$ (Titik berat tulangan tarik)", hasil: formatNumber(dimensiData.ds), satuan: "mm" },
-            { parameter: "$d$ (Tinggi efektif penampang)", hasil: formatNumber(dimensiData.d), satuan: "mm" },
-            { parameter: "$\\beta_1$ (Faktor tinggi blok tekan)", hasil: formatNumber(tulanganResult.beta1 || dimensiData.beta1), satuan: "-" },
-            { parameter: "$m$ (Jumlah maksimum tulangan per baris)", hasil: dimensiData.m || 'N/A', satuan: "-" }
+            { parameter: "$P_u$ (Beban aksial)", hasil: formatNumber(beban.Pu || beban.pu), satuan: 'kN' },
+            { parameter: "$M_u$ (Momen lentur)", hasil: formatNumber(beban.Mu || beban.mu), satuan: 'kNm' },
+            { parameter: "$V_u$ (Gaya geser)", hasil: formatNumber(beban.Vu || beban.vu), satuan: 'kN' }
+        ];
+        
+        return createThreeColumnTable(rows, false, true);
+    }
+
+    // Fungsi untuk membuat tabel data tulangan (DIPERBAIKI)
+    function createTulanganTable() {
+        const tulangan = getData('data.parsedInput.tulangan', {});
+        const mode = getData('mode', 'evaluasi');
+        
+        const rows = [
+            { parameter: "D (Diameter tulangan utama)", hasil: formatNumber(tulangan.d || tulangan.d_tul || getData('data.D', 'N/A'), 0), satuan: 'mm' },
+            { parameter: "ɸ (Diameter tulangan sengkang)", hasil: formatNumber(tulangan.phi || tulangan.phi_tul || getData('data.phi', 'N/A'), 0), satuan: 'mm' }
+        ];
+        
+        if (mode === 'evaluasi') {
+            rows.push(
+                { parameter: "$n$ (Jumlah tulangan)", hasil: formatNumber(tulangan.n || tulangan.n_tul, 0), satuan: 'batang' },
+                { parameter: "$s$ (Jarak sengkang)", hasil: formatNumber(tulangan.s || tulangan.s_tul, 0), satuan: 'mm' }
+            );
+        }
+        
+        return createThreeColumnTable(rows, false, true);
+    }
+
+    // Fungsi untuk membuat tabel parameter perhitungan
+    function createParameterTable() {
+        const dimensi = getData('data.Dimensi', {});
+        const hasilTulangan = getData('data.hasilTulangan', {});
+        
+        const rows = [
+            { parameter: "$\\displaystyle m = \\left\\lfloor \\frac{b - 2d_{s1}}{D + s_b} \\right\\rfloor + 1$", hasil: formatNumber(dimensi.m, 0), satuan: '-' },
+            { parameter: "$S_n$ (Jarak bersih antar tulangan)", hasil: formatNumber(dimensi.Sn), satuan: 'mm' },
+            { parameter: "$d_{s1}$ (Jarak pusat tulangan ke muka beton)", hasil: formatNumber(dimensi.ds1), satuan: 'mm' },
+            { parameter: "$d_{s2}$", hasil: formatNumber(dimensi.ds2), satuan: 'mm' },
+            { parameter: "$d_s$", hasil: formatNumber(dimensi.ds), satuan: 'mm' },
+            { parameter: "$d$ (Tinggi efektif)", hasil: formatNumber(dimensi.d), satuan: 'mm' },
+            { parameter: "$\\beta_1$", hasil: formatNumber(dimensi.beta1), satuan: '-' },
+            { parameter: "$\\phi_1$ (Faktor reduksi lentur)", hasil: formatNumber(dimensi.phi1), satuan: '-' },
+            { parameter: "$\\phi_2$ (Faktor reduksi geser)", hasil: formatNumber(dimensi.phi2), satuan: '-' },
+            { parameter: "$\\displaystyle a_b = \\frac{600 \\beta_1 d}{600 + f_y}$", hasil: formatNumber(hasilTulangan.ab), satuan: 'mm' },
+            { parameter: "$\\displaystyle a_{b1} = \\frac{600 \\beta_1 d}{600 - f_y}$", hasil: formatNumber(hasilTulangan.ab1), satuan: 'mm' },
+            { parameter: "$\\displaystyle a_{b2} = \\beta_1 d$", hasil: formatNumber(hasilTulangan.ab2), satuan: 'mm' },
+            { parameter: "$\\displaystyle a_{t1} = \\frac{600 \\beta_1 d_s}{600 - f_y}$", hasil: formatNumber(hasilTulangan.at1), satuan: 'mm' },
+            { parameter: "$\\displaystyle a_{t2} = \\beta_1 d_s$", hasil: formatNumber(hasilTulangan.at2), satuan: 'mm' }
         ];
         
         return createThreeColumnTable(rows);
     }
-    
-    // ==============================================
-    // FUNGSI KHUSUS KOLOM: Tabel Perhitungan Kondisi
-    // ==============================================
-    function createKondisiTable() {
-        const tulanganResult = getData('rekap.tulangan', {});
-        const kondisiAktif = tulanganResult.kondisiAktif || 'N/A';
-        const semuaKondisi = tulanganResult.semuaKondisi || {};
-        
-        let rows = [
-            { parameter: "<strong>Parameter Kondisi Lentur-Aksial</strong>", hasil: "", satuan: "" },
-            { parameter: "$a_b$ (Tinggi blok tekan balanced)", hasil: formatNumber(tulanganResult.ab), satuan: "mm" },
-            { parameter: "$a_c$ (Tinggi blok tekan beban aksial)", hasil: formatNumber(tulanganResult.ac), satuan: "mm" },
-            { parameter: "$a_{b1}$", hasil: formatNumber(tulanganResult.ab1), satuan: "mm" },
-            { parameter: "$a_{b2}$", hasil: formatNumber(tulanganResult.ab2), satuan: "mm" },
-            { parameter: "$a_{t1}$", hasil: formatNumber(tulanganResult.at1), satuan: "mm" },
-            { parameter: "$a_{t2}$", hasil: formatNumber(tulanganResult.at2), satuan: "mm" },
-            { parameter: "$e$ (Eksentrisitas)", hasil: formatNumber(tulanganResult.e), satuan: "mm" }
-        ];
-        
-        // Tambahkan kondisi aktif
-        rows.push({ 
-            parameter: "<strong>Kondisi Aktif</strong>", 
-            isFullRow: true, 
-            hasil: "", 
-            satuan: "" 
-        });
-        
-        rows.push({ 
-            parameter: kondisiAktif, 
-            isStatus: true, 
-            statusHtml: `<span class="status-aman">TERPENUHI</span>` 
-        });
-        
-        // Tampilkan data kondisi spesifik jika tersedia
-        if (tulanganResult.a_cubic && tulanganResult.a_cubic !== 'N/A') {
-            rows.push({ 
-                parameter: "$a_{cubic}$ (Solusi persamaan kubik)", 
-                hasil: formatNumber(tulanganResult.a_cubic), 
-                satuan: "mm" 
-            });
-        }
-        
-        if (tulanganResult.a_flexure && tulanganResult.a_flexure !== 'N/A') {
-            rows.push({ 
-                parameter: "$a_{flexure}$ (Tinggi blok tekan lentur murni)", 
-                hasil: formatNumber(tulanganResult.a_flexure), 
-                satuan: "mm" 
-            });
-        }
-        
-        return createThreeColumnTable(rows, true);
-    }
-    
-    // ==============================================
-    // FUNGSI KHUSUS KOLOM: Tabel Perhitungan Tulangan Utama
-    // ==============================================
-    function createTulanganUtamaTable() {
-        const tulanganResult = getData('rekap.tulangan', {});
+
+    // Fungsi untuk membuat tabel perhitungan lentur detail
+    function createLenturTableDetail() {
+        const hasilTulangan = getData('data.hasilTulangan', {});
         const kontrolLentur = getData('kontrol.lentur', {});
-        const faktorPhi = tulanganResult.faktorPhi || 0.65;
+        const beban = getData('data.parsedInput.beban', {});
+        const dimensi = getData('data.Dimensi', {});
         
-        let rows = [
-            { parameter: "<strong>Perhitungan Kebutuhan Tulangan</strong>", hasil: "", satuan: "" },
-            { parameter: "$\\phi$ (Faktor reduksi aktual)", hasil: formatNumber(faktorPhi, 3), satuan: "-" },
-            { parameter: "$A_1$ (Luas tulangan tarik)", hasil: formatNumber(tulanganResult.A1), satuan: "mm²" },
-            { parameter: "$A_2$ (Luas tulangan tekan)", hasil: formatNumber(tulanganResult.A2), satuan: "mm²" },
-            { parameter: "$A_{s,tu}$ (Luas tulangan total perlu)", hasil: formatNumber(tulanganResult.As_tu), satuan: "mm²" },
-            { parameter: "$A_{st,u}$ (Luas tulangan perlu terkoreksi)", hasil: formatNumber(tulanganResult.Ast_u), satuan: "mm²" },
+        const rows = [
+            { parameter: "$P_u$", hasil: formatNumber(beban.Pu || beban.pu), satuan: 'kN' },
+            { parameter: "$M_u$", hasil: formatNumber(beban.Mu || beban.mu), satuan: 'kNm' },
+            { parameter: "$\\displaystyle e = \\frac{M_u}{P_u}$ (jika $P_u \\neq 0$)", hasil: formatNumber(hasilTulangan.e), satuan: 'mm' },
+            { parameter: "$\\displaystyle a_c = \\frac{P_u \\times 1000}{0.65 \\times 0.85 \\times f'_c \\times b}$", hasil: formatNumber(hasilTulangan.ac), satuan: 'mm' },
+            { parameter: "Kondisi yang berlaku", hasil: hasilTulangan.kondisi || 'N/A', satuan: '-' },
+            { parameter: "$\\displaystyle P_{u\\phi} = 0.1 \\times f'_c \\times b \\times h / 1000$", hasil: formatNumber(hasilTulangan.Pu_phi), satuan: 'kN' },
+            { parameter: "Faktor $\\phi$ yang digunakan", hasil: formatNumber(hasilTulangan.faktorPhi), satuan: '-' },
+            { parameter: "$A_{s,perlu}$ (Tulangan tarik perlu)", hasil: formatNumber(hasilTulangan.As_tu), satuan: 'mm²' },
+            { parameter: "$A_{s,tunggal}$ (Luas 1 tulangan)", hasil: formatNumber(hasilTulangan.Ast_satu), satuan: 'mm²' },
+            { parameter: "$n_{perlu}$", hasil: formatNumber(hasilTulangan.n, 0), satuan: 'batang' },
+            { parameter: "$n_{maks} = 2 \\times m$", hasil: formatNumber(hasilTulangan.n_max, 0), satuan: 'batang' },
+            { parameter: "$n_{terpasang}$", hasil: formatNumber(hasilTulangan.n_terpakai, 0), satuan: 'batang' },
             { 
-                parameter: "$A_{st,terpasang} \\ge A_{st,u}$", 
-                isComparison: true, 
-                statusHtml: `<span class="${kontrolLentur.Ast_ok ? 'status-aman' : 'status-tidak-aman'}">${kontrolLentur.Ast_ok ? 'AMAN' : 'TIDAK AMAN'}</span>`
+                parameter: "$n \\le n_{maks}$", 
+                isStatus: true, 
+                statusHtml: `<span class="${kontrolLentur.n_ok ? 'status-aman' : 'status-tidak-aman'}">${kontrolLentur.n_ok ? 'AMAN' : 'TIDAK AMAN'}</span>` 
+            },
+            { parameter: "$A_{s,terpasang}$", hasil: formatNumber(hasilTulangan.Ast_i), satuan: 'mm²' },
+            { 
+                parameter: "$A_{s,terpasang} \\ge A_{s,perlu}$", 
+                isStatus: true, 
+                statusHtml: `<span class="${kontrolLentur.Ast_ok ? 'status-aman' : 'status-tidak-aman'}">${kontrolLentur.Ast_ok ? 'AMAN' : 'TIDAK AMAN'}</span>` 
+            },
+            { parameter: "$\\displaystyle \\rho = \\frac{A_{s,terpasang}}{b \\times h} \\times 100\\%$", hasil: formatNumber(hasilTulangan.rho, 3), satuan: '%' },
+            { 
+                parameter: "$\\rho \\ge 1\\%$", 
+                isStatus: true, 
+                statusHtml: `<span class="${kontrolLentur.rho_ok ? 'status-aman' : 'status-tidak-aman'}">${kontrolLentur.rho_ok ? 'AMAN' : 'TIDAK AMAN'}</span>` 
+            },
+            { parameter: "$\\displaystyle K = \\frac{M_u \\times 10^6}{\\phi_1 \\times b \\times d^2}$", hasil: formatNumber(hasilTulangan.K, 4), satuan: 'MPa' },
+            { parameter: "$K_{maks}$", hasil: formatNumber(hasilTulangan.Kmaks, 4), satuan: 'MPa' },
+            { 
+                parameter: "$K \\le K_{maks}$", 
+                isStatus: true, 
+                statusHtml: `<span class="${kontrolLentur.K_ok ? 'status-aman' : 'status-tidak-aman'}">${kontrolLentur.K_ok ? 'AMAN' : 'TIDAK AMAN'}</span>` 
             }
         ];
         
-        // TAMBAHAN: Untuk kondisi at2>ac, tampilkan perhitungan K
-        if (tulanganResult.kondisi === 'at2 > ac') {
-            rows.push({ 
-                parameter: "$K$ (Parameter momen ternormalisasi)", 
-                hasil: formatNumber(tulanganResult.K, 4), 
-                satuan: "MPa" 
-            });
-            
-            rows.push({ 
-                parameter: "$K_{maks}$", 
-                hasil: formatNumber(tulanganResult.Kmaks, 4), 
-                satuan: "MPa" 
-            });
-            
-            rows.push({ 
-                parameter: "$K \\le K_{maks}$", 
-                isComparison: true, 
-                statusHtml: `<span class="${kontrolLentur.K_ok ? 'status-aman' : 'status-tidak-aman'}">${kontrolLentur.K_ok ? 'AMAN' : 'TIDAK AMAN'}</span>`
-            });
-        }
-        
-        rows.push({ 
-            parameter: "<strong>Konfigurasi Tulangan</strong>", 
-            isFullRow: true, 
-            hasil: "", 
-            satuan: "" 
-        });
-        
-        rows.push({ 
-            parameter: "$A_{st,satu}$ (Luas satu tulangan)", 
-            hasil: formatNumber(tulanganResult.Ast_satu), 
-            satuan: "mm²" 
-        });
-        
-        rows.push({ 
-            parameter: "$n_{perlu}$ (Jumlah tulangan perlu)", 
-            hasil: tulanganResult.n_calculated || 'N/A', 
-            satuan: "batang" 
-        });
-        
-        rows.push({ 
-            parameter: "$n_{maks}$ (Jumlah maksimum tulangan)", 
-            hasil: tulanganResult.n_max || 'N/A', 
-            satuan: "batang" 
-        });
-        
-        rows.push({ 
-            parameter: "$n_{terpasang} \\le n_{maks}$", 
-            isComparison: true, 
-            statusHtml: `<span class="${kontrolLentur.n_ok ? 'status-aman' : 'status-tidak-aman'}">${kontrolLentur.n_ok ? 'AMAN' : 'TIDAK AMAN'}</span>`
-        });
-        
-        rows.push({ 
-            parameter: "$\\rho$ (Rasio tulangan)", 
-            hasil: formatNumber(tulanganResult.rho, 4), 
-            satuan: "%" 
-        });
-        
-        rows.push({ 
-            parameter: "$\\rho \\ge 1.0\\%$", 
-            isComparison: true, 
-            statusHtml: `<span class="${kontrolLentur.rho_ok ? 'status-aman' : 'status-tidak-aman'}">${kontrolLentur.rho_ok ? 'AMAN' : 'TIDAK AMAN'}</span>`
-        });
-        
-        rows.push({ 
-            parameter: `<strong>Digunakan Tulangan ${tulanganResult.n_terpakai || 'N/A'}D${tulanganResult.D || 'N/A'}</strong>`, 
-            isFullRow: true, 
-            hasil: "", 
-            satuan: "" 
-        });
-        
         return createThreeColumnTable(rows, true);
     }
-    
-    // ==============================================
-    // FUNGSI KHUSUS KOLOM: Tabel Perhitungan Begel
-    // ==============================================
-    function createBegelTable() {
-        const begelResult = getData('rekap.begel', {});
+
+    // Fungsi untuk membuat tabel perhitungan geser detail
+    function createGeserTableDetail() {
+        const begel = getData('data.begel', {});
         const kontrolGeser = getData('kontrol.geser', {});
-        const dimensi = getData('inputData.dimensi', {});
-        const material = getData('inputData.material', {});
+        const beban = getData('data.parsedInput.beban', {});
+        const dimensi = getData('data.Dimensi', {});
+        const material = getData('data.parsedInput.material', {});
         
-        const b = parseFloat(dimensi.b) || 300;
-        const h = parseFloat(dimensi.h) || 400;
-        const Ag = b * h;
-        const fc = parseFloat(material.fc) || 20;
-        const fyt = parseFloat(material.fyt) || 300;
+        const h = getData('data.parsedInput.dimensi.h', 0);
+        const b = getData('data.parsedInput.dimensi.b', 0);
+        const Ag = h * b;
         
-        let rows = [
-            { parameter: "<strong>Perhitungan Kapasitas Geser</strong>", hasil: "", satuan: "" },
-            { parameter: "$A_g = b \\times h$", hasil: formatNumber(Ag, 0), satuan: "mm²" },
-            { parameter: "$V_{c,\\phi}$ (Kontribusi beton)", hasil: formatNumber(begelResult.Vc_phi, 2), satuan: "kN" },
-            { parameter: "$V_s$ (Kebutuhan tulangan geser)", hasil: formatNumber(begelResult.Vs, 2), satuan: "kN" },
-            { parameter: "$V_{s,max}$ (Kapasitas geser maksimum)", hasil: formatNumber(begelResult.Vs_max, 2), satuan: "kN" },
+        const rows = [
+            { parameter: "$V_u$", hasil: formatNumber(beban.Vu || beban.vu), satuan: 'kN' },
+            { parameter: "$A_g = b \\times h$", hasil: formatNumber(Ag, 0), satuan: 'mm²' },
+            { parameter: "$\\displaystyle \\phi V_c = \\phi_2 \\times 0.17 \\times \\left(1 + \\frac{P_u \\times 1000}{14 \\times A_g}\\right) \\times \\lambda \\times \\sqrt{f'_c} \\times b \\times d / 1000$", hasil: formatNumber(begel.Vc_phi), satuan: 'kN' },
+            { parameter: "$V_s = (V_u - \\phi V_c) / \\phi_2$", hasil: formatNumber(begel.Vs), satuan: 'kN' },
+            { parameter: "$V_{s,max} = \\frac{2}{3} \\times \\sqrt{f'_c} \\times b \\times d / 1000$", hasil: formatNumber(begel.Vs_max), satuan: 'kN' },
             { 
                 parameter: "$V_s \\le V_{s,max}$", 
-                isComparison: true, 
-                statusHtml: `<span class="${kontrolGeser.Vs_ok ? 'status-aman' : 'status-tidak-aman'}">${kontrolGeser.Vs_ok ? 'AMAN' : 'TIDAK AMAN'}</span>`
+                isStatus: true, 
+                statusHtml: `<span class="${kontrolGeser.Vs_ok ? 'status-aman' : 'status-tidak-aman'}">${kontrolGeser.Vs_ok ? 'AMAN' : 'TIDAK AMAN'}</span>` 
+            },
+            { parameter: "$A_{v,u1} = 0.062 \\times \\sqrt{f'_c} \\times b \\times 1000 / f_{yt}$", hasil: formatNumber(begel.Avu1), satuan: 'mm²/m' },
+            { parameter: "$A_{v,u2} = 0.35 \\times b \\times 1000 / f_{yt}$", hasil: formatNumber(begel.Avu2), satuan: 'mm²/m' },
+            { parameter: "$A_{v,u3} = \\frac{V_s \\times 10^6}{f_{yt} \\times d}$", hasil: formatNumber(begel.Avu3), satuan: 'mm²/m' },
+            { parameter: "$A_{v,u} = \\max(A_{v,u1}, A_{v,u2}, A_{v,u3})$", hasil: formatNumber(begel.Av_u), satuan: 'mm²/m' },
+            { parameter: "$s$ (Jarak sengkang)", hasil: formatNumber(begel.s, 0), satuan: 'mm' },
+            { parameter: "$A_{v,terpasang}$", hasil: formatNumber(begel.Av_terpakai), satuan: 'mm²/m' },
+            { 
+                parameter: "$A_{v,terpasang} \\ge A_{v,u}$", 
+                isStatus: true, 
+                statusHtml: `<span class="${kontrolGeser.Av_ok ? 'status-aman' : 'status-tidak-aman'}">${kontrolGeser.Av_ok ? 'AMAN' : 'TIDAK AMAN'}</span>` 
             }
         ];
         
-        // Jika ada warning
-        if (begelResult.warning && begelResult.warning !== 'AMAN') {
-            rows.push({ 
-                parameter: "<strong>Peringatan</strong>", 
-                isFullRow: true, 
-                hasil: "", 
-                satuan: "" 
-            });
-            
-            rows.push({ 
-                parameter: begelResult.warning, 
-                isStatus: true, 
-                statusHtml: `<span class="status-tidak-aman">PERHATIAN</span>` 
-            });
-        }
-        
-        rows.push({ 
-            parameter: "<strong>Perhitungan Luas Sengkang Perlu</strong>", 
-            isFullRow: true, 
-            hasil: "", 
-            satuan: "" 
-        });
-        
-        rows.push({ 
-            parameter: "$A_{v,u1} = 0.062 \\sqrt{f'_c} \\dfrac{b \\cdot s}{f_{yt}}$", 
-            hasil: formatNumber(begelResult.Avu1, 2), 
-            satuan: "mm²/m" 
-        });
-        
-        rows.push({ 
-            parameter: "$A_{v,u2} = 0.35 \\dfrac{b \\cdot s}{f_{yt}}$", 
-            hasil: formatNumber(begelResult.Avu2, 2), 
-            satuan: "mm²/m" 
-        });
-        
-        rows.push({ 
-            parameter: "$A_{v,u3} = \\dfrac{V_s \\cdot s}{f_{yt} \\cdot d}$", 
-            hasil: formatNumber(begelResult.Avu3, 2), 
-            satuan: "mm²/m" 
-        });
-        
-        rows.push({ 
-            parameter: "$A_{v,u} = \\max(A_{v,u1}, A_{v,u2}, A_{v,u3})$", 
-            hasil: formatNumber(begelResult.Av_u, 2), 
-            satuan: "mm²/m" 
-        });
-        
-        rows.push({ 
-            parameter: "$A_{v,terpasang}$ (Luas sengkang terpasang)", 
-            hasil: formatNumber(begelResult.Av_terpakai, 2), 
-            satuan: "mm²/m" 
-        });
-        
-        rows.push({ 
-            parameter: "$A_{v,terpasang} \\ge A_{v,u}$", 
-            isComparison: true, 
-            statusHtml: `<span class="${kontrolGeser.Av_ok ? 'status-aman' : 'status-tidak-aman'}">${kontrolGeser.Av_ok ? 'AMAN' : 'TIDAK AMAN'}</span>`
-        });
-        
-        rows.push({ 
-            parameter: "$s$ (Jarak sengkang)", 
-            hasil: formatNumber(begelResult.s, 0), 
-            satuan: "mm" 
-        });
-        
-        const tulanganResult = getData('rekap.tulangan', {});
-        const diameterSengkang = tulanganResult.phi || 'N/A';
-        
-        rows.push({ 
-            parameter: `<strong>Digunakan Sengkang ɸ${diameterSengkang}-${formatNumber(begelResult.s, 0)}</strong>`, 
-            isFullRow: true, 
-            hasil: "", 
-            satuan: "" 
-        });
-        
         return createThreeColumnTable(rows, true);
     }
-    
-    // ==============================================
-    // FUNGSI KHUSUS KOLOM: Tabel Rekapitulasi Kolom
-    // ==============================================
-    function createRekapitulasiTableKolom() {
-        const tulanganResult = getData('rekap.tulangan', {});
-        const begelResult = getData('rekap.begel', {});
-        const formatted = getData('rekap.formatted', {});
+
+    // Fungsi untuk membuat tabel rekap hasil
+    function createRekapitulasiTable() {
+        const rekap = getData('rekap', {});
+        const tulangan = rekap?.tulangan || {};
+        const begel = rekap?.begel || {};
         
-        let html = '<table class="rekap-table">';
-        html += '<thead>';
-        html += '<tr>';
-        html += '<th class="rekap-col-tulangan" style="width: 40%">Parameter</th>';
-        html += '<th class="rekap-col-tumpuan" style="width: 60%">Hasil Desain</th>';
-        html += '</tr>';
-        html += '</thead>';
-        html += '<tbody>';
+        const rows = [
+            { 
+                parameter: "Tulangan Utama", 
+                hasil: rekap?.formatted?.tulangan_utama || 'N/A', 
+                satuan: '-' 
+            },
+            { 
+                parameter: "Sengkang/Begel", 
+                hasil: rekap?.formatted?.begel || 'N/A', 
+                satuan: '-' 
+            },
+            { 
+                parameter: "Eksentrisitas (e)", 
+                hasil: rekap?.formatted?.e || formatNumber(tulangan.e), 
+                satuan: 'mm' 
+            },
+            { 
+                parameter: "Rasio Tulangan (ρ)", 
+                hasil: formatNumber(tulangan.rho, 3), 
+                satuan: '%' 
+            },
+            { 
+                parameter: "Kontrol K", 
+                hasil: rekap?.formatted?.K || (tulangan.K_ok !== undefined ? (tulangan.K_ok ? 'AMAN' : 'TIDAK AMAN') : 'N/A'), 
+                satuan: '-' 
+            }
+        ];
         
-        html += '<tr class="row-merged">';
-        html += '<td class="rekap-col-tulangan text-bold vertical-middle">Dimensi Kolom</td>';
-        html += '<td class="rekap-col-tumpuan text-center">' + 
-                `${getData('inputData.dimensi.b', 'N/A')} × ${getData('inputData.dimensi.h', 'N/A')} mm` + 
-                '</td>';
-        html += '</tr>';
-        
-        html += '<tr>';
-        html += '<td class="rekap-col-tulangan text-bold vertical-middle">Tulangan Utama</td>';
-        html += '<td class="rekap-col-tumpuan text-center">' + 
-                (formatted.tulangan_utama || `${tulanganResult.n_terpakai || 'N/A'}D${tulanganResult.D || 'N/A'}`) + 
-                '</td>';
-        html += '</tr>';
-        
-        html += '<tr>';
-        html += '<td class="rekap-col-tulangan text-bold vertical-middle">Sengkang/Begel</td>';
-        html += '<td class="rekap-col-tumpuan text-center">' + 
-                (formatted.begel || `ɸ${tulanganResult.phi || 'N/A'}-${formatNumber(begelResult.s, 0)}`) + 
-                '</td>';
-        html += '</tr>';
-        
-        html += '<tr class="row-merged">';
-        html += '<td class="rekap-col-tulangan text-bold vertical-middle">Luas Tulangan (A<sub>st</sub>)</td>';
-        html += '<td class="rekap-col-tumpuan text-center">' + 
-                `${formatNumber(tulanganResult.Ast_i, 0)} mm²` + 
-                '</td>';
-        html += '</tr>';
-        
-        html += '<tr>';
-        html += '<td class="rekap-col-tulangan text-bold vertical-middle">Rasio Tulangan (ρ)</td>';
-        html += '<td class="rekap-col-tumpuan text-center">' + 
-                `${formatNumber(tulanganResult.rho, 3)} %` + 
-                '</td>';
-        html += '</tr>';
-        
-        // TAMBAHAN: Tampilkan informasi P_u vs P_u∅
-        if (formatted.Pu_vs_Pu_phi) {
-            html += '<tr class="row-merged">';
-            html += '<td class="rekap-col-tulangan text-bold vertical-middle">P<sub>u</sub> vs P<sub>u</sub>∅</td>';
-            html += '<td class="rekap-col-tumpuan text-center">' + 
-                    formatted.Pu_vs_Pu_phi + 
-                    '</td>';
-            html += '</tr>';
-        }
-        
-        // TAMBAHAN: Tampilkan informasi K vs K_maks untuk kondisi at2>ac
-        if (formatted.K) {
-            html += '<tr>';
-            html += '<td class="rekap-col-tulangan text-bold vertical-middle">Kontrol K</td>';
-            html += '<td class="rekap-col-tumpuan text-center">' + 
-                    formatted.K + 
-                    '</td>';
-            html += '</tr>';
-        }
-        
-        html += '<tr>';
-        html += '<td class="rekap-col-tulangan text-bold vertical-middle">Eksentrisitas (e)</td>';
-        html += '<td class="rekap-col-tumpuan text-center">' + 
-                formatted.e || `${formatNumber(tulanganResult.e, 2)} mm` + 
-                '</td>';
-        html += '</tr>';
-        
-        html += '</tbody>';
-        html += '</table>';
-        return html;
+        return createThreeColumnTable(rows, false, true);
     }
-    
-    // ==============================================
-    // FUNGSI KHUSUS KOLOM: Ringkasan Kontrol Keamanan
-    // ==============================================
-    function createKontrolTableKolom() {
+
+    // Fungsi untuk membuat ringkasan kontrol
+    function createKontrolTable() {
         const kontrolLentur = getData('kontrol.lentur', {});
         const kontrolGeser = getData('kontrol.geser', {});
         
         const rows = [
             { 
-                parameter: "$A_{st,terpasang} \\ge A_{st,u}$ (Kapasitas tulangan)", 
-                statusHtml: `<span class="${kontrolLentur.Ast_ok ? 'status-aman' : 'status-tidak-aman'}">${kontrolLentur.Ast_ok ? 'AMAN' : 'TIDAK AMAN'}</span>`
+                parameter: "$A_{s,terpasang} \\ge A_{s,perlu}$", 
+                statusHtml: `<span class="${kontrolLentur.Ast_ok ? 'status-aman' : 'status-tidak-aman'}">${kontrolLentur.Ast_ok ? 'AMAN' : 'TIDAK AMAN'}</span>` 
             },
             { 
-                parameter: "$\\rho \\ge 1.0\\%$ (Rasio tulangan minimum)", 
-                statusHtml: `<span class="${kontrolLentur.rho_ok ? 'status-aman' : 'status-tidak-aman'}">${kontrolLentur.rho_ok ? 'AMAN' : 'TIDAK AMAN'}</span>`
+                parameter: "$\\rho \\ge 1\\%$", 
+                statusHtml: `<span class="${kontrolLentur.rho_ok ? 'status-aman' : 'status-tidak-aman'}">${kontrolLentur.rho_ok ? 'AMAN' : 'TIDAK AMAN'}</span>` 
             },
             { 
-                parameter: "$n \\le n_{maks}$ (Jumlah tulangan)", 
-                statusHtml: `<span class="${kontrolLentur.n_ok ? 'status-aman' : 'status-tidak-aman'}">${kontrolLentur.n_ok ? 'AMAN' : 'TIDAK AMAN'}</span>`
-            },
-            // TAMBAHAN: Kontrol K untuk kondisi at2>ac
-            { 
-                parameter: "$K \\le K_{maks}$ (Kontrol momen ternormalisasi)", 
-                statusHtml: `<span class="${kontrolLentur.K_ok ? 'status-aman' : 'status-tidak-aman'}">${kontrolLentur.K_ok ? 'AMAN' : 'TIDAK AMAN'}</span>`
+                parameter: "$n \\le n_{maks}$", 
+                statusHtml: `<span class="${kontrolLentur.n_ok ? 'status-aman' : 'status-tidak-aman'}">${kontrolLentur.n_ok ? 'AMAN' : 'TIDAK AMAN'}</span>` 
             },
             { 
-                parameter: "$V_s \\le V_{s,max}$ (Kapasitas geser)", 
-                statusHtml: `<span class="${kontrolGeser.Vs_ok ? 'status-aman' : 'status-tidak-aman'}">${kontrolGeser.Vs_ok ? 'AMAN' : 'TIDAK AMAN'}</span>`
+                parameter: "$K \\le K_{maks}$", 
+                statusHtml: `<span class="${kontrolLentur.K_ok ? 'status-aman' : 'status-tidak-aman'}">${kontrolLentur.K_ok ? 'AMAN' : 'TIDAK AMAN'}</span>` 
             },
             { 
-                parameter: "$A_{v,terpasang} \\ge A_{v,u}$ (Luas sengkang)", 
-                statusHtml: `<span class="${kontrolGeser.Av_ok ? 'status-aman' : 'status-tidak-aman'}">${kontrolGeser.Av_ok ? 'AMAN' : 'TIDAK AMAN'}</span>`
+                parameter: "$V_s \\le V_{s,max}$", 
+                statusHtml: `<span class="${kontrolGeser.Vs_ok ? 'status-aman' : 'status-tidak-aman'}">${kontrolGeser.Vs_ok ? 'AMAN' : 'TIDAK AMAN'}</span>` 
+            },
+            { 
+                parameter: "$A_{v,terpasang} \\ge A_{v,u}$", 
+                statusHtml: `<span class="${kontrolGeser.Av_ok ? 'status-aman' : 'status-tidak-aman'}">${kontrolGeser.Av_ok ? 'AMAN' : 'TIDAK AMAN'}</span>` 
             }
         ];
         
         return createTwoColumnTable(rows);
     }
-    
-    // ==============================================
-    // FUNGSI KHUSUS KOLOM: Kesimpulan Dinamis Kolom
-    // ==============================================
-    function generateDynamicConclusionKolom() {
-        // Hitung status kolom secara dinamis
+
+    // Fungsi untuk membuat kesimpulan dinamis
+    function generateDynamicConclusion() {
         const statusKolom = cekStatusKolom();
-        
-        const dimensi = getData('inputData.dimensi', {});
-        const material = getData('inputData.material', {});
-        const beban = getData('inputData.beban', {});
-        const tulanganResult = getData('rekap.tulangan', {});
+        const dimensi = getData('data.parsedInput.dimensi', {});
+        const material = getData('data.parsedInput.material', {});
+        const beban = getData('data.parsedInput.beban', {});
+        const tulangan = getData('data.parsedInput.tulangan', {});
         const kontrolLentur = getData('kontrol.lentur', {});
         const kontrolGeser = getData('kontrol.geser', {});
         
-        // Analisis status per komponen
         let masalah = [];
         let rekomendasi = [];
         
-        // Analisis Lentur-Aksial
+        // Analisis masalah
         if (kontrolLentur) {
-            const lenturProblems = [];
-            
             if (!kontrolLentur.Ast_ok) {
-                lenturProblems.push("Luas tulangan tidak mencukupi untuk menahan beban lentur-aksial");
+                masalah.push("Luas tulangan terpasang tidak mencukupi");
+                rekomendasi.push("Tambah jumlah atau diameter tulangan utama");
             }
             if (!kontrolLentur.rho_ok) {
-                lenturProblems.push("Rasio tulangan kurang dari 1% (minimum SNI)");
+                masalah.push("Rasio tulangan kurang dari 1%");
+                rekomendasi.push("Tambah jumlah tulangan hingga ρ ≥ 1%");
             }
             if (!kontrolLentur.n_ok) {
-                lenturProblems.push("Jumlah tulangan melebihi kapasitas penampang");
+                masalah.push("Jumlah tulangan melebihi batas maksimum");
+                rekomendasi.push("Kurangi jumlah tulangan atau perbesar dimensi kolom");
             }
-            // TAMBAHAN: Kontrol K
             if (!kontrolLentur.K_ok) {
-                lenturProblems.push("Parameter momen ternormalisasi (K) melebihi batas maksimum");
-            }
-            
-            if (lenturProblems.length > 0) {
-                masalah.push(`<strong>Masalah pada tulangan lentur-aksial (${lenturProblems.length} masalah):</strong>`);
-                masalah.push(...lenturProblems.map(p => `<span class="problem-item">• ${p}</span>`));
-                rekomendasi.push("Perlu penambahan atau perubahan tulangan utama");
-                rekomendasi.push("Pertimbangkan untuk menambah jumlah atau diameter tulangan");
+                masalah.push("Nilai K melebihi Kmaks (momen terlalu besar)");
+                rekomendasi.push("Perbesar dimensi kolom atau tambah mutu beton");
             }
         }
         
-        // Analisis Geser
         if (kontrolGeser) {
-            const geserProblems = [];
-            
             if (!kontrolGeser.Vs_ok) {
-                geserProblems.push("Kapasitas geser tidak mencukupi, perlu perbesaran dimensi kolom");
+                masalah.push("Kebutuhan tulangan geser melebihi kapasitas maksimum");
+                rekomendasi.push("Perbesar dimensi kolom atau tambah mutu beton");
             }
             if (!kontrolGeser.Av_ok) {
-                geserProblems.push("Luas sengkang tidak memadai");
-            }
-            
-            if (geserProblems.length > 0) {
-                masalah.push(`<strong>Masalah pada tulangan geser (${geserProblems.length} masalah):</strong>`);
-                masalah.push(...geserProblems.map(p => `<span class="problem-item">• ${p}</span>`));
-                rekomendasi.push("Perlu penambahan atau pengurangan jarak sengkang");
-                rekomendasi.push("Pertimbangkan untuk menambah diameter sengkang atau jumlah kaki");
+                masalah.push("Luas sengkang tidak mencukupi");
+                rekomendasi.push("Perkecil jarak sengkang atau gunakan diameter sengkang lebih besar");
             }
         }
         
-        // Buat HTML kesimpulan dinamis
+        // Buat HTML kesimpulan
         let conclusionHTML = `
             <div class="section-group">
                 <h3>3. Kesimpulan</h3>
@@ -717,43 +519,40 @@
                     </h4>
         `;
         
-        // Ringkasan status
         if (statusKolom === 'aman') {
             conclusionHTML += `
                 <p><strong>Status:</strong> <span class="status-aman">SEMUA KONTROL AMAN</span></p>
                 <p>Struktur kolom dengan dimensi ${dimensi.b || 'N/A'} × ${dimensi.h || 'N/A'} mm memenuhi semua persyaratan SNI 2847:2019 untuk:</p>
                 <ul>
-                    <li>Kuat lentur dan aksial (P<sub>u</sub> = ${beban.Pu || 'N/A'} kN, M<sub>u</sub> = ${beban.Mu || 'N/A'} kNm)</li>
-                    <li>Kuat geser (V<sub>u</sub> = ${beban.Vu || 'N/A'} kN)</li>
-                    <li>Persyaratan rasio tulangan minimum (ρ ≥ 1%)</li>
-                    <li>Persyaratan detail tulangan dan sengkang</li>
+                    <li>Kuat lentur aksial dengan eksentrisitas</li>
+                    <li>Kuat geser</li>
+                    <li>Persyaratan rasio tulangan minimum</li>
+                    <li>Batasan jumlah tulangan maksimum</li>
                 </ul>
             `;
             
-            // Rekomendasi untuk kondisi aman
             rekomendasi = [
-                "Gunakan tulangan " + (tulanganResult.n_terpakai || 'N/A') + "D" + (tulanganResult.D || 'N/A') + " untuk tulangan utama",
-                "Gunakan sengkang ɸ" + (tulanganResult.phi || 'N/A') + " dengan jarak " + formatNumber(getData('rekap.begel.s', 'N/A'), 0) + " mm",
-                "Pastikan mutu beton mencapai f'c = " + (material.fc || 'N/A') + " MPa",
-                "Pastikan mutu baja mencapai fy = " + (material.fy || 'N/A') + " MPa",
-                "Pastikan tulangan didistribusi merata di semua sisi kolom",
-                "Lakukan pengecoran dengan metode yang sesuai standar"
+                `Gunakan tulangan utama ${getData('rekap.formatted.tulangan_utama', 'N/A')}`,
+                `Gunakan sengkang ${getData('rekap.formatted.begel', 'N/A')}`,
+                `Pastikan mutu beton mencapai f'c = ${formatNumber(material.fc)} MPa`,
+                `Pastikan mutu baja mencapai fy = ${formatNumber(material.fy)} MPa`,
+                "Lakukan pengecoran dengan metode yang sesuai standar",
+                "Perhatikan penempatan tulangan dan sengkang sesuai detil"
             ];
         } else {
             conclusionHTML += `
                 <p><strong>Status:</strong> <span class="status-tidak-aman">TIDAK AMAN - PERLU PERBAIKAN DESAIN</span></p>
                 <p>Ditemukan masalah pada beberapa aspek desain:</p>
                 <div style="margin: 8px 0 12px 0; padding: 8px; background-color: #f8f9fa; border-radius: 4px;">
-                    ${masalah.length > 0 ? masalah.join('') : '<p class="problem-item">• Terdapat masalah pada satu atau lebih kontrol keamanan</p>'}
+                    ${masalah.length > 0 ? masalah.map(m => `<p class="problem-item">• ${m}</p>`).join('') : '<p class="problem-item">• Terdapat masalah pada satu atau lebih kontrol keamanan</p>'}
                 </div>
             `;
             
-            // Rekomendasi tambahan untuk kondisi tidak aman
             if (masalah.length === 0) {
                 rekomendasi.push("Tinjau kembali dimensi kolom: " + (dimensi.b || 'N/A') + " × " + (dimensi.h || 'N/A') + " mm");
                 rekomendasi.push("Evaluasi ulang mutu material yang digunakan");
                 rekomendasi.push("Pertimbangkan untuk menggunakan tulangan dengan diameter lebih besar");
-                rekomendasi.push("Periksa kembali konfigurasi sengkang");
+                rekomendasi.push("Periksa kembali konfigurasi tulangan dan sengkang");
             }
         }
         
@@ -769,7 +568,8 @@
         conclusionHTML += `
             <p style="margin-top: 8px; font-size: 10pt; color: #666;">
                 <strong>Catatan:</strong> Hasil perhitungan ini berdasarkan SNI 2847:2019 (Persyaratan Beton Struktural untuk Bangunan Gedung). 
-                Kolom merupakan elemen struktur tekan utama, pastikan pelaksanaan sesuai dengan spesifikasi teknis dan dilakukan pengawasan yang ketat.
+                Pastikan semua aspek konstruksi sesuai dengan spesifikasi teknis dan dilakukan pengawasan yang memadai.
+                Untuk kolom dengan eksentrisitas besar, perhatikan juga kontrol stabilitas dan tekuk.
             </p>
         `;
         
@@ -780,14 +580,12 @@
         
         return conclusionHTML;
     }
-    
+
     // ==============================================
-    // FUNGSI UTAMA: Generate Content Blocks untuk Kolom
+    // FUNGSI UTAMA: Generate Content Blocks
     // ==============================================
     function generateContentBlocks() {
         const blocks = [];
-        
-        // Gunakan status kolom yang dihitung secara dinamis
         const statusKolomDinamis = cekStatusKolom();
         
         blocks.push(`
@@ -805,119 +603,84 @@
             <h2>A. DATA INPUT DAN PARAMETER</h2>
         `);
         
-        const materialDimensiRows = [
-            { parameter: "$f'_c$ (Kuat tekan beton)", hasil: getData('inputData.material.fc'), satuan: 'MPa' },
-            { parameter: "$f_y$ (Tegangan leleh tulangan lentur)", hasil: getData('inputData.material.fy'), satuan: 'MPa' },
-            { parameter: "$f_{yt}$ (Tegangan leleh tulangan geser)", hasil: getData('inputData.material.fyt', getData('inputData.material.fy')), satuan: 'MPa' },
-            { parameter: "$h$ (Tinggi kolom)", hasil: getData('inputData.dimensi.h'), satuan: 'mm' },
-            { parameter: "$b$ (Lebar kolom)", hasil: getData('inputData.dimensi.b'), satuan: 'mm' },
-            { parameter: "$S_b$ (Selimut beton)", hasil: getData('inputData.dimensi.sb', 40), satuan: 'mm' },
-            { parameter: "$\\lambda$ (Faktor agregat ringan)", hasil: getData('inputData.lanjutan.lambda', 1), satuan: '-' },
-            { parameter: "$n_{kaki}$ (Jumlah kaki sengkang)", hasil: getData('inputData.lanjutan.n_kaki', 2), satuan: '-' }
-        ];
-        
         blocks.push(`
             <div class="section-group">
                 <h3>1. Data Material dan Dimensi</h3>
-                ${createThreeColumnTable(materialDimensiRows, false, true)}
+                ${createMaterialDimensiTable()}
             </div>
         `);
         
         blocks.push(`
             <div class="section-group">
-                <h3>2. Data Beban Kolom</h3>
-                ${createBebanTableKolom()}
+                <h3>2. Data Beban</h3>
+                ${createBebanTable()}
             </div>
         `);
         
         blocks.push(`
             <div class="section-group">
                 <h3>3. Data Tulangan</h3>
-                ${createTulanganTableKolom()}
+                ${createTulanganTable()}
             </div>
         `);
         
         blocks.push(`
             <div class="section-group">
-                <h3>4. Perhitungan Parameter Dimensi</h3>
-                ${createParameterDimensiTable()}
+                <h3>4. Perhitungan Parameter</h3>
+                ${createParameterTable()}
             </div>
         `);
         
-        const headerB = `
+        blocks.push(`
             <div class="header-content-group">
-                <h2>B. ANALISIS KONDISI LENTUR-AKSIAL</h2>
-                <p class="note">Analisis interaksi lentur dan aksial pada kolom beton bertulang</p>
+                <h2>B. PERHITUNGAN TULANGAN LENTUR KOLOM</h2>
+                <p class="note">Perhitungan tulangan lentur dengan beban aksial dan momen (kolom dengan eksentrisitas)</p>
             </div>
-        `;
-        
-        blocks.push(headerB);
+        `);
         
         blocks.push(`
             <div class="section-group">
-                <h3>1. Parameter Kondisi</h3>
-                ${createKondisiTable()}
+                <h3>1. Analisis Lentur Aksial</h3>
+                ${createLenturTableDetail()}
             </div>
         `);
         
-        const headerC = `
+        blocks.push(`
             <div class="header-content-group">
-                <h2>C. PERHITUNGAN TULANGAN UTAMA</h2>
-                <p class="note">Perhitungan kebutuhan tulangan longitudinal untuk menahan beban lentur dan aksial</p>
+                <h2>C. PERHITUNGAN TULANGAN GESER (SENGKANG)</h2>
+                <p class="note">Perhitungan tulangan geser untuk menahan gaya geser pada kolom</p>
             </div>
-        `;
-        
-        blocks.push(headerC);
+        `);
         
         blocks.push(`
             <div class="section-group">
-                <h3>1. Kebutuhan Tulangan Lentur-Aksial</h3>
-                ${createTulanganUtamaTable()}
+                <h3>1. Analisis Geser</h3>
+                ${createGeserTableDetail()}
             </div>
         `);
         
-        const headerD = `
-            <div class="header-content-group keep-together">
-                <h2>D. PERHITUNGAN TULANGAN GESER (SENGKANG)</h2>
-                <p class="note">Perhitungan kebutuhan sengkang/begel untuk menahan gaya geser</p>
-            </div>
-        `;
-        
-        const contentD = `
-            <div class="section-group">
-                <h3>1. Kebutuhan Tulangan Geser</h3>
-                ${createBegelTable()}
-            </div>
-        `;
-        
-        blocks.push(headerD + contentD);
-        
-        const headerE = `
+        blocks.push(`
             <div class="header-content-group">
-                <h2>E. REKAPITULASI HASIL DESAIN</h2>
+                <h2>D. REKAPITULASI HASIL DESAIN</h2>
             </div>
-        `;
+        `);
         
-        const contentE1 = `
+        blocks.push(`
             <div class="section-group">
-                <h3>1. Spesifikasi Tulangan Terpasang</h3>
-                ${createRekapitulasiTableKolom()}
+                <h3>1. Tulangan Terpasang</h3>
+                ${createRekapitulasiTable()}
             </div>
-        `;
-        
-        blocks.push(headerE + contentE1);
+        `);
         
         blocks.push(`
             <div class="section-group">
                 <h3>2. Ringkasan Kontrol Keamanan</h3>
-                ${createKontrolTableKolom()}
+                ${createKontrolTable()}
             </div>
         `);
         
-        // Gunakan fungsi kesimpulan khusus kolom
-        blocks.push(generateDynamicConclusionKolom());
+        blocks.push(generateDynamicConclusion());
         
-        // Referensi
         blocks.push(`
             <p class="note" style="margin-top: 10px;">
                 <strong>Referensi:</strong> SNI 2847:2019 (Persyaratan Beton Struktural untuk Bangunan Gedung)
@@ -936,4 +699,3 @@
         getData: getData
     };
 })();
-[file content end]
