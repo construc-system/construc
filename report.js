@@ -1,5 +1,5 @@
 // report.js - Universal Report Renderer untuk semua modul
-// Versi 3.0 - Enhanced multi-module support
+// Versi 3.1 - Enhanced multi-module support with balok fix
 
 // Generator untuk step number
 function* createStepNumber() {
@@ -12,7 +12,7 @@ function* createStepNumber() {
 let stepNumberGenerator;
 
 document.addEventListener("DOMContentLoaded", function() {
-    console.log("📄 Report.js initialized - Enhanced multi-module support v3.0");
+    console.log("📄 Report.js initialized - Enhanced multi-module support v3.1");
     
     // Terapkan warna dari sessionStorage
     applyColorSettings();
@@ -260,7 +260,7 @@ function determineModuleFromKey(key) {
     return null;
 }
 
-// Fungsi untuk menjalankan renderer berdasarkan modul
+// ==================== MODULE RENDERER DISPATCHER ====================
 function executeModuleRenderer(module, result) {
     switch(module.toLowerCase()) {
         case 'kolom':
@@ -298,16 +298,65 @@ function executeModuleRenderer(module, result) {
             
         case 'balok':
         default:
-            console.log("🔄 Menjalankan renderer default untuk BALOK");
-            renderAllSections(result);
+            console.log("🔄 Menjalankan renderer untuk BALOK");
+            // Gunakan renderBalokReport jika tersedia
+            if (typeof window.renderBalokReport === 'function') {
+                window.renderBalokReport(result);
+            } else {
+                console.error('Fungsi renderBalokReport tidak ditemukan');
+                console.log("⚠ Menggunakan renderer default sebagai fallback");
+                renderAllSections(result);
+            }
             break;
     }
 }
 
-// Fallback jika renderer spesifik tidak tersedia
-function fallbackToDefaultRenderer(result) {
-    console.warn("Renderer spesifik tidak tersedia, menggunakan renderer default...");
-    renderAllSections(result);
+// ==================== FUNGSI RENDER UMUM (FALLBACK) ====================
+// Ini hanya digunakan sebagai fallback jika renderer spesifik tidak tersedia
+function renderAllSections(result) {
+    try {
+        console.log("🎨 Rendering semua section (fallback) untuk modul:", result.module);
+        
+        // Update judul
+        updateReportTitle(result);
+        
+        // Tampilkan data dalam format JSON di setiap container yang ada
+        const containers = [
+            { id: 'inputDataContainer', title: 'Data Input', data: result.inputData },
+            { id: 'resultContainer', title: 'Hasil Perhitungan', data: result.data },
+            { id: 'controlContainer', title: 'Kontrol', data: result.kontrol }
+        ];
+        
+        containers.forEach(container => {
+            const element = document.getElementById(container.id);
+            if (element) {
+                if (container.data && Object.keys(container.data).length > 0) {
+                    element.innerHTML = `
+                        <div class="data-card">
+                            <h3>${container.title}</h3>
+                            <pre style="font-size: 0.8rem; overflow: auto; max-height: 300px;">${JSON.stringify(container.data, null, 2)}</pre>
+                        </div>
+                    `;
+                } else {
+                    element.innerHTML = `<div class="data-card"><p>${container.title} tidak tersedia</p></div>`;
+                }
+            }
+        });
+        
+        // Untuk penampang, jika ada container-nya, tampilkan pesan
+        const penampangContainer = document.querySelector('.penampang-section');
+        if (penampangContainer) {
+            penampangContainer.innerHTML = `
+                <h2>PENAMPANG</h2>
+                <p>Gambar penampang tidak tersedia dalam mode fallback.</p>
+            `;
+        }
+        
+        console.log("✅ Fallback rendering selesai");
+    } catch (error) {
+        console.error('Error rendering sections:', error);
+        showError(`Error merender laporan: ${error.message}`);
+    }
 }
 
 // Fungsi utilitas untuk mendapatkan data dari sessionStorage dengan logging
@@ -359,25 +408,7 @@ function getResultFromStorage() {
     return { data, key: firstKey };
 }
 
-// ==================== FUNGSI RENDER UMUM ====================
-function renderAllSections(result) {
-    try {
-        console.log("🎨 Rendering semua section untuk modul:", result.module);
-        
-        renderInputData(result.inputData || {});
-        renderHasilPerhitungan(result);
-        renderRingkasan(result);
-        renderPenampang(result); // Tambahkan render penampang
-        
-        // Update judul laporan
-        updateReportTitle(result);
-        
-        console.log("✅ Semua section berhasil dirender");
-    } catch (error) {
-        console.error('Error rendering sections:', error);
-        showError(`Error merender laporan: ${error.message}`);
-    }
-}
+// ==================== FUNGSI UTILITAS ====================
 
 function updateReportTitle(result) {
     const module = (result.module || 'balok').toUpperCase();
@@ -390,151 +421,6 @@ function updateReportTitle(result) {
     
     console.log(`📝 Judul laporan: ${module} - ${mode}`);
 }
-
-// [Sisa fungsi renderInputData, renderHasilPerhitungan, renderRingkasan, dll tetap sama seperti sebelumnya]
-// ... (kode yang sudah ada untuk fungsi-fungsi render)
-
-// ==================== FUNGSI PENAMPANG DUAL VIEW ====================
-function renderPenampang(result) {
-    console.log("🎨 Rendering penampang untuk modul:", result.module);
-    
-    // Render untuk tumpuan
-    renderSinglePenampang(result, 'tumpuan', 'svg-container-tumpuan');
-    
-    // Render untuk lapangan  
-    renderSinglePenampang(result, 'lapangan', 'svg-container-lapangan');
-}
-
-function renderSinglePenampang(result, jenis, containerId) {
-    const container = document.getElementById(containerId);
-    if (!container) {
-        console.error(`Element #${containerId} tidak ditemukan`);
-        return;
-    }
-
-    const { data, inputData, mode } = result;
-    
-    if (!data || !inputData) {
-        console.error("Data tidak lengkap untuk render penampang");
-        container.innerHTML = '<p style="text-align: center; color: #888;">Data penampang tidak tersedia</p>';
-        return;
-    }
-
-    try {
-        // Ambil data dimensi
-        const dimensi = inputData.dimensi || {};
-        const lebar = parseFloat(dimensi.b) || 300;
-        const tinggi = parseFloat(dimensi.h) || 500;
-        const sb = parseFloat(dimensi.sb) || 30;
-
-        // Ambil data material dan tulangan
-        const material = inputData.material || {};
-        const tulangan = inputData.tulangan || {};
-
-        // Tentukan D dan phi berdasarkan mode
-        let D, phi;
-        if (mode === 'evaluasi' && tulangan) {
-            D = parseFloat(tulangan.d) || 19;
-            phi = parseFloat(tulangan.phi) || 10;
-        } else {
-            // Untuk mode desain, gunakan nilai default atau dari hasil optimasi
-            D = 19;
-            phi = 10;
-        }
-
-        // Tentukan jumlah tulangan berdasarkan jenis (tumpuan/lapangan)
-        let jumlahAtas, jumlahBawah;
-        
-        if (jenis === 'tumpuan') {
-            // Untuk tumpuan, gunakan jumlah maksimum dari kiri/kanan
-            jumlahAtas = Math.max(
-                data.tulanganKirinegatif?.n || 2,
-                data.tulanganKanannegatif?.n || 2
-            );
-            jumlahBawah = Math.max(
-                data.tulanganKiripositif?.n || 3,
-                data.tulanganKananpositif?.n || 3
-            );
-        } else { // lapangan
-            // Untuk lapangan, gunakan jumlah dari tengah
-            jumlahAtas = data.tulanganTengahnegatif?.n || 2;
-            jumlahBawah = data.tulanganTengahpositif?.n || 3;
-        }
-
-        // Tentukan jumlah tulangan torsi dan jarak berdasarkan jenis penampang
-        let jumlahTorsi, jarakTorsi;
-
-        if (jenis === 'tumpuan') {
-            // Untuk tumpuan, ambil maksimum dari kiri/kanan
-            jumlahTorsi = Math.max(
-                data.torsikiri?.n || 0,
-                data.torsikanan?.n || 0
-            );
-            // Jarak torsi menggunakan spasi begel minimum
-            jarakTorsi = Math.min(
-                parseFloat(data.begelkiri?.sTerkecil) || 100,
-                parseFloat(data.begelkanan?.sTerkecil) || 100
-            );
-        } else { // lapangan
-            jumlahTorsi = data.torsitengah?.n || 0;
-            jarakTorsi = parseFloat(data.begeltengah?.sTerkecil) || 100;
-        }
-
-        // Ambil m dari hasil perhitungan
-        const m = data.m || 3;
-
-        console.log(`📐 Data untuk penampang ${jenis}:`, {
-            lebar, tinggi, D, phi, jumlahAtas, jumlahBawah, sb, m, jumlahTorsi, jarakTorsi
-        });
-
-        // Tampilkan loading terlebih dahulu
-        container.innerHTML = `
-            <div style="text-align: center; padding: 1rem; color: #666;">
-                <p>Memuat gambar ${jenis}...</p>
-                <p style="font-size: 0.8rem; margin-top: 0.5rem;">
-                    ${jumlahBawah}D${D} bawah, ${jumlahAtas}D${D} atas
-                    ${jumlahTorsi > 0 ? `, ${jumlahTorsi}D${D} torsi` : ''}
-                </p>
-            </div>
-        `;
-
-        // Panggil fungsi render dari cut-generator dengan parameter lengkap
-        if (typeof window.renderPenampangBalok === 'function') {
-            window.renderPenampangBalok({
-                lebar: lebar,
-                tinggi: tinggi,
-                D: D,
-                begel: phi,
-                jumlahAtas: jumlahAtas,
-                jumlahBawah: jumlahBawah,
-                selimut: sb,
-                m: m,
-                jumlahTorsi: jumlahTorsi,
-                jarakTorsi: jarakTorsi
-            }, containerId);
-            
-        } else {
-            console.warn("cut-generator.js belum dimuat");
-            container.innerHTML = `
-                <div style="text-align: center; padding: 1rem; color: #dc3545;">
-                    <p>Gagal memuat gambar</p>
-                    <p style="font-size: 0.8rem;">Modul tidak tersedia</p>
-                </div>
-            `;
-        }
-
-    } catch (error) {
-        console.error(`Error rendering penampang ${jenis}:`, error);
-        container.innerHTML = `
-            <div style="text-align: center; padding: 1rem; color: #dc3545;">
-                <p>Error memuat gambar</p>
-                <p style="font-size: 0.8rem;">${error.message}</p>
-            </div>
-        `;
-    }
-}
-
-// ==================== FUNGSI UTILITAS ====================
 
 function showError(message) {
     console.error("❌ Error:", message);
@@ -622,5 +508,6 @@ window.renderAllSections = renderAllSections;
 window.showError = showError;
 window.updateReportTitle = updateReportTitle;
 window.getResultFromStorage = getResultFromStorage;
+window.loadAndRenderResult = loadAndRenderResult;
 
-console.log("✅ report.js loaded successfully - Enhanced multi-module support v3.0");
+console.log("✅ report.js loaded successfully - Enhanced multi-module support v3.1");

@@ -114,6 +114,21 @@
         return numFloat.toFixed(decimals);
     }
 
+    // Fungsi untuk format timestamp
+    function formatTimestampFull(timestamp) {
+        if (!timestamp) return 'N/A';
+        const date = new Date(timestamp);
+        return date.toLocaleDateString('id-ID', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+    }
+
     // Fungsi untuk membuat tabel 3 kolom
     function createThreeColumnTable(rows, withStatus = false, isDataTable = false) {
         let html = '<table class="three-col-table">';
@@ -237,7 +252,7 @@
         return createThreeColumnTable(rows, false, true);
     }
     
-    // Fungsi untuk membuat tabel perhitungan lentur lengkap
+    // Fungsi untuk membuat tabel perhitungan lentur lengkap (DIPERBAIKI)
     function createLenturTableFull(data, status, d_eff, fc, fy, b, title, Mu) {
         // Gunakan nilai dari data jika ada, jika tidak gunakan N/A
         const As1 = data && d_eff !== 'N/A' && fc !== 'N/A' && fy !== 'N/A' && b !== 'N/A' && data.a && data.a !== 'N/A' ? 
@@ -249,6 +264,11 @@
         const a2 = data && data.AsTerpakai !== 'N/A' && data.AsTerpakai && fy !== 'N/A' && fc !== 'N/A' && b !== 'N/A' ? 
             formatNumber((parseFloat(data.AsTerpakai) * parseFloat(fy)) / (0.85 * parseFloat(fc) * parseFloat(b))) : 'N/A';
         
+        // Ambil diameter tulangan yang benar dari fungsi getTulanganInfo()
+        const tulanganInfo = getTulanganInfo();
+        const diameterTulangan = tulanganInfo.D;
+        const jumlahTulangan = data?.n || 'N/A';
+        
         const rows = [
             { parameter: "$\\displaystyle K = \\frac{M_u}{\\phi b d^2}$", hasil: formatNumber(data?.K), satuan: 'MPa' },
             { parameter: "$K \\le K_{maks}$", isStatus: true, statusHtml: `<span class="${status?.K_aman ? 'status-aman' : 'status-tidak-aman'}">${status?.K_aman ? 'AMAN' : 'TIDAK AMAN'}</span>` },
@@ -257,7 +277,7 @@
             { parameter: "$\\displaystyle A_{s2} = \\frac{\\sqrt{f'_c}}{4f_y} b d$", hasil: As2, satuan: 'mm²' },
             { parameter: "$\\displaystyle A_{s3} = \\frac{1.4}{f_y} b d$", hasil: As3, satuan: 'mm²' },
             { parameter: "$A_{s,perlu} = \\max(A_{s1}, A_{s2}, A_{s3})$", hasil: formatNumber(data?.As), satuan: 'mm²' },
-            { parameter: "$\\displaystyle n = \\frac{A_{s,perlu}}{A_{D19}}$", hasil: data?.n || 'N/A', satuan: 'batang' },
+            { parameter: "$\\displaystyle n = \\frac{A_{s,perlu}}{A_{D19}}$", hasil: jumlahTulangan, satuan: 'batang' },
             { parameter: "$A_{s,terpasang} = n \\times (0.25 \\times \\pi \\times D^2)$", hasil: formatNumber(data?.AsTerpakai), satuan: 'mm²' },
             { parameter: "$\\displaystyle \\rho = \\frac{A_{s,terpasang}}{b \\times d} \\times 100\\%$", hasil: formatNumber(data?.rho, 4), satuan: '%' },
             { parameter: "$\\displaystyle \\rho_{min} = \\max\\left(\\frac{\\sqrt{f'_c}}{4f_y}, \\frac{1.4}{f_y}\\right) \\times 100\\%$", hasil: formatNumber(data?.pmin, 4), satuan: '%' },
@@ -267,7 +287,7 @@
             { parameter: "$\\displaystyle M_n = A_{s,terpasang} \\times f_y \\times (d - a/2)$", hasil: formatNumber(data?.Mn), satuan: 'kNm' },
             { parameter: "$\\displaystyle M_d = \\phi \\times M_n$", hasil: formatNumber(data?.Md), satuan: 'kNm' },
             { parameter: "$M_d \\ge M_u$", isStatus: true, statusHtml: `<span class="${status?.Md_aman ? 'status-aman' : 'status-tidak-aman'}">${status?.Md_aman ? 'AMAN' : 'TIDAK AMAN'}</span>` },
-            { parameter: `<strong>Digunakan Tulangan ${data?.n || 'N/A'}D${getData('inputData.tulangan.d', 'N/A')}</strong>`, isFullRow: true, hasil: "", satuan: "" }
+            { parameter: `<strong>Digunakan Tulangan ${jumlahTulangan}D${diameterTulangan}</strong>`, isFullRow: true, hasil: "", satuan: "" }
         ];
         
         return createThreeColumnTable(rows, true);
