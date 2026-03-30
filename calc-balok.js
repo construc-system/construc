@@ -535,7 +535,7 @@ function hitungBegel(Vu, fc, fyt, b, dmin, phi, lambda, n_val, fr2, mode = "desa
 
     const Av1 = 0.062 * sqrtFc * b * 1000 / fyt;
     const Av2 = 0.35 * b * 1000 / fyt;
-    const Av3 = (fyt > 0 && dmin > 0) ? (Vs * 1e3 * 1000) / (fyt * dmin) : 0;
+    const Av3 = (fyt > 0 && dmin > 0 && Vu > phiVc) ? (Vs * 1e3 * 1000) / (fyt * dmin) : 0;
 
     const Av_u = Math.max(Av1, Av2, Av3);
     const luasSengkang = n_val * 0.25 * Math.PI * phi ** 2;
