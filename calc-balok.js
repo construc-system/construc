@@ -264,7 +264,7 @@ function hitungEvaluasi(data, options = {}) {
     let ms1, ms2;
 
     // Hitung m (jumlah maksimal tulangan per baris)
-    const selimut = 40;
+    const selimut = sb;
     const Snv = Math.max(25, D);
     const ds1 = ceil5(selimut + phi + D / 2);
     const m = Math.max(1, Math.floor((b - 2 * ds1) / (D + sb)) + 1);
