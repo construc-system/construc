@@ -125,15 +125,21 @@ window.modules.kolom = {
           </div>
         </div>
         <div class="field">
-          <label>M<sub>u</sub></label>
-          <div class="input-with-unit" data-unit="kNm">
-            <input data-key="mu" placeholder="Momen Ultimit" value="${escapeHtml(currentState['mu'] || '')}">
-          </div>
-        </div>
-        <div class="field">
           <label>V<sub>u</sub></label>
           <div class="input-with-unit" data-unit="kN">
             <input data-key="vu" placeholder="Gaya Geser Ultimit" value="${escapeHtml(currentState['vu'] || '')}">
+          </div>
+        </div>
+        <div class="field">
+          <label>M<sub>ux</sub></label>
+          <div class="input-with-unit" data-unit="kNm">
+            <input data-key="mux" placeholder="Momen Ultimit Arah X" value="${escapeHtml(currentState['mux'] || '')}">
+          </div>
+        </div>
+        <div class="field">
+          <label>M<sub>uy</sub></label>
+          <div class="input-with-unit" data-unit="kNm">
+            <input data-key="muy" placeholder="Momen Ultimit Arah Y" value="${escapeHtml(currentState['muy'] || '')}">
           </div>
         </div>
       </div>
@@ -334,8 +340,8 @@ window.modules.kolom = {
       }
     });
 
-    // Field wajib dari Data Beban
-    const bebanFields = ['pu', 'mu', 'vu'];
+    // Field wajib dari Data Beban (Pu, Vu, Mux, Muy)
+    const bebanFields = ['pu', 'vu', 'mux', 'muy'];
     bebanFields.forEach(field => {
       if (!state[field] || state[field].toString().trim() === '') {
         missingFields.push(`${this.getBebanFieldLabel(field)} (Data Beban)`);
@@ -367,8 +373,9 @@ window.modules.kolom = {
   getBebanFieldLabel: function(field) {
     const labels = {
       'pu': 'Pu (Beban Aksial Ultimit)',
-      'mu': 'Mu (Momen Ultimit)',
-      'vu': 'Vu (Gaya Geser Ultimit)'
+      'vu': 'Vu (Gaya Geser Ultimit)',
+      'mux': 'Mux (Momen Ultimit Arah X)',
+      'muy': 'Muy (Momen Ultimit Arah Y)'
     };
     return labels[field] || field;
   },
@@ -404,8 +411,9 @@ window.modules.kolom = {
       },
       beban: {
         pu: state.pu,
-        mu: state.mu,
-        vu: state.vu
+        vu: state.vu,
+        mux: state.mux,
+        muy: state.muy
       },
       material: quickInputs,
       lanjutan: {
@@ -486,8 +494,9 @@ window.modules.kolom = {
     // Data Beban
     variablesList.push("\n=== DATA BEBAN ===");
     variablesList.push(`Pu: ${data.beban.pu} kN`);
-    variablesList.push(`Mu: ${data.beban.mu} kNm`);
     variablesList.push(`Vu: ${data.beban.vu} kN`);
+    variablesList.push(`Mux: ${data.beban.mux} kNm`);
+    variablesList.push(`Muy: ${data.beban.muy} kNm`);
     
     // Data Lanjutan
     variablesList.push("\n=== DATA LANJUTAN ===");

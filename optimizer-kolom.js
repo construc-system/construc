@@ -1,5 +1,5 @@
 // ============================================================================
-// KONFIGURASI OPTIMIZER KOLOM
+// KONFIGURASI OPTIMIZER KOLOM (BIAXIAL)
 // ============================================================================
 const OPTIMIZER_KOLOM = {
     D_KOLOM: [10, 13, 16, 19, 22, 25, 29, 32, 36],
@@ -25,13 +25,14 @@ function validateKolomInput(inputData) {
 }
 
 // ============================================================================
-// FUNGSI KONTROL KHUSUS KOLOM
+// FUNGSI KONTROL KHUSUS KOLOM (BIAXIAL)
 // ============================================================================
 function isKontrolKolomAman(kontrol, kondisi, dataHasil) {
     if (!kontrol || !kontrol.lentur || !kontrol.geser) return false;
     
     const { lentur, geser } = kontrol;
     
+    // Kontrol dasar
     const kontrolWajib = (
         lentur.Ast_ok === true &&
         lentur.rho_ok === true && 
@@ -42,9 +43,10 @@ function isKontrolKolomAman(kontrol, kondisi, dataHasil) {
     
     if (!kontrolWajib) return false;
     
-    const isKondisi6 = kondisi === 'at2 > ac' || kondisi === 'kondisi6';
-    if (isKondisi6 && lentur.K_ok !== true) return false;
+    // Untuk biaxial, K_ok sudah mencakup kedua arah (AND)
+    if (lentur.K_ok !== undefined && lentur.K_ok !== true) return false;
     
+    // Jika ada data hasil, pastikan n terpasang cukup
     if (dataHasil) {
         const nDibutuhkan = Math.ceil(dataHasil.Ast_u / dataHasil.Ast_satu);
         const nTerpasang = dataHasil.n_terpakai || 0;
@@ -55,7 +57,7 @@ function isKontrolKolomAman(kontrol, kondisi, dataHasil) {
 }
 
 // ============================================================================
-// FUNGSI SKOR OPTIMALITAS KOLOM
+// FUNGSI SKOR OPTIMALITAS KOLOM (tetap)
 // ============================================================================
 function hitungSkorOptimalitasKolom(result, D, phi) {
     try {
@@ -121,10 +123,10 @@ function saveTop10ToSessionStorage(hasilTerbaik, semuaHasil, inputData) {
 }
 
 // ============================================================================
-// OPTIMIZER UTAMA KHUSUS KOLOM
+// OPTIMIZER UTAMA KHUSUS KOLOM (BIAXIAL)
 // ============================================================================
 async function optimizeKolom(inputData) {
-    console.log('🚀 OPTIMIZER KOLOM DIMULAI...');
+    console.log('🚀 OPTIMIZER KOLOM BIAXIAL DIMULAI...');
     
     try {
         validateKolomInput(inputData);
@@ -141,7 +143,7 @@ async function optimizeKolom(inputData) {
         rawData = inputData;
     }
     
-    console.log(`📊 Kolom ${rawData.dimensi?.b}x${rawData.dimensi?.h} mm | Pu=${rawData.beban?.Pu} kN`);
+    console.log(`📊 Kolom ${rawData.dimensi?.b}x${rawData.dimensi?.h} mm | Pu=${rawData.beban?.Pu} kN | Mux=${rawData.beban?.Mux} kNm | Muy=${rawData.beban?.Muy} kNm`);
     
     let kombinasiList = [];
     for (const D of OPTIMIZER_KOLOM.D_KOLOM) {
@@ -261,7 +263,7 @@ async function optimizeKolom(inputData) {
         return {
             status: "error",
             code: "NO_VALID_COMBINATION",
-            message: "Tidak ditemukan kombinasi tulangan yang memenuhi semua kontrol untuk kolom ini."
+            message: "Tidak ditemukan kombinasi tulangan yang memenuhi semua kontrol untuk kolom ini (biaxial)."
         };
     }
     
@@ -280,12 +282,19 @@ async function optimizeKolom(inputData) {
             status_n: hasilTerbaik.result.data.hasilTulangan.status,
             e: hasilTerbaik.result.data.hasilTulangan.e,
             Pu: rawData.beban?.Pu,
-            Mu: rawData.beban?.Mu,
+            Mux: rawData.beban?.Mux,   // Ganti Mu dengan Mux
+            Muy: rawData.beban?.Muy,   // Tambah Muy
             Pu_phi: hasilTerbaik.result.data.hasilTulangan.Pu_phi,
-            K: hasilTerbaik.result.data.hasilTulangan.K,
+            K: hasilTerbaik.result.data.hasilTulangan.K,          // Gabungan
+            K_X: hasilTerbaik.result.data.hasilTulangan.K_X,      // Tambah arah X
+            K_Y: hasilTerbaik.result.data.hasilTulangan.K_Y,      // Tambah arah Y
             Kmaks: hasilTerbaik.result.data.hasilTulangan.Kmaks,
-            K_ok: !hasilTerbaik.result.data.hasilTulangan.K_melebihi_Kmaks,
+            K_ok: hasilTerbaik.result.data.hasilTulangan.K_ok,    // Gabungan
+            K_ok_X: hasilTerbaik.result.data.hasilTulangan.K_ok_X,
+            K_ok_Y: hasilTerbaik.result.data.hasilTulangan.K_ok_Y,
             kondisi: hasilTerbaik.kondisi,
+            kondisi_X: hasilTerbaik.result.data.hasilTulangan.kondisi_X,
+            kondisi_Y: hasilTerbaik.result.data.hasilTulangan.kondisi_Y,
             faktorPhi: hasilTerbaik.result.data.hasilTulangan.faktorPhi,
             minimum_diterapkan: hasilTerbaik.minimum_diterapkan
         },
@@ -331,4 +340,4 @@ if (typeof window !== 'undefined') {
     window.hitungSkorOptimalitasKolom = hitungSkorOptimalitasKolom;
 }
 
-console.log("✅ optimizer-kolom.js loaded - Lengkap dengan semua perbaikan");
+console.log("✅ optimizer-kolom.js loaded - BIAXIAL READY (Mux & Muy)");

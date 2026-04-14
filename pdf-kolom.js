@@ -1,5 +1,56 @@
-// pdf-kolom.js
+// pdf-kolom.js (Final - Fixed: Tulangan Utama = nX+nY-4, Rasio dihitung ulang)
 (function() {
+    // ==============================================
+    // CSS YANG DIPERBAIKI UNTUK PAGE BREAK (PRINT MEDIA)
+    // ==============================================
+    const style = document.createElement('style');
+    style.textContent = `
+        /* Aturan umum untuk layar dan cetak */
+        .section-group {
+            break-inside: auto;
+            page-break-inside: auto;
+        }
+        table {
+            break-inside: auto;
+            page-break-inside: auto;
+        }
+        tr {
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+        h2, h3 {
+            page-break-after: avoid;
+            break-after: avoid;
+        }
+        .keep-together {
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+        @media print {
+            .section-group {
+                break-inside: auto !important;
+                page-break-inside: auto !important;
+            }
+            table {
+                break-inside: auto !important;
+                page-break-inside: auto !important;
+            }
+            tr {
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+            }
+            h2, h3 {
+                page-break-after: avoid !important;
+                break-after: avoid !important;
+            }
+            .keep-together {
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+
     let resultData;
 
     function setData(data) {
@@ -117,7 +168,7 @@
     }
 
     function createThreeColumnTable(rows, withStatus = false, isDataTable = false) {
-        let html = '<table class="three-col-table">';
+        let html = '<table class="three-col-table" style="break-inside: auto; page-break-inside: auto;">';
         
         if (isDataTable) {
             html += '<tr>';
@@ -190,7 +241,7 @@
     }
 
     function createTwoColumnTable(rows) {
-        let html = '<table class="two-col-table">';
+        let html = '<table class="two-col-table" style="break-inside: auto; page-break-inside: auto;">';
         html += '<tr>';
         html += '<th class="col-param-2">Parameter</th>';
         html += '<th class="col-status-2" style="text-align: center">Status</th>';
@@ -219,28 +270,97 @@
         return html;
     }
 
-    // Fungsi untuk membuat tabel 2 kolom untuk tulangan terpasang
+    // ==============================================
+    // FUNGSI UNTUK MENDAPATKAN TOTAL BATANG DAN RASIO TOTAL (MODE DESAIN) - DIPERBAIKI
+    // ==============================================
+    function getTotalBatangDanRasio() {
+        const mode = getData('mode', 'evaluasi');
+        const dimensi = getData('data.parsedInput.dimensi', {});
+        const b = dimensi.b || 1;
+        const h = dimensi.h || 1;
+        
+        let D = getData('data.D', null);
+        if (!D) D = getData('data.parsedInput.tulangan.d_tul', null);
+        if (!D) D = getData('data.parsedInput.tulangan.d', 16);
+        const Ast_satu = Math.PI * D * D / 4;
+        
+        if (mode === 'desain') {
+            const nX = getData('data.hasilTulangan.hasilArahX.n_terpakai', 0);
+            const nY = getData('data.hasilTulangan.hasilArahY.n_terpakai', 0);
+            let totalBatang = nX + nY - 4;
+            if (totalBatang < 0) totalBatang = 0;
+            const Ast_total = totalBatang * Ast_satu;
+            const rho_total = (Ast_total / (b * h)) * 100;
+            return { totalBatang, Ast_total, rho_total, D };
+        } else {
+            const n = getData('data.hasilTulangan.n_terpakai', 0);
+            const Ast_total = n * Ast_satu;
+            const rho_total = (Ast_total / (b * h)) * 100;
+            return { totalBatang: n, Ast_total, rho_total, D };
+        }
+    }
+
+    // Fungsi untuk membuat tabel 2 kolom untuk tulangan terpasang - DIPERBAIKI: total batang = nX+nY-4 dan rasio dihitung ulang
     function createTulanganTerpasangTable() {
+        const mode = getData('mode', 'evaluasi');
         const rekap = getData('rekap', {});
-        const tulangan = rekap?.tulangan || {};
-        const begel = rekap?.begel || {};
+        const formatted = rekap.formatted || {};
+        let begel = formatted.begel || 'N/A';
+        
+        let tulanganUtama = 'N/A';
+        let rhoTotal = 'N/A';
+        
+        if (mode === 'desain') {
+            // Hitung total batang dari nX dan nY
+            const nX = getData('data.hasilTulangan.hasilArahX.n_terpakai', 0);
+            const nY = getData('data.hasilTulangan.hasilArahY.n_terpakai', 0);
+            let totalBatang = nX + nY - 4;
+            if (totalBatang < 0) totalBatang = 0;
+            
+            let D = getData('data.D', null);
+            if (!D) D = getData('data.parsedInput.tulangan.d_tul', null);
+            if (!D) D = getData('data.parsedInput.tulangan.d', 16);
+            
+            if (totalBatang > 0 && D) {
+                tulanganUtama = `${totalBatang}D${D}`;
+                // Hitung ulang rasio berdasarkan total batang
+                const b = getData('data.parsedInput.dimensi.b', 1);
+                const h = getData('data.parsedInput.dimensi.h', 1);
+                const Ast_satu = Math.PI * D * D / 4;
+                const Ast_total = totalBatang * Ast_satu;
+                const rho = (Ast_total / (b * h)) * 100;
+                rhoTotal = formatNumber(rho, 3) + ' %';
+            }
+        } else {
+            // Mode evaluasi: ambil dari rekap
+            if (rekap.tulangan) {
+                const n = rekap.tulangan.n_terpakai;
+                const D = rekap.tulangan.D;
+                if (n && D) tulanganUtama = `${n}D${D}`;
+                if (rekap.tulangan.rho !== undefined) rhoTotal = formatNumber(rekap.tulangan.rho, 3) + ' %';
+            }
+            if (tulanganUtama === 'N/A' && formatted.tulangan_utama) tulanganUtama = formatted.tulangan_utama;
+        }
+        
+        // Fallback jika masih N/A
+        if (tulanganUtama === 'N/A') {
+            const { totalBatang, rho_total, D } = getTotalBatangDanRasio();
+            if (totalBatang > 0 && D) tulanganUtama = `${totalBatang}D${D}`;
+            if (rhoTotal === 'N/A') rhoTotal = formatNumber(rho_total, 3) + ' %';
+        }
+        
+        if (begel === 'N/A' && rekap.begel && rekap.begel.s) {
+            const phi = getData('data.parsedInput.tulangan.phi_tul', 8);
+            begel = `Φ${phi}-${rekap.begel.s}`;
+        }
         
         const rows = [
-            {
-                parameter: "Tulangan Utama",
-                hasil: rekap?.formatted?.tulangan_utama || 'N/A'
-            },
-            {
-                parameter: "Sengkang/Begel",
-                hasil: rekap?.formatted?.begel || 'N/A'
-            },
-            {
-                parameter: "Rasio Tulangan (ρ)",
-                hasil: formatNumber(tulangan.rho, 3) + ' %'
-            }
+            { parameter: "Tulangan Utama", hasil: tulanganUtama },
+            { parameter: "Sengkang/Begel", hasil: begel },
+            { parameter: "Rasio Tulangan (ρ)", hasil: rhoTotal }
         ];
         
-        let html = '<table class="two-col-table tulangan-terpasang">';
+        let html = '<table class="two-col-table tulangan-terpasang" style="break-inside: auto; page-break-inside: auto;">';
         html += '<tr>';
         html += '<th class="col-tulangan">Tulangan</th>';
         html += '<th class="col-terpasang" style="text-align: center">Terpasang</th>';
@@ -283,7 +403,8 @@
         
         const rows = [
             { parameter: "$P_u$ (Beban aksial)", hasil: formatNumber(beban.Pu || beban.pu), satuan: 'kN' },
-            { parameter: "$M_u$ (Momen lentur)", hasil: formatNumber(beban.Mu || beban.mu), satuan: 'kNm' },
+            { parameter: "$M_{ux}$ (Momen arah X)", hasil: formatNumber(beban.Mux || beban.mux), satuan: 'kNm' },
+            { parameter: "$M_{uy}$ (Momen arah Y)", hasil: formatNumber(beban.Muy || beban.muy), satuan: 'kNm' },
             { parameter: "$V_u$ (Gaya geser)", hasil: formatNumber(beban.Vu || beban.vu), satuan: 'kN' }
         ];
         
@@ -293,10 +414,12 @@
     function createTulanganTable() {
         const tulangan = getData('data.parsedInput.tulangan', {});
         const mode = getData('mode', 'evaluasi');
+        const D = tulangan.d_tul || tulangan.d || getData('data.D', 'N/A');
+        const phi = tulangan.phi_tul || tulangan.phi || getData('data.phi', 'N/A');
         
         const rows = [
-            { parameter: "D (Diameter tulangan utama)", hasil: formatNumber(tulangan.d || tulangan.d_tul || getData('data.D', 'N/A'), 0), satuan: 'mm' },
-            { parameter: "ɸ (Diameter tulangan sengkang)", hasil: formatNumber(tulangan.phi || tulangan.phi_tul || getData('data.phi', 'N/A'), 0), satuan: 'mm' }
+            { parameter: "D (Diameter tulangan utama)", hasil: formatNumber(D, 0), satuan: 'mm' },
+            { parameter: "ɸ (Diameter tulangan sengkang)", hasil: formatNumber(phi, 0), satuan: 'mm' }
         ];
         
         if (mode === 'evaluasi') {
@@ -309,23 +432,29 @@
         return createThreeColumnTable(rows, false, true);
     }
 
+    // ==============================================
+    // TABEL PARAMETER (dengan D yang benar)
+    // ==============================================
     function createParameterTable() {
-        const dimensi = getData('data.Dimensi', {});
-        const hasilTulangan = getData('data.hasilTulangan', {});
+        const dimensiGlobal = getData('data.Dimensi', {});
         const material = getData('data.parsedInput.material', {});
         const tulangan = getData('data.parsedInput.tulangan', {});
-        const lanjutan = getData('data.parsedInput.lanjutan', {});
         
         const fc = material.fc || 20;
-        const fy = material.fy || 300;
-        const b = dimensi.b || 300;
-        const h = dimensi.h || 400;
-        const sb = dimensi.sb || 40;
-        const phi = tulangan.phi || tulangan.phi_tul || 8;
-        const D = tulangan.d || tulangan.d_tul || 16;
-        const ds = dimensi.ds || (sb + phi + D/2);
+        const b = dimensiGlobal.b || 300;
+        const h = dimensiGlobal.h || 400;
+        const sb = dimensiGlobal.sb || 40;
+        const phi = tulangan.phi_tul || tulangan.phi || 8;
+        const D = tulangan.d_tul || tulangan.d || getData('data.D', 16);
+        const ds = dimensiGlobal.ds || (sb + phi + D/2);
         
         const beta1_calc = fc <= 28 ? 0.85 : (fc < 55 ? 0.85 - 0.05 * ((fc - 28) / 7) : 0.65);
+        
+        const m_X_calc = Math.floor((b - 2 * ds) / (D + sb)) + 1;
+        const m_Y_calc = Math.floor((h - 2 * ds) / (D + sb)) + 1;
+        
+        const m_X = getData('data.hasilTulangan.hasilArahX.m', m_X_calc);
+        const m_Y = getData('data.hasilTulangan.hasilArahY.m', m_Y_calc);
         
         const rows = [
             { 
@@ -334,60 +463,34 @@
                 satuan: 'mm' 
             },
             { 
-                parameter: "$\\displaystyle d = h - d_s$", 
-                hasil: formatNumber(dimensi.d), 
+                parameter: "$\\displaystyle d_X = h - d_s$ (untuk arah X)", 
+                hasil: formatNumber(dimensiGlobal.d_X || (h - ds)), 
                 satuan: 'mm' 
             },
             { 
-                parameter: "$\\displaystyle m = \\left\\lfloor \\dfrac{b - 2d_s}{D + s_b} \\right\\rfloor + 1$", 
-                hasil: formatNumber(dimensi.m, 0), 
+                parameter: "$\\displaystyle d_Y = b - d_s$ (untuk arah Y)", 
+                hasil: formatNumber(dimensiGlobal.d_Y || (b - ds)), 
+                satuan: 'mm' 
+            },
+            { 
+                parameter: "$\\displaystyle m_X = \\left\\lfloor \\dfrac{b - 2d_s}{D + s_b} \\right\\rfloor + 1$", 
+                hasil: formatNumber(m_X, 0), 
+                satuan: '-' 
+            },
+            { 
+                parameter: "$\\displaystyle m_Y = \\left\\lfloor \\dfrac{h - 2d_s}{D + s_b} \\right\\rfloor + 1$", 
+                hasil: formatNumber(m_Y, 0), 
                 satuan: '-' 
             },
             { 
                 parameter: "$\\displaystyle S_n = \\max(40, 1.5 \\times D)$", 
-                hasil: formatNumber(dimensi.Sn), 
+                hasil: formatNumber(dimensiGlobal.Sn), 
                 satuan: 'mm' 
             },
             { 
                 parameter: "$\\displaystyle \\beta_1 = \\begin{cases} 0.85 & f'_c \\leq 28 \\text{ MPa} \\\\ 0.85 - 0.05\\dfrac{f'_c - 28}{7} & 28 < f'_c < 55 \\text{ MPa} \\\\ 0.65 & f'_c \\geq 55 \\text{ MPa} \\end{cases}$", 
-                hasil: formatNumber(dimensi.beta1 || beta1_calc, 3), 
+                hasil: formatNumber(dimensiGlobal.beta1 || beta1_calc, 3), 
                 satuan: '-' 
-            },
-            { 
-                parameter: "$\\displaystyle a_b = \\dfrac{600 \\beta_1 d}{600 + f_y}$", 
-                hasil: formatNumber(hasilTulangan.ab), 
-                satuan: 'mm' 
-            },
-            { 
-                parameter: "$\\displaystyle a_c = \\dfrac{P_u \\times 1000}{0.65 \\times 0.85 \\times f'_c \\times b}$", 
-                hasil: formatNumber(hasilTulangan.ac), 
-                satuan: 'mm' 
-            },
-            { 
-                parameter: "$\\displaystyle a_{b1} = \\dfrac{600 \\beta_1 d}{600 - f_y}$", 
-                hasil: formatNumber(hasilTulangan.ab1), 
-                satuan: 'mm' 
-            },
-            { 
-                parameter: "$\\displaystyle a_{b2} = \\beta_1 d$", 
-                hasil: formatNumber(hasilTulangan.ab2), 
-                satuan: 'mm' 
-            },
-            { 
-                parameter: "$\\displaystyle a_{t1} = \\dfrac{600 \\beta_1 d_s}{600 - f_y}$", 
-                hasil: formatNumber(hasilTulangan.at1), 
-                satuan: 'mm' 
-            },
-            { 
-                parameter: "$\\displaystyle a_{t2} = \\beta_1 d_s$", 
-                hasil: formatNumber(hasilTulangan.at2), 
-                satuan: 'mm' 
-            },
-            { 
-                parameter: "Kondisi yang berlaku", 
-                hasil: hasilTulangan.kondisi || 'N/A',
-                satuan: '',
-                isConditionValue: true
             }
         ];
         
@@ -395,18 +498,30 @@
     }
 
     // ==============================================
-    // FUNGSI DIPERBAIKI: Analisis Tulangan Lentur dengan Detail Kondisi
+    // BAGIAN 1: PERHITUNGAN KONDISI PENAMPANG (ab, ac, at, ab1, ab2, kondisi)
     // ==============================================
-    function createLenturTableDetail() {
-        const hasilTulangan = getData('data.hasilTulangan', {});
-        const kontrolLentur = getData('kontrol.lentur', {});
-        const beban = getData('data.parsedInput.beban', {});
-        const dimensi = getData('data.Dimensi', {});
-        const material = getData('data.parsedInput.material', {});
-        
-        const semuaKondisi = hasilTulangan.semuaKondisi || {};
-        const kondisi = hasilTulangan.kondisi || '';
-        const kondisiAktif = getData('kondisiAktif', {}) || {};
+    function createKondisiPenampangTableForArah(arah) {
+        const hasilArah = getData(`data.hasilTulangan.hasilArah${arah}`, {});
+        const rows = [
+            { parameter: "$\\displaystyle a_b = \\dfrac{600 \\beta_1 d}{600 + f_y}$", hasil: formatNumber(hasilArah.ab), satuan: 'mm' },
+            { parameter: "$\\displaystyle a_c = \\dfrac{P_u \\times 1000}{0.65 \\times 0.85 \\times f'_c \\times b}$", hasil: formatNumber(hasilArah.ac), satuan: 'mm' },
+            { parameter: "$\\displaystyle a_{b1} = \\dfrac{600 \\beta_1 d}{600 - f_y}$", hasil: formatNumber(hasilArah.ab1), satuan: 'mm' },
+            { parameter: "$\\displaystyle a_{b2} = \\beta_1 d$", hasil: formatNumber(hasilArah.ab2), satuan: 'mm' },
+            { parameter: "$\\displaystyle a_{t1} = \\dfrac{600 \\beta_1 d_s}{600 - f_y}$", hasil: formatNumber(hasilArah.at1), satuan: 'mm' },
+            { parameter: "$\\displaystyle a_{t2} = \\beta_1 d_s$", hasil: formatNumber(hasilArah.at2), satuan: 'mm' },
+            { parameter: "Kondisi yang berlaku", hasil: hasilArah.kondisi, isConditionValue: true }
+        ];
+        return createThreeColumnTable(rows, false);
+    }
+
+    // ==============================================
+    // BAGIAN 2: ANALISIS TULANGAN LENTUR - DIPERBAIKI (ρ = As/(b*h))
+    // ==============================================
+    function createAnalisisTulanganLenturTableForArah(arah) {
+        const hasilArah = getData(`data.hasilTulangan.hasilArah${arah}`, {});
+        const semuaKondisi = hasilArah.semuaKondisi || {};
+        const kondisi = hasilArah.kondisi || '';
+        const kondisiAktif = hasilArah.kondisiDetail || {};
         
         let kondisiData = null;
         
@@ -426,14 +541,51 @@
         
         const tampilkanK = kondisi === 'at2 > ac';
         
+        const beban = getData('data.parsedInput.beban', {});
+        const Mu = arah === 'X' ? (beban.Mux || beban.mux || 0) : (beban.Muy || beban.muy || 0);
+        const Pu = beban.Pu || beban.pu || 0;
+        
+        const kontrolLentur = getData('kontrol.lentur', {});
+        const K_ok = arah === 'X' ? kontrolLentur.K_ok_X : kontrolLentur.K_ok_Y;
+        
+        const d = hasilArah.inputVariables?.d || (arah === 'X' ? getData('data.Dimensi.d_X', 0) : getData('data.Dimensi.d_Y', 0));
+        const ds = hasilArah.inputVariables?.ds || getData('data.Dimensi.ds', 0);
+        const beta1 = hasilArah.beta1 || getData('data.Dimensi.beta1', 0.85);
+        const fy = getData('data.parsedInput.material.fy', 300);
+        const fc = getData('data.parsedInput.material.fc', 20);
+        const b = getData('data.parsedInput.dimensi.b', 300);
+        const h = getData('data.parsedInput.dimensi.h', 400);
+        
+        // Hitung As_terpasang dari n_terpakai dan D yang valid
+        const n = hasilArah.n_terpakai !== undefined ? hasilArah.n_terpakai : (hasilArah.n || 'N/A');
+        let D_tul = hasilArah.D;
+        if (!D_tul) D_tul = getData('data.parsedInput.tulangan.d_tul', null);
+        if (!D_tul) D_tul = getData('data.parsedInput.tulangan.d', null);
+        if (!D_tul) D_tul = getData('data.D', 'N/A');
+        
+        let As_terpasang = 'N/A';
+        let rho_arah = 'N/A';
+        if (n !== 'N/A' && D_tul !== 'N/A' && !isNaN(parseFloat(n)) && !isNaN(parseFloat(D_tul))) {
+            const nVal = parseFloat(n);
+            const Dval = parseFloat(D_tul);
+            const Ast_satu = Math.PI * Dval * Dval / 4;
+            As_terpasang = nVal * Ast_satu;
+            // PERBAIKAN: ρ per arah = As_terpasang / (b * h) * 100% (bukan b*d)
+            const b_val = parseFloat(b);
+            const h_val = parseFloat(h);
+            if (!isNaN(b_val) && !isNaN(h_val) && b_val > 0 && h_val > 0) {
+                rho_arah = (As_terpasang / (b_val * h_val)) * 100;
+            }
+        }
+        
         const rows = [
-            { parameter: "$P_u$", hasil: formatNumber(beban.Pu || beban.pu), satuan: 'kN' },
-            { parameter: "$M_u$", hasil: formatNumber(beban.Mu || beban.mu), satuan: 'kNm' },
-            { parameter: "$\\displaystyle e = \\dfrac{M_u}{P_u} \\times 1000$", hasil: formatNumber(hasilTulangan.e), satuan: 'mm' },
-            { parameter: "$\\displaystyle P_{u\\phi} = 0.1 \\cdot f'_c \\cdot b \\cdot h / 1000$", hasil: formatNumber(hasilTulangan.Pu_phi), satuan: 'kN' },
+            { parameter: "$P_u$", hasil: formatNumber(Pu), satuan: 'kN' },
+            { parameter: `$M_u$ (Arah ${arah.toLowerCase()})`, hasil: formatNumber(Mu), satuan: 'kNm' },
+            { parameter: "$\\displaystyle e = \\dfrac{M_u}{P_u} \\times 1000$", hasil: formatNumber(hasilArah.e), satuan: 'mm' },
+            { parameter: "$\\displaystyle P_{u\\phi} = 0.1 \\cdot f'_c \\cdot b \\cdot h / 1000$", hasil: formatNumber(hasilArah.Pu_phi), satuan: 'kN' },
             { 
                 parameter: "$\\displaystyle \\phi = \\begin{cases} 0.65 & \\text{jika } a_c > a_b \\text{ atau } P_u \\geq P_{u\\phi} \\\\ 0.9 - 0.25 \\cdot \\dfrac{P_u}{P_{u\\phi}} & \\text{jika } P_u < P_{u\\phi} \\end{cases}$", 
-                hasil: formatNumber(hasilTulangan.faktorPhi), 
+                hasil: formatNumber(hasilArah.faktorPhi), 
                 satuan: '-' 
             }
         ];
@@ -441,139 +593,57 @@
         if (kondisiData && !kondisiData.error) {
             if (kondisi === 'ac > ab1') {
                 rows.push(
-                    { 
-                        parameter: "<strong>Perhitungan Kondisi 1: $a_c > a_{b1}$</strong>", 
-                        isFullRow: true 
-                    },
-                    { 
-                        parameter: "$\\displaystyle A_1 = A_2 = \\dfrac{1.25 \\cdot \\dfrac{P_u}{\\phi} - 0.85 f'_c b h}{2(f_y - 0.85 f'_c)}$", 
-                        hasil: formatNumber(kondisiData.A1), 
-                        satuan: 'mm²' 
-                    }
+                    { parameter: "<strong>Perhitungan Kondisi 1: $a_c > a_{b1}$</strong>", isFullRow: true },
+                    { parameter: "$\\displaystyle A_1 = A_2 = \\dfrac{1.25 \\cdot \\dfrac{P_u}{\\phi} - 0.85 f'_c b h}{2(f_y - 0.85 f'_c)}$", hasil: formatNumber(kondisiData.A1), satuan: 'mm²' }
                 );
             } 
             else if (kondisi === 'ab1 > ac > ab2') {
                 rows.push(
-                    { 
-                        parameter: "<strong>Perhitungan Kondisi 2: $a_{b1} > a_c > a_{b2}$</strong>", 
-                        isFullRow: true 
-                    },
-                    { 
-                        parameter: "$\\displaystyle a_{p1} = \\dfrac{(600 - f_y)(d - d_s)}{600 + f_y}$", 
-                        hasil: formatNumber(kondisiData.ap1), 
-                        satuan: 'mm' 
-                    },
+                    { parameter: "<strong>Perhitungan Kondisi 2: $a_{b1} > a_c > a_{b2}$</strong>", isFullRow: true },
+                    { parameter: "$\\displaystyle a_{p1} = \\dfrac{(600 - f_y)(d - d_s)}{600 + f_y}$", hasil: formatNumber(kondisiData.ap1), satuan: 'mm' },
                     { parameter: "$R_1 = -(a_b + a_{p1} + h)$", hasil: formatNumber(kondisiData.R1), satuan: 'mm' },
                     { parameter: "$R_2 = 2a_b d + a_c(a_{p1} + 2e)$", hasil: formatNumber(kondisiData.R2), satuan: 'mm²' },
                     { parameter: "$R_3 = -a_c a_b(d - d_s + 2e)$", hasil: formatNumber(kondisiData.R3), satuan: 'mm³' },
-                    { 
-                        parameter: "$f(a) = a^3 + R_1 \\cdot a^2 + R_2 \\cdot a + R_3 = 0$", 
-                        hasil: formatNumber(kondisiData.a_cubic), 
-                        satuan: 'mm' 
-                    },
-                    { 
-                        parameter: "$\\displaystyle A_1 = A_2 = \\dfrac{a(P_u/\\phi - 0.85 f'_c a b)}{(600 + f_y)a - 600\\beta_1 d}$", 
-                        hasil: formatNumber(kondisiData.A1), 
-                        satuan: 'mm²' 
-                    }
+                    { parameter: "$f(a) = a^3 + R_1 \\cdot a^2 + R_2 \\cdot a + R_3 = 0$", hasil: formatNumber(kondisiData.a_cubic), satuan: 'mm' },
+                    { parameter: "$\\displaystyle A_1 = A_2 = \\dfrac{a(P_u/\\phi - 0.85 f'_c a b)}{(600 + f_y)a - 600\\beta_1 d}$", hasil: formatNumber(kondisiData.A1), satuan: 'mm²' }
                 );
             }
             else if (kondisi === 'ab2 > ac > ab') {
                 rows.push(
-                    { 
-                        parameter: "<strong>Perhitungan Kondisi 3: $a_{b2} > a_c > a_b$</strong>", 
-                        isFullRow: true 
-                    },
-                    { 
-                        parameter: "$\\displaystyle a_{p2} = \\dfrac{2f_y d_s + 1200d}{600 + f_y}$", 
-                        hasil: formatNumber(kondisiData.ap2), 
-                        satuan: 'mm' 
-                    },
+                    { parameter: "<strong>Perhitungan Kondisi 3: $a_{b2} > a_c > a_b$</strong>", isFullRow: true },
+                    { parameter: "$\\displaystyle a_{p2} = \\dfrac{2f_y d_s + 1200d}{600 + f_y}$", hasil: formatNumber(kondisiData.ap2), satuan: 'mm' },
                     { parameter: "$R_4 = -(a_b + a_{p2})$", hasil: formatNumber(kondisiData.R4), satuan: 'mm' },
                     { parameter: "$R_5 = 2a_b d - a_c(h - a_{p2} - 2e)$", hasil: formatNumber(kondisiData.R5), satuan: 'mm²' },
                     { parameter: "$R_6 = -a_c a_b(d - d_s + 2e)$", hasil: formatNumber(kondisiData.R6), satuan: 'mm³' },
-                    { 
-                        parameter: "$f(a) = a^3 + R_4 \\cdot a^2 + R_5 \\cdot a + R_6 = 0$", 
-                        hasil: formatNumber(kondisiData.a_cubic), 
-                        satuan: 'mm' 
-                    },
-                    { 
-                        parameter: "$\\displaystyle A_1 = A_2 = \\dfrac{a(P_u/\\phi - 0.85 f'_c a b)}{(600 + f_y)a - 600\\beta_1 d}$", 
-                        hasil: formatNumber(kondisiData.A1), 
-                        satuan: 'mm²' 
-                    }
+                    { parameter: "$f(a) = a^3 + R_4 \\cdot a^2 + R_5 \\cdot a + R_6 = 0$", hasil: formatNumber(kondisiData.a_cubic), satuan: 'mm' },
+                    { parameter: "$\\displaystyle A_1 = A_2 = \\dfrac{a(P_u/\\phi - 0.85 f'_c a b)}{(600 + f_y)a - 600\\beta_1 d}$", hasil: formatNumber(kondisiData.A1), satuan: 'mm²' }
                 );
             }
             else if (kondisi === 'ab > ac > at1') {
                 rows.push(
-                    { 
-                        parameter: "<strong>Perhitungan Kondisi 4: $a_b > a_c > a_{t1}$</strong>", 
-                        isFullRow: true 
-                    },
-                    { 
-                        parameter: "$\\displaystyle A_1 = A_2 = \\dfrac{0.5 P_u (2e - h + a_c)}{\\phi (d - d_s) f_y}$", 
-                        hasil: formatNumber(kondisiData.A1), 
-                        satuan: 'mm²' 
-                    }
+                    { parameter: "<strong>Perhitungan Kondisi 4: $a_b > a_c > a_{t1}$</strong>", isFullRow: true },
+                    { parameter: "$\\displaystyle A_1 = A_2 = \\dfrac{0.5 P_u (2e - h + a_c)}{\\phi (d - d_s) f_y}$", hasil: formatNumber(kondisiData.A1), satuan: 'mm²' }
                 );
             }
             else if (kondisi === 'at1 > ac > at2') {
                 rows.push(
-                    { 
-                        parameter: "<strong>Perhitungan Kondisi 5: $a_{t1} > a_c > a_{t2}$</strong>", 
-                        isFullRow: true 
-                    },
-                    { 
-                        parameter: "$\\displaystyle a_{p3} = \\dfrac{2f_y d - 1200d_s}{600 - f_y}$", 
-                        hasil: formatNumber(kondisiData.ap3), 
-                        satuan: 'mm' 
-                    },
+                    { parameter: "<strong>Perhitungan Kondisi 5: $a_{t1} > a_c > a_{t2}$</strong>", isFullRow: true },
+                    { parameter: "$\\displaystyle a_{p3} = \\dfrac{2f_y d - 1200d_s}{600 - f_y}$", hasil: formatNumber(kondisiData.ap3), satuan: 'mm' },
                     { parameter: "$R_7 = a_{p3} - a_{t1}$", hasil: formatNumber(kondisiData.R7), satuan: 'mm' },
                     { parameter: "$R_8 = a_c(2e - h - a_{p3}) + 2a_{t1} d_s$", hasil: formatNumber(kondisiData.R8), satuan: 'mm²' },
                     { parameter: "$R_9 = a_c a_{t1}(d - d_s - 2e)$", hasil: formatNumber(kondisiData.R9), satuan: 'mm³' },
-                    { 
-                        parameter: "$f(a) = a^3 + R_7 \\cdot a^2 + R_8 \\cdot a + R_9 = 0$", 
-                        hasil: formatNumber(kondisiData.a_cubic), 
-                        satuan: 'mm' 
-                    },
-                    { 
-                        parameter: "$\\displaystyle A_1 = A_2 = \\dfrac{a(P_u/\\phi - 0.85 f'_c a b)}{(600 + f_y)a - 600\\beta_1 d}$", 
-                        hasil: formatNumber(kondisiData.A1), 
-                        satuan: 'mm²' 
-                    }
+                    { parameter: "$f(a) = a^3 + R_7 \\cdot a^2 + R_8 \\cdot a + R_9 = 0$", hasil: formatNumber(kondisiData.a_cubic), satuan: 'mm' },
+                    { parameter: "$\\displaystyle A_1 = A_2 = \\dfrac{a(P_u/\\phi - 0.85 f'_c a b)}{(600 + f_y)a - 600\\beta_1 d}$", hasil: formatNumber(kondisiData.A1), satuan: 'mm²' }
                 );
             }
             else if (kondisi === 'at2 > ac') {
                 rows.push(
-                    { 
-                        parameter: "<strong>Perhitungan Kondisi 6: $a_{t2} > a_c$</strong>", 
-                        isFullRow: true 
-                    },
-                    { 
-                        parameter: "$\\displaystyle K = \\dfrac{M_u \\times 10^6}{\\phi_1 b d^2}$", 
-                        hasil: formatNumber(kondisiData.K, 4), 
-                        satuan: 'MPa' 
-                    },
-                    { 
-                        parameter: "$\\displaystyle K_{maks} = \\dfrac{382.5 \\beta_1 f'_c (600 + f_y - 225\\beta_1)}{(600 + f_y)^2}$", 
-                        hasil: formatNumber(kondisiData.Kmaks, 4), 
-                        satuan: 'MPa' 
-                    },
-                    { 
-                        parameter: "$\\displaystyle a = \\left(1 - \\sqrt{1 - \\dfrac{2K}{0.85 f'_c}}\\right) d$", 
-                        hasil: formatNumber(kondisiData.a_flexure), 
-                        satuan: 'mm' 
-                    },
-                    { 
-                        parameter: "$\\displaystyle A_{s1} = \\dfrac{0.85 f'_c a b}{f_y}$", 
-                        hasil: formatNumber(kondisiData.As1), 
-                        satuan: 'mm²' 
-                    },
-                    { 
-                        parameter: "$\\displaystyle A_{s2} = \\dfrac{1.4 b d}{f_y}$", 
-                        hasil: formatNumber(kondisiData.As2), 
-                        satuan: 'mm²' 
-                    }
+                    { parameter: "<strong>Perhitungan Kondisi 6: $a_{t2} > a_c$</strong>", isFullRow: true },
+                    { parameter: "$\\displaystyle K = \\dfrac{M_u \\times 10^6}{\\phi_1 b d^2}$", hasil: formatNumber(kondisiData.K, 4), satuan: 'MPa' },
+                    { parameter: "$\\displaystyle K_{maks} = \\dfrac{382.5 \\beta_1 f'_c (600 + f_y - 225\\beta_1)}{(600 + f_y)^2}$", hasil: formatNumber(kondisiData.Kmaks, 4), satuan: 'MPa' },
+                    { parameter: "$\\displaystyle a = \\left(1 - \\sqrt{1 - \\dfrac{2K}{0.85 f'_c}}\\right) d$", hasil: formatNumber(kondisiData.a_flexure), satuan: 'mm' },
+                    { parameter: "$\\displaystyle A_{s1} = \\dfrac{0.85 f'_c a b}{f_y}$", hasil: formatNumber(kondisiData.As1), satuan: 'mm²' },
+                    { parameter: "$\\displaystyle A_{s2} = \\dfrac{1.4 b d}{f_y}$", hasil: formatNumber(kondisiData.As2), satuan: 'mm²' }
                 );
             }
             
@@ -586,13 +656,9 @@
             }
         }
         
-        const n = hasilTulangan.n || 0;
-        const D = getData('data.parsedInput.tulangan.d', 16);
-        const As_terpasang = n * Math.PI * Math.pow(D, 2) / 4;
-        
         rows.push(
-            { parameter: "$\\displaystyle n = \\dfrac{A_{s,perlu}}{0.25 \\cdot \\pi \\cdot D^2}$", hasil: formatNumber(hasilTulangan.n, 0), satuan: 'batang' },
-            { parameter: "$n_{maks} = 2 \\cdot m$", hasil: formatNumber(hasilTulangan.n_max, 0), satuan: 'batang' },
+            { parameter: "$\\displaystyle n = \\dfrac{A_{s,perlu}}{0.25 \\cdot \\pi \\cdot D^2}$", hasil: formatNumber(n, 0), satuan: 'batang' },
+            { parameter: "$n_{maks} = 2 \\cdot m$", hasil: formatNumber(hasilArah.n_max, 0), satuan: 'batang' },
             { 
                 parameter: "$n \\le n_{maks}$", 
                 isStatus: true, 
@@ -608,9 +674,13 @@
                 isStatus: true, 
                 statusHtml: `<span class="${kontrolLentur.Ast_ok ? 'status-aman' : 'status-tidak-aman'}">${kontrolLentur.Ast_ok ? 'AMAN' : 'TIDAK AMAN'}</span>` 
             },
-            { parameter: "$\\displaystyle \\rho = \\dfrac{A_{s,terpasang}}{b \\cdot h} \\times 100\\%$", hasil: formatNumber(hasilTulangan.rho, 3), satuan: '%' },
             { 
-                parameter: "$\\rho \\ge 1\\%$", 
+                parameter: "$\\displaystyle \\rho = \\dfrac{A_{s,terpasang}}{b \\cdot h} \\times 100\\%$", 
+                hasil: formatNumber(rho_arah, 3), 
+                satuan: '%' 
+            },
+            { 
+                parameter: "$\\rho_{min} = 1\\%$ (syarat SNI)", 
                 isStatus: true, 
                 statusHtml: `<span class="${kontrolLentur.rho_ok ? 'status-aman' : 'status-tidak-aman'}">${kontrolLentur.rho_ok ? 'AMAN' : 'TIDAK AMAN'}</span>` 
             }
@@ -621,7 +691,7 @@
                 { 
                     parameter: "$K \\le K_{maks}$", 
                     isStatus: true, 
-                    statusHtml: `<span class="${kontrolLentur.K_ok ? 'status-aman' : 'status-tidak-aman'}">${kontrolLentur.K_ok ? 'AMAN' : 'TIDAK AMAN'}</span>` 
+                    statusHtml: `<span class="${K_ok ? 'status-aman' : 'status-tidak-aman'}">${K_ok ? 'AMAN' : 'TIDAK AMAN'}</span>` 
                 }
             );
         }
@@ -630,7 +700,7 @@
     }
 
     // ==============================================
-    // FUNGSI DIPERBAIKI: Analisis Tulangan Geser dengan Detail s
+    // FUNGSI GESER DENGAN DETAIL s - DIPERBAIKI (ambil d yang benar)
     // ==============================================
     function createGeserTableDetail() {
         const begel = getData('data.begel', {});
@@ -640,22 +710,23 @@
         const material = getData('data.parsedInput.material', {});
         const tulangan = getData('data.parsedInput.tulangan', {});
         const lanjutan = getData('data.parsedInput.lanjutan', {});
-        const detailBegel = getData('detailBegel', {});
         
         const h = getData('data.parsedInput.dimensi.h', 0);
         const b = getData('data.parsedInput.dimensi.b', 0);
-        const d = dimensi.d || 0;
+        let d = begel.inputVariables?.d;
+        if (!d) d = getData('data.d_begel', null);
+        if (!d) d = getData('data.d', null);
+        if (!d) d = getData('data.Dimensi.d_X', 0);
         const Ag = h * b;
         const fc = material.fc || 20;
         const fyt = material.fyt || material.fy || 300;
         const lambda = lanjutan.lambda || 1;
         const nKaki = lanjutan.n_kaki || 2;
-        const phi = tulangan.phi || tulangan.phi_tul || 8;
+        const phi = tulangan.phi_tul || tulangan.phi || 8;
         const Vs = begel.Vs || 0;
         const Vs_max = begel.Vs_max || 0;
         const Av_u = begel.Av_u || 0;
         
-        // Hitung s1, s2, s3 sesuai dengan kondisi
         const luasSatuSengkang = 0.25 * Math.PI * phi * phi;
         const luasTotalSengkang = nKaki * luasSatuSengkang;
         const s1 = Av_u > 0 ? (luasTotalSengkang * 1000) / Av_u : 0;
@@ -757,7 +828,7 @@
     }
 
     // ==============================================
-    // FUNGSI DIPERBAIKI: Ringkasan Kontrol Keamanan
+    // RINGKASAN KONTROL KEAMANAN
     // ==============================================
     function createKontrolTable() {
         const kontrolLentur = getData('kontrol.lentur', {});
@@ -780,11 +851,14 @@
             }
         ];
         
-        // Hanya tampilkan kontrol K jika kondisi adalah 'at2 > ac'
         if (kondisi === 'at2 > ac') {
             rows.push({ 
-                parameter: "$K \\le K_{maks}$", 
-                statusHtml: `<span class="${kontrolLentur.K_ok ? 'status-aman' : 'status-tidak-aman'}">${kontrolLentur.K_ok ? 'AMAN' : 'TIDAK AMAN'}</span>` 
+                parameter: "$K_X \\le K_{maks,X}$", 
+                statusHtml: `<span class="${kontrolLentur.K_ok_X ? 'status-aman' : 'status-tidak-aman'}">${kontrolLentur.K_ok_X ? 'AMAN' : 'TIDAK AMAN'}</span>` 
+            });
+            rows.push({ 
+                parameter: "$K_Y \\le K_{maks,Y}$", 
+                statusHtml: `<span class="${kontrolLentur.K_ok_Y ? 'status-aman' : 'status-tidak-aman'}">${kontrolLentur.K_ok_Y ? 'AMAN' : 'TIDAK AMAN'}</span>` 
             });
         }
         
@@ -806,10 +880,9 @@
         const statusKolom = cekStatusKolom();
         const dimensi = getData('data.parsedInput.dimensi', {});
         const material = getData('data.parsedInput.material', {});
-        const beban = getData('data.parsedInput.beban', {});
-        const tulangan = getData('data.parsedInput.tulangan', {});
         const kontrolLentur = getData('kontrol.lentur', {});
         const kontrolGeser = getData('kontrol.geser', {});
+        const { totalBatang, D } = getTotalBatangDanRasio();
         
         let masalah = [];
         let rekomendasi = [];
@@ -827,9 +900,13 @@
                 masalah.push("Jumlah tulangan melebihi batas maksimum");
                 rekomendasi.push("Kurangi jumlah tulangan atau perbesar dimensi kolom");
             }
-            if (!kontrolLentur.K_ok) {
-                masalah.push("Nilai K melebihi Kmaks (momen terlalu besar)");
-                rekomendasi.push("Perbesar dimensi kolom atau tambah mutu beton");
+            if (!kontrolLentur.K_ok_X) {
+                masalah.push("Nilai K arah X melebihi Kmaks (momen terlalu besar)");
+                rekomendasi.push("Perbesar dimensi kolom atau tambah mutu beton untuk arah X");
+            }
+            if (!kontrolLentur.K_ok_Y) {
+                masalah.push("Nilai K arah Y melebihi Kmaks (momen terlalu besar)");
+                rekomendasi.push("Perbesar dimensi kolom atau tambah mutu beton untuk arah Y");
             }
         }
         
@@ -845,7 +922,7 @@
         }
         
         let conclusionHTML = `
-            <div class="section-group">
+            <div class="section-group" style="page-break-inside: avoid;">
                 <h3>3. Kesimpulan</h3>
                 <div class="conclusion-box">
                     <h4 style="text-align: center; ${statusKolom === 'aman' ? 'color: #155724;' : 'color: #721c24;'} margin-bottom: 8px;">
@@ -858,7 +935,7 @@
                 <p><strong>Status:</strong> <span class="status-aman">SEMUA KONTROL AMAN</span></p>
                 <p>Struktur kolom dengan dimensi ${dimensi.b || 'N/A'} × ${dimensi.h || 'N/A'} mm memenuhi semua persyaratan SNI 2847:2019 untuk:</p>
                 <ul>
-                    <li>Kuat lentur aksial dengan eksentrisitas</li>
+                    <li>Kuat lentur aksial dengan eksentrisitas (dua arah)</li>
                     <li>Kuat geser</li>
                     <li>Persyaratan rasio tulangan minimum</li>
                     <li>Batasan jumlah tulangan maksimum</li>
@@ -866,7 +943,7 @@
             `;
             
             rekomendasi = [
-                `Gunakan tulangan utama ${getData('rekap.formatted.tulangan_utama', 'N/A')}`,
+                `Gunakan tulangan utama ${totalBatang}D${D}`,
                 `Gunakan sengkang ${getData('rekap.formatted.begel', 'N/A')}`,
                 `Pastikan mutu beton mencapai f'c = ${formatNumber(material.fc)} MPa`,
                 `Pastikan mutu baja mencapai fy = ${formatNumber(material.fy)} MPa`,
@@ -934,7 +1011,7 @@
             </div>
             <div class="keep-together">
                 <h2>A. DATA INPUT DAN PARAMETER</h2>
-                <div class="section-group">
+                <div class="section-group" style="page-break-inside: avoid;">
                     <h3>1. Data Material dan Dimensi</h3>
                     ${createMaterialDimensiTable()}
                 </div>
@@ -942,39 +1019,66 @@
         `);
         
         blocks.push(`
-            <div class="section-group">
+            <div class="section-group" style="page-break-inside: avoid;">
                 <h3>2. Data Beban</h3>
                 ${createBebanTable()}
             </div>
         `);
         
         blocks.push(`
-            <div class="section-group">
+            <div class="section-group" style="page-break-inside: avoid;">
                 <h3>3. Data Tulangan</h3>
                 ${createTulanganTable()}
             </div>
         `);
         
         blocks.push(`
-            <div class="section-group">
-                <h3>4. Perhitungan Parameter</h3>
+            <div class="section-group" style="page-break-inside: avoid;">
+                <h3>4. Perhitungan Parameter Dasar</h3>
                 ${createParameterTable()}
             </div>
         `);
         
+        // BAGIAN B: PERHITUNGAN TULANGAN LENTUR (DUA ARAH)
         blocks.push(`
-            <div class="header-content-group keep-together">
+            <div class="header-content-group">
                 <h2>B. PERHITUNGAN TULANGAN LENTUR KOLOM</h2>
-                <p class="note">Perhitungan tulangan lentur dengan beban aksial dan momen (kolom dengan eksentrisitas)</p>
-                <div class="section-group">
-                    <h3>1. Analisis Tulangan Lentur</h3>
-                    ${createLenturTableDetail()}
-                </div>
+                <p class="note">Perhitungan tulangan lentur dengan beban aksial dan momen dua arah (kolom biaxial)</p>
+        `);
+        
+        blocks.push(`
+            <div class="section-group">
+                <h3>1. Perhitungan Kondisi Penampang Kolom Arah X</h3>
+                ${createKondisiPenampangTableForArah('X')}
             </div>
         `);
         
         blocks.push(`
-            <div class="header-content-group keep-together">
+            <div class="section-group">
+                <h3>2. Analisis Tulangan Lentur Arah X</h3>
+                ${createAnalisisTulanganLenturTableForArah('X')}
+            </div>
+        `);
+        
+        blocks.push(`
+            <div class="section-group">
+                <h3>3. Perhitungan Kondisi Penampang Kolom Arah Y</h3>
+                ${createKondisiPenampangTableForArah('Y')}
+            </div>
+        `);
+        
+        blocks.push(`
+            <div class="section-group">
+                <h3>4. Analisis Tulangan Lentur Arah Y</h3>
+                ${createAnalisisTulanganLenturTableForArah('Y')}
+            </div>
+        `);
+        
+        blocks.push(`</div>`);
+        
+        // BAGIAN C: PERHITUNGAN TULANGAN GESER
+        blocks.push(`
+            <div class="header-content-group">
                 <h2>C. PERHITUNGAN TULANGAN GESER</h2>
                 <p class="note">Perhitungan tulangan geser untuk menahan gaya geser pada kolom</p>
                 <div class="section-group">
@@ -984,6 +1088,7 @@
             </div>
         `);
         
+        // BAGIAN D: REKAPITULASI HASIL DESAIN
         blocks.push(`
             <div class="header-content-group">
                 <h2>D. REKAPITULASI HASIL DESAIN</h2>
@@ -991,14 +1096,14 @@
         `);
         
         blocks.push(`
-            <div class="section-group">
+            <div class="section-group" style="page-break-inside: avoid;">
                 <h3>1. Tulangan Terpasang</h3>
                 ${createTulanganTerpasangTable()}
             </div>
         `);
         
         blocks.push(`
-            <div class="section-group">
+            <div class="section-group" style="page-break-inside: avoid;">
                 <h3>2. Ringkasan Kontrol Keamanan</h3>
                 ${createKontrolTable()}
             </div>

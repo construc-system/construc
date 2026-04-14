@@ -1,4 +1,8 @@
-// report-kolom.js - Renderer khusus untuk laporan kolom
+// report-kolom.js - Renderer khusus untuk laporan kolom (Biaxial dengan format step terpisah)
+// PERBAIKAN: 
+// 1. Menampilkan jumlah tulangan utama yang benar (nX + nY - 4) di rekap tulangan dan gambar penampang
+// 2. Menghapus poin "Penerapan Persyaratan Minimum" dari ringkasan step
+// 3. Mengambil data per arah dari rekap.hasilPerhitunganArahX/Y
 
 // Generator untuk step number - dibuat sebagai fungsi factory
 function createStepNumberGenerator() {
@@ -16,7 +20,6 @@ function renderKolomReport(result) {
         renderRingkasanKolom(result);
         renderPenampangKolom(result);
         
-        // PERBAIKAN: Panggil update layout untuk kolom
         updateLayoutForKolom();
         
         console.log("✅ Laporan kolom berhasil di-render");
@@ -79,7 +82,7 @@ function renderInputDataKolom(inputData) {
         </div>
     `;
 
-    // DATA BEBAN - lebih sederhana dari balok
+    // DATA BEBAN - dua momen
     if (inputData.beban) {
         html += `
             <div class="data-card">
@@ -89,8 +92,11 @@ function renderInputDataKolom(inputData) {
         if (inputData.beban.pu !== undefined && inputData.beban.pu !== null) {
             html += `<div class="data-row"><span class="data-label">P<sub>u</sub></span><span class="data-value">${inputData.beban.pu} kN</span></div>`;
         }
-        if (inputData.beban.mu !== undefined && inputData.beban.mu !== null) {
-            html += `<div class="data-row"><span class="data-label">M<sub>u</sub></span><span class="data-value">${inputData.beban.mu} kNm</span></div>`;
+        if (inputData.beban.mux !== undefined && inputData.beban.mux !== null) {
+            html += `<div class="data-row"><span class="data-label">M<sub>ux</sub></span><span class="data-value">${inputData.beban.mux} kNm</span></div>`;
+        }
+        if (inputData.beban.muy !== undefined && inputData.beban.muy !== null) {
+            html += `<div class="data-row"><span class="data-label">M<sub>uy</sub></span><span class="data-value">${inputData.beban.muy} kNm</span></div>`;
         }
         if (inputData.beban.vu !== undefined && inputData.beban.vu !== null) {
             html += `<div class="data-row"><span class="data-label">V<sub>u</sub></span><span class="data-value">${inputData.beban.vu} kN</span></div>`;
@@ -154,12 +160,9 @@ function renderInputDataKolom(inputData) {
     const n_kaki = inputData.lanjutan?.n_kaki;
     const n_val = inputData.lanjutan?.n_val;
     
-    // PERBAIKAN: Cek jika nilai tidak default - sembunyikan jika lambda=1 DAN n=2
     const showLambda = lambda !== undefined && lambda !== null && parseFloat(lambda) !== 1;
     const showN = (n_kaki !== undefined && n_kaki !== null && parseFloat(n_kaki) !== 2) || 
                  (n_val !== undefined && n_val !== null && parseFloat(n_val) !== 2);
-    
-    console.log("🔍 Data konstanta:", { lambda, n_kaki, n_val, showLambda, showN });
     
     if (showLambda || showN) {
         html += `
@@ -200,30 +203,46 @@ function renderHasilPerhitunganKolom(result) {
         return;
     }
     
-    // Validasi data yang diperlukan
     if (!result.rekap) {
         container.innerHTML = '<div class="result-item"><p>Data hasil perhitungan tidak tersedia</p></div>';
         return;
     }
 
-    const { rekap, kontrol } = result;
+    const { rekap, kontrol, data, inputData } = result;
     console.log("📊 Data rekap untuk hasil:", rekap);
     console.log("📊 Data kontrol untuk hasil:", kontrol);
 
     let html = '';
 
-    // REKAP TULANGAN - untuk kolom lebih sederhana (HANYA tulangan utama dan begel)
-    if (rekap.formatted) {
+    // ==================== PERBAIKAN: HITUNG ULANG TULANGAN UTAMA UNTUK MODE DESAIN ====================
+    let tulanganUtamaDisplay = rekap.formatted?.tulangan_utama || '';
+    const isDesain = (inputData?.mode === 'desain' || result.mode === 'desain');
+    
+    if (isDesain && data?.hasilTulangan?.hasilArahX && data?.hasilTulangan?.hasilArahY) {
+        const nX = data.hasilTulangan.hasilArahX.n_terpakai || 0;
+        const nY = data.hasilTulangan.hasilArahY.n_terpakai || 0;
+        const D = rekap.tulangan?.D || data.D || 0;
+        let totalBatang = nX + nY - 4;
+        if (totalBatang < 0) totalBatang = 0;
+        if (totalBatang > 0 && D > 0) {
+            tulanganUtamaDisplay = `${totalBatang}D${D}`;
+            console.log(`✅ Koreksi tulangan utama: ${nX}+${nY}-4 = ${totalBatang}D${D}`);
+        }
+    }
+
+    // REKAP TULANGAN - menggunakan nilai yang sudah dikoreksi
+    if (rekap.formatted || tulanganUtamaDisplay) {
         html += `
             <div class="result-item" style="grid-column: 1 / -1;">
                 <h4>Rekap Tulangan</h4>
-                ${rekap.formatted.tulangan_utama ? `<p><strong>Tulangan Utama:</strong> ${rekap.formatted.tulangan_utama}</p>` : ''}
-                ${rekap.formatted.begel ? `<p><strong>Begel:</strong> ${rekap.formatted.begel}</p>` : ''}
+                ${tulanganUtamaDisplay ? `<p><strong>Tulangan Utama:</strong> ${tulanganUtamaDisplay}</p>` : ''}
+                ${rekap.formatted?.begel ? `<p><strong>Begel:</strong> ${rekap.formatted.begel}</p>` : ''}
+                ${rekap.formatted?.Sn_info ? `<p><strong>Spasi Bersih Minimum (Sn):</strong> ${rekap.formatted.Sn_info}</p>` : ''}
             </div>
         `;
     }
 
-    // KESIMPULAN KEAMANAN - hanya jika kontrol tersedia
+    // KESIMPULAN KEAMANAN
     if (kontrol) {
         const statusKeamanan = getStatusKeamananKolom(kontrol);
         console.log("Status Keamanan Kolom:", statusKeamanan);
@@ -243,7 +262,7 @@ function renderHasilPerhitunganKolom(result) {
                         <div style="margin-top: 1rem; text-align: left;">
                             <strong>Bagian yang perlu diperbaiki:</strong>
                             <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
-                                ${statusKeamanan.kontrolTidakAman.map(kontrol => `<li>${kontrol}</li>`).join('')}
+                                ${statusKeamanan.kontrolTidakAman.map(k => `<li>${k}</li>`).join('')}
                             </ul>
                         </div>
                     ` : ''}
@@ -252,7 +271,7 @@ function renderHasilPerhitunganKolom(result) {
                         <div style="margin-top: 1rem; text-align: left;">
                             <strong>Saran perbaikan:</strong>
                             <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
-                                ${statusKeamanan.saranPerbaikan.map(saran => `<li>${saran}</li>`).join('')}
+                                ${statusKeamanan.saranPerbaikan.map(s => `<li>${s}</li>`).join('')}
                             </ul>
                         </div>
                     ` : ''}
@@ -260,7 +279,6 @@ function renderHasilPerhitunganKolom(result) {
             </div>
         `;
     } else {
-        // Jika kontrol tidak tersedia
         html += `
             <div class="result-item" style="grid-column: 1 / -1; background: #fff3cd !important;">
                 <h4>STATUS KEAMANAN STRUKTUR</h4>
@@ -277,7 +295,7 @@ function renderHasilPerhitunganKolom(result) {
     container.innerHTML = html;
 }
 
-// Fungsi untuk mendapatkan status keamanan struktur kolom
+// Fungsi untuk mendapatkan status keamanan struktur kolom (Biaxial)
 function getStatusKeamananKolom(kontrol) {
     if (!kontrol) {
         return {
@@ -310,10 +328,16 @@ function getStatusKeamananKolom(kontrol) {
             saranPerbaikan.push('Kurangi jumlah tulangan atau perbesar dimensi kolom');
         }
         
-        // TAMBAHAN: Kontrol K ≤ Kmaks
-        if (!lentur.K_ok) {
-            kontrolTidakAman.push('Rasio K melebihi Kmaks');
-            saranPerbaikan.push('Perbesar dimensi kolom atau tingkatkan mutu beton');
+        // Kontrol K untuk arah X
+        if (lentur.K_ok_X !== undefined && !lentur.K_ok_X) {
+            kontrolTidakAman.push('Rasio K untuk arah X melebihi Kmaks');
+            saranPerbaikan.push('Perbesar dimensi kolom atau tingkatkan mutu beton untuk arah X');
+        }
+        
+        // Kontrol K untuk arah Y
+        if (lentur.K_ok_Y !== undefined && !lentur.K_ok_Y) {
+            kontrolTidakAman.push('Rasio K untuk arah Y melebihi Kmaks');
+            saranPerbaikan.push('Perbesar dimensi kolom atau tingkatkan mutu beton untuk arah Y');
         }
     }
 
@@ -352,163 +376,224 @@ function renderRingkasanKolom(result) {
         return;
     }
     
-    const { kontrol, data, rekap } = result;
-    console.log("📋 Data kontrol detail kolom:", kontrol);
-    console.log("📋 Data hasil perhitungan kolom:", data);
-    console.log("📋 Data rekap kolom:", rekap);
-
+    // Ambil data hasil per arah dari rekap (sudah disimpan di hasilPerhitunganArahX/Y)
+    let hasilArahX = null;
+    let hasilArahY = null;
+    
+    if (result.rekap) {
+        hasilArahX = result.rekap.hasilPerhitunganArahX;
+        hasilArahY = result.rekap.hasilPerhitunganArahY;
+    }
+    
+    // Fallback jika tidak ada
+    if (!hasilArahX && result.data && result.data.hasilTulangan) {
+        hasilArahX = result.data.hasilTulangan.hasilArahX;
+        hasilArahY = result.data.hasilTulangan.hasilArahY;
+    }
+    
+    console.log("📋 Data hasilArahX:", hasilArahX);
+    console.log("📋 Data hasilArahY:", hasilArahY);
+    
+    const { kontrol } = result;
+    
     let html = '';
 
-    // Buat generator step number lokal untuk fungsi ini
-    const getStepNumber = createStepNumberGenerator();
-
-    if (kontrol && data && rekap) {
-        html = `
-            <div class="steps">
-                ${renderParameterDasarKolom(data, rekap, getStepNumber)}
-                ${renderKontrolLenturKolom(kontrol.lentur, rekap, getStepNumber)}
-                ${renderKontrolGeserKolom(kontrol.geser, rekap, getStepNumber)}
-            </div>
-        `;
+    if (kontrol && hasilArahX && hasilArahY) {
+        const getStepNumber = createStepNumberGenerator();
+        
+        // Arah X: 2 poin parameter dasar + 3 poin kontrol lentur
+        html += renderParameterDasarKolomArah(hasilArahX, 'X', getStepNumber);
+        html += renderKontrolLenturPerArah(hasilArahX, kontrol.lentur, 'X', getStepNumber);
+        
+        // Arah Y: 2 poin parameter dasar + 3 poin kontrol lentur
+        html += renderParameterDasarKolomArah(hasilArahY, 'Y', getStepNumber);
+        html += renderKontrolLenturPerArah(hasilArahY, kontrol.lentur, 'Y', getStepNumber);
+        
+        // Kontrol geser: 2 poin
+        html += renderKontrolGeserKolom(kontrol.geser, result.rekap, getStepNumber);
     } else {
         html = '<div class="step-item"><p>Data ringkasan tidak tersedia</p></div>';
     }
-
+    
     container.innerHTML = html;
 }
 
-function renderParameterDasarKolom(data, rekap, getStepNumber) {
+// Fungsi untuk merender parameter dasar per arah (faktor reduksi dan kondisi)
+function renderParameterDasarKolomArah(hasilArah, arah, getStepNumber) {
+    let faktorPhi = hasilArah?.faktorPhi;
+    let kondisi = hasilArah?.kondisi;
+    
     let html = '';
-    const tulangan = rekap.tulangan || {};
     
-    console.log("🔍 Data tulangan untuk parameter:", tulangan);
-    
-    // PERBANDINGAN Pu dan Pu∅ - TANPA INDIKATOR AMAN/TIDAK AMAN
-    if (tulangan.Pu !== undefined && tulangan.Pu_phi !== undefined) {
-        const simbol = tulangan.Pu >= tulangan.Pu_phi ? '≥' : '<';
+    if (faktorPhi !== undefined) {
         html += renderStepKolom(
             getStepNumber(),
-            'Perbandingan Pu dan Pu∅',
-            `P<sub>u</sub> = ${tulangan.Pu?.toFixed(2) || 'N/A'} kN ${simbol} P<sub>u</sub>∅ = ${tulangan.Pu_phi?.toFixed(2) || 'N/A'} kN`
-            // Tidak ada parameter aman - hanya perbandingan nilai
+            `Faktor Reduksi Kekuatan Arah ${arah === 'X' ? 'x' : 'y'}`,
+            `∅ = ${faktorPhi?.toFixed(3) || 'N/A'}`
+        );
+    } else {
+        html += renderStepKolom(
+            getStepNumber(),
+            `Faktor Reduksi Kekuatan Arah ${arah === 'X' ? 'x' : 'y'}`,
+            `∅ = N/A (data tidak tersedia)`
         );
     }
     
-    // PERBANDINGAN ab dan ac - HANYA PERBANDINGAN TANPA KONTROL KEAMANAN
-    if (tulangan.ab !== undefined && tulangan.ac !== undefined) {
-        const simbol = tulangan.ab >= tulangan.ac ? '≥' : '<';
+    if (kondisi) {
         html += renderStepKolom(
             getStepNumber(),
-            'Perbandingan Parameter Teknis',
-            `ab = ${tulangan.ab?.toFixed(1) || 'N/A'} mm ${simbol} ac = ${tulangan.ac?.toFixed(1) || 'N/A'} mm`
+            `Kondisi Perhitungan Arah ${arah === 'X' ? 'x' : 'y'}`,
+            kondisi
         );
-    }
-    
-    // Nilai faktor Phi
-    if (tulangan.faktorPhi !== undefined) {
+    } else {
         html += renderStepKolom(
             getStepNumber(),
-            'Faktor Reduksi Kekuatan',
-            `∅ = ${tulangan.faktorPhi?.toFixed(3) || 'N/A'}`
-        );
-    }
-    
-    // KONDISI YANG DIGUNAKAN - DITAMBAHKAN DI SINI (SETELAH FAKTOR REDUKSI)
-    // PERUBAHAN: Hanya menampilkan kondisi tanpa penjelasan tambahan
-    if (tulangan.kondisi) {
-        html += renderStepKolom(
-            getStepNumber(),
-            'Kondisi Perhitungan yang Digunakan',
-            tulangan.kondisi
-        );
-    }
-    
-    // TAMBAHAN: Jika ada informasi minimum yang diterapkan
-    if (tulangan.minimum_diterapkan && tulangan.minimum_detail) {
-        html += renderStepKolom(
-            getStepNumber(),
-            'Penerapan Persyaratan Minimum',
-            `<span style="color: #e67e22;">${tulangan.minimum_detail.alasan || 'Persyaratan minimum diterapkan'}</span><br>
-             <small>Hasil setelah penyesuaian: ${tulangan.minimum_detail.setelah || 'Tidak tersedia'}</small>`
+            `Kondisi Perhitungan Arah ${arah === 'X' ? 'x' : 'y'}`,
+            `Tidak diketahui`
         );
     }
     
     return html;
 }
 
-function renderKontrolLenturKolom(kontrolLentur, rekap, getStepNumber) {
-    if (!kontrolLentur) return '';
+// Fungsi untuk merender kontrol lentur per arah (3 poin: rasio, jumlah, kapasitas)
+// Tidak menampilkan "Penerapan Persyaratan Minimum" sesuai permintaan user
+function renderKontrolLenturPerArah(hasilArah, kontrolLentur, arah, getStepNumber) {
+    if (!hasilArah) return '';
+    
+    // Ambil data dari hasilArah
+    let rho = hasilArah.rho;
+    let n_terpakai = hasilArah.n_terpakai;
+    let n_max = hasilArah.n_max;
+    let Ast_i = hasilArah.Ast_i;
+    let Ast_u = hasilArah.As_tu;  // kebutuhan luas tulangan
+    let K = hasilArah.K;
+    let Kmaks = hasilArah.Kmaks;
+    let K_melebihi_Kmaks = hasilArah.K_melebihi_Kmaks;
+    
+    // Jika Ast_u negatif, set ke 0 (karena tidak butuh tulangan)
+    if (Ast_u !== undefined && Ast_u < 0) Ast_u = 0;
+    
+    let Ast_ok = false;
+    if (Ast_i !== undefined && Ast_u !== undefined) {
+        Ast_ok = Ast_i >= Ast_u;
+    }
+    
+    let rho_ok = false;
+    if (rho !== undefined) {
+        rho_ok = rho >= 1.0;
+    }
+    
+    let n_ok = false;
+    if (n_terpakai !== undefined && n_max !== undefined) {
+        n_ok = n_terpakai <= n_max;
+    }
+    
+    let K_ok = false;
+    if (K !== undefined && Kmaks !== undefined) {
+        K_ok = !K_melebihi_Kmaks;
+    }
     
     let html = '';
-    const tulangan = rekap.tulangan || {};
     
-    // Kontrol K ≤ Kmaks (khusus kondisi at2>ac)
-    if (tulangan.K !== undefined && tulangan.Kmaks !== undefined) {
-        const amanK = !tulangan.K_melebihi_Kmaks;
+    // 1. Kontrol rasio tulangan
+    const rhoFormatted = (rho !== undefined && !isNaN(rho)) ? rho.toFixed(3) : 'N/A';
+    html += renderStepKolom(
+        getStepNumber(),
+        `Kontrol Rasio Tulangan Minimum Arah ${arah === 'X' ? 'x' : 'y'}`,
+        `ρ = ${rhoFormatted}% ≥ 1%`,
+        rho_ok
+    );
+    
+    // 2. Kontrol jumlah tulangan
+    let nFormatted = (n_terpakai !== undefined) ? n_terpakai : 'N/A';
+    let nMaxFormatted = (n_max !== undefined) ? n_max : 'N/A';
+    html += renderStepKolom(
+        getStepNumber(),
+        `Kontrol Jumlah Tulangan Arah ${arah === 'X' ? 'x' : 'y'}`,
+        `n = ${nFormatted} ≤ 2m = ${nMaxFormatted}`,
+        n_ok
+    );
+    
+    // 3. Kontrol kapasitas tulangan
+    let Ast_iFormatted = (Ast_i !== undefined) ? Ast_i.toFixed(0) : 'N/A';
+    let Ast_uFormatted = (Ast_u !== undefined) ? Ast_u.toFixed(0) : 'N/A';
+    html += renderStepKolom(
+        getStepNumber(),
+        `Kontrol Kapasitas Tulangan Arah ${arah === 'X' ? 'x' : 'y'}`,
+        `A<sub>s,terpasang</sub> = ${Ast_iFormatted} mm² ≥ A<sub>s,diperlukan</sub> = ${Ast_uFormatted} mm²`,
+        Ast_ok
+    );
+    
+    // 4. Kontrol K (rasio momen) - jika ada
+    if (K !== undefined && Kmaks !== undefined && !isNaN(K) && !isNaN(Kmaks)) {
+        const KFormatted = K.toFixed(2);
+        const KmaksFormatted = Kmaks.toFixed(2);
         html += renderStepKolom(
             getStepNumber(),
-            'Kontrol Rasio Tulangan (K)',
-            `K = ${tulangan.K?.toFixed(4) || 'N/A'} ≤ K<sub>maks</sub> = ${tulangan.Kmaks?.toFixed(4) || 'N/A'}`,
-            amanK
+            `Kontrol Rasio Momen (K) Arah ${arah === 'X' ? 'x' : 'y'}`,
+            `K = ${KFormatted} ≤ K<sub>maks</sub> = ${KmaksFormatted}`,
+            K_ok
         );
     }
     
-    // Kontrol rho ≥ 1%
-    if (kontrolLentur.detail && kontrolLentur.detail.rho !== undefined) {
-        html += renderStepKolom(
-            getStepNumber(),
-            'Kontrol Rasio Tulangan Minimum',
-            `ρ = ${kontrolLentur.detail.rho?.toFixed(3) || 'N/A'}% ≥ 1%`,
-            kontrolLentur.rho_ok
-        );
-    }
-    
-    // Kontrol n ≤ 2m
-    if (kontrolLentur.detail && kontrolLentur.detail.n !== undefined && kontrolLentur.detail.n_max !== undefined) {
-        html += renderStepKolom(
-            getStepNumber(),
-            'Kontrol Jumlah Tulangan',
-            `n = ${kontrolLentur.detail.n} ≤ 2m = ${kontrolLentur.detail.n_max}`,
-            kontrolLentur.n_ok
-        );
-    }
-    
-    // Kontrol kapasitas tulangan
-    if (kontrolLentur.detail && kontrolLentur.detail.Ast_i !== undefined && kontrolLentur.detail.Ast_u !== undefined) {
-        html += renderStepKolom(
-            getStepNumber(),
-            'Kontrol Kapasitas Tulangan',
-            `A<sub>s,terpasang</sub> = ${kontrolLentur.detail.Ast_i?.toFixed(0) || 'N/A'} mm² ≥ A<sub>s,diperlukan</sub> = ${kontrolLentur.detail.Ast_u?.toFixed(0) || 'N/A'} mm²`,
-            kontrolLentur.Ast_ok
-        );
-    }
+    // Catatan: Tidak menampilkan step "Penerapan Persyaratan Minimum" sesuai permintaan user
     
     return html;
 }
 
+// Fungsi untuk merender kontrol geser (2 poin)
 function renderKontrolGeserKolom(kontrolGeser, rekap, getStepNumber) {
     if (!kontrolGeser) return '';
     
     let html = '';
-    const begel = rekap.begel || {};
+    const begel = rekap?.begel || {};
     
     // Kontrol Vs ≤ Vs_maks
-    if (kontrolGeser.detail && kontrolGeser.detail.Vs !== undefined && kontrolGeser.detail.Vs_max !== undefined) {
+    let Vs = kontrolGeser.detail?.Vs ?? begel.Vs;
+    let Vs_max = kontrolGeser.detail?.Vs_max ?? begel.Vs_max;
+    let Vs_ok = kontrolGeser.Vs_ok;
+    if (Vs === undefined && begel.Vs !== undefined) Vs = begel.Vs;
+    if (Vs_max === undefined && begel.Vs_max !== undefined) Vs_max = begel.Vs_max;
+    if (Vs_ok === undefined && Vs !== undefined && Vs_max !== undefined) Vs_ok = Vs <= Vs_max;
+    
+    if (Vs !== undefined && Vs_max !== undefined) {
         html += renderStepKolom(
             getStepNumber(),
             'Kontrol Tegangan Geser',
-            `V<sub>s</sub> = ${kontrolGeser.detail.Vs?.toFixed(2) || 'N/A'} kN ≤ V<sub>s,maks</sub> = ${kontrolGeser.detail.Vs_max?.toFixed(2) || 'N/A'} kN`,
-            kontrolGeser.Vs_ok
+            `V<sub>s</sub> = ${Vs?.toFixed(2) || 'N/A'} kN ≤ V<sub>s,maks</sub> = ${Vs_max?.toFixed(2) || 'N/A'} kN`,
+            Vs_ok === true
+        );
+    } else {
+        html += renderStepKolom(
+            getStepNumber(),
+            'Kontrol Tegangan Geser',
+            `Data tidak tersedia`,
+            null
         );
     }
     
     // Kontrol Av_terpakai ≥ Av_u
-    if (kontrolGeser.detail && kontrolGeser.detail.Av_terpakai !== undefined && kontrolGeser.detail.Av_u !== undefined) {
+    let Av_terpakai = kontrolGeser.detail?.Av_terpakai ?? begel.Av_terpakai;
+    let Av_u = kontrolGeser.detail?.Av_u ?? begel.Av_u;
+    let Av_ok = kontrolGeser.Av_ok;
+    if (Av_terpakai === undefined && begel.Av_terpakai !== undefined) Av_terpakai = begel.Av_terpakai;
+    if (Av_u === undefined && begel.Av_u !== undefined) Av_u = begel.Av_u;
+    if (Av_ok === undefined && Av_terpakai !== undefined && Av_u !== undefined) Av_ok = Av_terpakai >= Av_u;
+    
+    if (Av_terpakai !== undefined && Av_u !== undefined) {
         html += renderStepKolom(
             getStepNumber(),
             'Kontrol Tulangan Geser',
-            `A<sub>v,terpasang</sub> = ${kontrolGeser.detail.Av_terpakai?.toFixed(2) || 'N/A'} mm²/m ≥ A<sub>v,diperlukan</sub> = ${kontrolGeser.detail.Av_u?.toFixed(2) || 'N/A'} mm²/m`,
-            kontrolGeser.Av_ok
+            `A<sub>v,terpasang</sub> = ${Av_terpakai?.toFixed(2) || 'N/A'} mm²/m ≥ A<sub>v,diperlukan</sub> = ${Av_u?.toFixed(2) || 'N/A'} mm²/m`,
+            Av_ok === true
+        );
+    } else {
+        html += renderStepKolom(
+            getStepNumber(),
+            'Kontrol Tulangan Geser',
+            `Data tidak tersedia`,
+            null
         );
     }
     
@@ -535,7 +620,7 @@ function renderStepKolom(number, desc, formula, aman = null) {
     `;
 }
 
-// FUNGSI: Render Penampang Kolom (Single View)
+// FUNGSI: Render Penampang Kolom (Single View) dengan jumlah batang yang benar
 function renderPenampangKolom(result) {
     const container = document.getElementById('svg-container-tumpuan');
     
@@ -553,44 +638,44 @@ function renderPenampangKolom(result) {
     }
 
     try {
-        // Ambil data dimensi
         const dimensi = inputData.dimensi || {};
         const lebar = parseFloat(dimensi.b) || 300;
         const tinggi = parseFloat(dimensi.h) || 500;
         const sb = parseFloat(dimensi.sb) || 30;
 
-        // Ambil data material dan tulangan
-        const material = inputData.material || {};
         const tulangan = inputData.tulangan || {};
 
-        // Tentukan D dan phi berdasarkan mode
         let D, phi;
         if (mode === 'evaluasi' && tulangan) {
             D = parseFloat(tulangan.d_tul || tulangan.d) || 19;
             phi = parseFloat(tulangan.phi_tul || tulangan.phi) || 10;
         } else {
-            // Untuk mode desain, gunakan nilai dari hasil optimasi
             D = data.D || 19;
             phi = data.phi || 10;
         }
 
-        // Tentukan jumlah tulangan
         let jumlahTulangan;
-        if (mode === 'evaluasi' && tulangan) {
+        const isDesain = (mode === 'desain');
+        
+        if (isDesain && data?.hasilTulangan?.hasilArahX && data?.hasilTulangan?.hasilArahY) {
+            const nX = data.hasilTulangan.hasilArahX.n_terpakai || 0;
+            const nY = data.hasilTulangan.hasilArahY.n_terpakai || 0;
+            jumlahTulangan = nX + nY - 4;
+            if (jumlahTulangan < 0) jumlahTulangan = 0;
+            console.log(`📐 Penampang: nX=${nX}, nY=${nY}, total batang = ${jumlahTulangan}D${D}`);
+        } else if (mode === 'evaluasi' && tulangan) {
             jumlahTulangan = parseFloat(tulangan.n_tul || tulangan.n) || 4;
         } else {
-            // Untuk mode desain, gunakan jumlah dari hasil perhitungan
-            jumlahTulangan = data.hasilTulangan?.n_terpakai || 4;
+            jumlahTulangan = data.hasilTulangan?.n_terpakai || 
+                             result.rekap?.tulangan?.n_terpakai || 4;
         }
 
-        // Ambil m dari hasil perhitungan
         const m = data.m || 2;
 
         console.log("📐 Data untuk penampang kolom:", {
             lebar, tinggi, D, phi, jumlahTulangan, sb, m
         });
 
-        // Tampilkan loading terlebih dahulu
         container.innerHTML = `
             <div style="text-align: center; padding: 1rem; color: #666;">
                 <p>Memuat gambar penampang kolom...</p>
@@ -600,7 +685,6 @@ function renderPenampangKolom(result) {
             </div>
         `;
 
-        // Panggil fungsi render dari cut-generator dengan parameter untuk kolom
         if (typeof window.renderPenampangKolom === 'function') {
             window.renderPenampangKolom({
                 lebar: lebar,
@@ -637,14 +721,12 @@ function renderPenampangKolom(result) {
 function updateLayoutForKolom() {
     console.log("🔄 Mengupdate layout untuk kolom...");
     
-    // Sembunyikan card lapangan
     const lapanganCard = document.querySelector('.penampang-card:nth-child(2)');
     if (lapanganCard) {
         lapanganCard.style.display = 'none';
         console.log("✅ Card lapangan disembunyikan");
     }
     
-    // Update judul penampang utama
     const penampangSection = document.querySelector('.penampang-section');
     if (penampangSection) {
         const title = penampangSection.querySelector('h2');
@@ -653,7 +735,6 @@ function updateLayoutForKolom() {
             console.log("✅ Judul section diubah menjadi PENAMPANG KOLOM");
         }
         
-        // UBAH LAYOUT PENAMPANG CONTAINER MENJADI FULL WIDTH
         const penampangContainer = penampangSection.querySelector('.penampang-container');
         if (penampangContainer) {
             penampangContainer.style.gridTemplateColumns = '1fr';
@@ -662,7 +743,6 @@ function updateLayoutForKolom() {
         }
     }
     
-    // Update judul card tumpuan
     const tumpuanCard = document.querySelector('.penampang-card:first-child');
     if (tumpuanCard) {
         const title = tumpuanCard.querySelector('h3');
@@ -670,18 +750,14 @@ function updateLayoutForKolom() {
             title.textContent = 'Penampang Kolom';
             console.log("✅ Judul card diubah menjadi Penampang Kolom");
         }
-        
-        // Pastikan card mengambil lebar penuh
         tumpuanCard.style.gridColumn = '1 / -1';
         tumpuanCard.style.width = '100%';
         tumpuanCard.style.maxWidth = '100%';
     }
     
-    // Update tombol CAD
     const cadButton = document.querySelector('.btn.primary[onclick="exportCAD()"]');
     if (cadButton) {
         cadButton.textContent = 'Copy ke CAD';
-        // Update onclick untuk kolom
         cadButton.setAttribute('onclick', 'exportCADKolom()');
         console.log("✅ Tombol CAD diupdate untuk kolom");
     }
@@ -707,7 +783,6 @@ function exportCADKolom() {
 // Fungsi utilitas tambahan
 function showError(message) {
     console.error(message);
-    // Anda bisa menambahkan notifikasi UI di sini jika diperlukan
     const errorDiv = document.createElement('div');
     errorDiv.style.cssText = `
         position: fixed;
@@ -754,4 +829,4 @@ window.renderKolomReport = renderKolomReport;
 window.exportCADKolom = exportCADKolom;
 window.updateReportTitle = updateReportTitle;
 
-console.log("✅ report-kolom.js loaded successfully");
+console.log("✅ report-kolom.js loaded successfully (Biaxial dengan koreksi tulangan utama nX+nY-4)");
