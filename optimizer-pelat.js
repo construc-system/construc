@@ -1,21 +1,20 @@
 // ============================================================================
-// optimizer-pelat.js — OPTIMIZER KHUSUS UNTUK PELAT
+// optimizer-pelat.js — OPTIMIZER KHUSUS UNTUK PELAT (REVISI DENGAN BATASAN φ ≤ D)
 // ============================================================================
 
 // ============================================================================
-// CONTROL CHECKER KHUSUS PELAT
+// CONTROL CHECKER KHUSUS PELAT (menggunakan fungsi dari window jika ada)
 // ============================================================================
 function isKontrolPelatAman(kontrol) {
-    if (!kontrol) return false;
-    
-    // Format kontrol pelat
-    if (kontrol.lentur && kontrol.bagi) {
-        return (
-            kontrol.lentur.ok &&
-            kontrol.bagi.ok
-        );
+    // Jika fungsi dari calc-pelat.js tersedia, gunakan itu
+    if (typeof window.isKontrolAmanPelat === 'function') {
+        return window.isKontrolAmanPelat(kontrol);
     }
-    return false;
+    // Fallback sederhana (seharusnya tidak terpakai jika calc-pelat.js sudah dimuat)
+    if (!kontrol) return false;
+    const lenturOk = kontrol.lentur && kontrol.lentur.ok;
+    const bagiOk = kontrol.bagi && kontrol.bagi.ok;
+    return lenturOk && bagiOk;
 }
 
 // ============================================================================
@@ -36,10 +35,10 @@ function hitungSkorOptimalitasPelat(result, D, phi) {
     const total_luas = luas_pokok_x + luas_pokok_y + luas_bagi_x + luas_bagi_y;
     
     // Faktor efisiensi spasi (semakin kecil spasi, semakin tidak ekonomis)
-    const spasi_pokok_x = R.tulangan?.pokokX?.sDigunakan || 450;
-    const spasi_pokok_y = R.tulangan?.pokokY?.sDigunakan || 450;
-    const spasi_bagi_x = R.tulangan?.bagiX?.sDigunakan || 450;
-    const spasi_bagi_y = R.tulangan?.bagiY?.sDigunakan || 450;
+    const spasi_pokok_x = R.tulangan?.pokokX?.sDigunakan || 0;
+    const spasi_pokok_y = R.tulangan?.pokokY?.sDigunakan || 0;
+    const spasi_bagi_x = R.tulangan?.bagiX?.sDigunakan || 0;
+    const spasi_bagi_y = R.tulangan?.bagiY?.sDigunakan || 0;
     
     const faktor_spasi = (spasi_pokok_x + spasi_pokok_y + spasi_bagi_x + spasi_bagi_y) / 4;
     
@@ -49,40 +48,58 @@ function hitungSkorOptimalitasPelat(result, D, phi) {
 }
 
 // ============================================================================
-// OPTIMIZER PELAT — DENGAN LOGGING LENGKAP
+// OPTIMIZER PELAT — DENGAN LOGGING LENGKAP DAN BATASAN φ ≤ D
 // ============================================================================
 async function optimizePelat(inputData) {
-    const list_D = [10, 13, 16, 19, 22, 25, 29, 32, 36]; // Diameter tulangan pokok
-    const list_phi = [10, 13, 16, 19, 22, 25, 29, 32, 36]; // Diameter tulangan bagi
+    const list_D = [8, 10, 13, 16, 19, 22]; // Diameter tulangan pokok
+    const list_phi = [8, 10, 13, 16, 19, 22]; // Diameter tulangan bagi
 
     let hasilTerbaik = null;
     let skorTerbaik = Infinity;
     let totalDicoba = 0;
     let totalValid = 0;
+    let totalSkipped = 0; // kombinasi dengan φ > D
+
+    // Hitung jumlah kombinasi yang memenuhi φ ≤ D untuk info awal
+    let totalKombinasiValid = 0;
+    for (const D of list_D) {
+        for (const phi of list_phi) {
+            if (phi <= D) totalKombinasiValid++;
+        }
+    }
 
     console.log(`\n🔍 OPTIMASI PELAT DIMULAI...`);
-    console.log(`📊 Mencoba ${list_D.length}×${list_phi.length} = ${list_D.length * list_phi.length} kombinasi...`);
+    console.log(`📊 Total kemungkinan kombinasi: ${list_D.length}×${list_phi.length} = ${list_D.length * list_phi.length}`);
+    console.log(`✂️  Hanya kombinasi dengan φ ≤ D yang diuji: ${totalKombinasiValid} kombinasi`);
 
     // Array untuk menyimpan semua hasil
     const semuaHasil = [];
 
     for (const D of list_D) {
         for (const phi of list_phi) {
+            // BATASAN: diameter tulangan bagi tidak boleh lebih besar dari tulangan utama
+            if (phi > D) {
+                totalSkipped++;
+                const skipMsg = `⏭️  Kombinasi D${D} φ${phi} dilewati (φ > D)`;
+                console.log(skipMsg);
+                semuaHasil.push({ D, phi, status: "skipped", detail: skipMsg });
+                continue;
+            }
+
             totalDicoba++;
             try {
                 let result;
                 let logDetail = "";
 
-                // Panggil fungsi calculatePelat
+                // Panggil fungsi calculatePelat dengan mode evaluasi, TANPA mengirim s dan sb
                 if (window.calculatePelat) {
                     result = await window.calculatePelat({
                         ...inputData.parsed.raw,
                         mode: "evaluasi",
                         tulangan: { 
                             d: D,      // Diameter tulangan pokok
-                            db: phi,   // Diameter tulangan bagi
-                            s: 0,      // Spasi akan dihitung otomatis
-                            sb: 0      // Spasi bagi akan dihitung otomatis
+                            db: phi    // Diameter tulangan bagi
+                            // s dan sb tidak dikirim -> akan dihitung otomatis
                         }
                     });
                 } else {
@@ -142,8 +159,8 @@ async function optimizePelat(inputData) {
                         const kontrol_bagi = result.kontrol?.bagi;
                         
                         if (kontrol_lentur) {
-                            const lentur_x_aman = kontrol_lentur.arahX?.K_aman && kontrol_lentur.arahX?.Md_amen;
-                            const lentur_y_aman = kontrol_lentur.arahY?.K_aman && kontrol_lentur.arahY?.Md_amen;
+                            const lentur_x_aman = kontrol_lentur.arahX?.K_aman && kontrol_lentur.arahX?.Md_aman;
+                            const lentur_y_aman = kontrol_lentur.arahY?.K_aman && kontrol_lentur.arahY?.Md_aman;
                             detail += `\n   🔍 Kontrol Lentur: X=${lentur_x_aman ? '✅' : '❌'} Y=${lentur_y_aman ? '✅' : '❌'}`;
                             
                             if (!lentur_x_aman && kontrol_lentur.arahX) {
@@ -234,7 +251,7 @@ async function optimizePelat(inputData) {
 
     // SUMMARY LENGKAP
     console.log(`\n🎉 OPTIMASI PELAT SELESAI`);
-    console.log(`📈 ${totalValid} valid dari ${totalDicoba} kombinasi`);
+    console.log(`📈 ${totalValid} valid dari ${totalDicoba} kombinasi yang diuji (${totalSkipped} kombinasi dilewati karena φ > D)`);
     
     // Tampilkan 10 kombinasi terbaik
     const kombinasiAman = semuaHasil.filter(h => h.status === "aman");
@@ -251,7 +268,7 @@ async function optimizePelat(inputData) {
         // Analisis mengapa gagal
         const analisisError = {};
         semuaHasil.forEach(hasil => {
-            if (hasil.status !== "aman") {
+            if (hasil.status !== "aman" && hasil.status !== "skipped") {
                 const key = hasil.status;
                 analisisError[key] = (analisisError[key] || 0) + 1;
             }
@@ -264,7 +281,7 @@ async function optimizePelat(inputData) {
         
         return {
             status: "error",
-            message: "Tidak ada kombinasi yang memenuhi kontrol",
+            message: "Tidak ada kombinasi yang memenuhi kontrol. Coba perbesar dimensi pelat atau kurangi beban.",
             analisis: analisisError,
             semua_hasil: semuaHasil
         };
@@ -290,6 +307,7 @@ async function optimizePelat(inputData) {
             skor: hasilTerbaik.skor,
             kombinasi_tercoba: totalDicoba,
             kombinasi_berhasil: totalValid,
+            kombinasi_dilewati: totalSkipped,
             top_10: kombinasiAman.slice(0, 10),
             semua_hasil: semuaHasil
         }
@@ -303,4 +321,4 @@ window.optimizePelat = optimizePelat;
 window.isKontrolPelatAman = isKontrolPelatAman;
 window.hitungSkorOptimalitasPelat = hitungSkorOptimalitasPelat;
 
-console.log("✅ optimizer-pelat.js loaded - Optimizer khusus untuk pelat");
+console.log("✅ optimizer-pelat.js loaded (revisi dengan batasan φ ≤ D) - Optimizer khusus untuk pelat");

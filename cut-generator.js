@@ -1,33 +1,6 @@
-// cut-generator.js - Versi final dengan perbaikan posisi kotak skala (di bawah gambar, tidak menempel tepi, ukuran seragam)
-// Semua fungsi asli dipertahankan, ditambah renderPenampangPelat dan export CAD pelat.
+// cut-generator.js - Final untuk Kolom (dengan perbaikan path pencarian dimensi dan nX/nY)
 
-// Konfigurasi global untuk CAD
-window.cadConfig = {
-    tumpuan: null,
-    lapangan: null,
-    kolom: null,
-    fondasi: null,
-    activeType: 'tumpuan'
-};
-
-// Fungsi untuk memuat data dari session storage
-window.loadDataFromStorage = function(storageKey = 'calculationResult') {
-    try {
-        const saved = sessionStorage.getItem(storageKey);
-        if (!saved) {
-            console.log(`📭 Tidak ada data di session storage dengan key: ${storageKey}`);
-            return null;
-        }
-        const data = JSON.parse(saved);
-        console.log(`📥 Data loaded from ${storageKey}:`, data);
-        return data;
-    } catch (error) {
-        console.error(`Error loading data from ${storageKey}:`, error);
-        return null;
-    }
-};
-
-// Helper untuk menambahkan vector-effect non-scaling-stroke pada elemen SVG
+// ==================== FUNGSI UMUM ====================
 function applyNonScalingStroke(element) {
     if (element && element.setAttribute) {
         element.setAttribute("vector-effect", "non-scaling-stroke");
@@ -35,18 +8,217 @@ function applyNonScalingStroke(element) {
     return element;
 }
 
-// ==================== RENDER PENAMPANG BALOK (LENGKAP) ====================
+function copyToClipboard(text, label) {
+    navigator.clipboard.writeText(text).then(() => alert(`${label} berhasil disalin ke clipboard!`))
+        .catch(() => {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            alert(`${label} berhasil disalin ke clipboard!`);
+        });
+}
+
+function getPelatDataFromStorage() {
+    try {
+        const saved = sessionStorage.getItem('calculationResultPelat');
+        if (!saved) return null;
+        return JSON.parse(saved);
+    } catch (e) {
+        console.warn('Gagal membaca data pelat:', e);
+        return null;
+    }
+}
+
+function getJenisPelatLengkap() {
+    const data = getPelatDataFromStorage();
+    if (!data) return "dua_arah";
+    let tumpuanHuruf = null;
+    let jenisPelatFromCalc = null;
+    let lx, ly;
+    if (data.rekap && data.rekap.tabel) {
+        tumpuanHuruf = data.rekap.tabel.tumpuanHuruf;
+        jenisPelatFromCalc = data.rekap.tabel.jenisPelat;
+    }
+    if (data.rekap && data.rekap.input && data.rekap.input.dimensi) {
+        lx = data.rekap.input.dimensi.lx;
+        ly = data.rekap.input.dimensi.ly;
+    }
+    if (data.rekap && data.rekap.formatted && data.rekap.formatted.tumpuan_manual) {
+        const tumpuanManual = data.rekap.formatted.tumpuan_manual;
+        if (tumpuanManual === "Kantilever") return "kantilever";
+        if (tumpuanManual === "Satu Arah") return "satu_arah";
+        if (tumpuanManual === "Dua Arah") return "dua_arah";
+    }
+    if (tumpuanHuruf === "F" || tumpuanHuruf === "G") return "kantilever";
+    if (tumpuanHuruf === "D" || tumpuanHuruf === "E") return "satu_arah";
+    if (lx && ly && ly >= 2 * lx) return "satu_arah";
+    if (jenisPelatFromCalc === "satu_arah") return "satu_arah";
+    return "dua_arah";
+}
+
+function getSubJenisSatuArah() {
+    const data = getPelatDataFromStorage();
+    if (!data) return "pendek";
+    let tumpuanHuruf = null;
+    let lx, ly;
+    if (data.rekap && data.rekap.tabel) {
+        tumpuanHuruf = data.rekap.tabel.tumpuanHuruf;
+    }
+    if (data.rekap && data.rekap.input && data.rekap.input.dimensi) {
+        lx = data.rekap.input.dimensi.lx;
+        ly = data.rekap.input.dimensi.ly;
+    }
+    if (tumpuanHuruf === "E") return "panjang";
+    if (tumpuanHuruf === "D") return "pendek";
+    if (ly >= 2 * lx) return "pendek";
+    return "pendek";
+}
+
+function hitungPosisiTitikKiriKanan(startX, endX, stepDisplay, diameterDisplay, offsetUjung, aturanUjungKhusus) {
+    const leftMost = startX + offsetUjung;
+    const rightMost = endX - offsetUjung;
+    if (leftMost >= rightMost) return [];
+    let positions = [];
+    let current = leftMost;
+    while (current <= rightMost) {
+        positions.push(current);
+        current += stepDisplay;
+    }
+    if (aturanUjungKhusus) {
+        positions.push(rightMost);
+        if (positions.length >= 2) {
+            const secondLast = positions[positions.length - 2];
+            const last = positions[positions.length - 1];
+            if (last - secondLast < 4 * diameterDisplay) {
+                positions[positions.length - 2] = last;
+                positions.pop();
+            }
+        }
+    }
+    return positions;
+}
+
+function hitungPosisiTitikKananKiri(startX, endX, stepDisplay, diameterDisplay, offsetUjung, aturanUjungKhusus) {
+    const leftMost = startX + offsetUjung;
+    const rightMost = endX - offsetUjung;
+    if (leftMost >= rightMost) return [];
+    let positions = [];
+    let current = rightMost;
+    while (current >= leftMost) {
+        positions.push(current);
+        current -= stepDisplay;
+    }
+    if (aturanUjungKhusus) {
+        positions.push(leftMost);
+        if (positions.length >= 2) {
+            const secondLast = positions[positions.length - 2];
+            const last = positions[positions.length - 1];
+            if (last - secondLast < 4 * diameterDisplay) {
+                positions[positions.length - 2] = last;
+                positions.pop();
+            }
+        }
+    }
+    return positions;
+}
+
+function buatSegitiga(svg, orientasi, jumlah, posisiX, posisiY, lebar, tinggi, warna) {
+    if (jumlah === 1) {
+        let points = '';
+        switch (orientasi) {
+            case 'left':
+                points = `${posisiX - lebar},${posisiY} ${posisiX},${posisiY - tinggi/2} ${posisiX},${posisiY + tinggi/2}`;
+                break;
+            case 'right':
+                points = `${posisiX + lebar},${posisiY} ${posisiX},${posisiY - tinggi/2} ${posisiX},${posisiY + tinggi/2}`;
+                break;
+            case 'up':
+                points = `${posisiX},${posisiY - tinggi} ${posisiX - lebar/2},${posisiY} ${posisiX + lebar/2},${posisiY}`;
+                break;
+            case 'down':
+                points = `${posisiX},${posisiY + tinggi} ${posisiX - lebar/2},${posisiY} ${posisiX + lebar/2},${posisiY}`;
+                break;
+        }
+        const polygon = document.createElementNS(svg.namespaceURI, "polygon");
+        polygon.setAttribute("points", points);
+        polygon.setAttribute("fill", warna);
+        polygon.setAttribute("stroke", "none");
+        svg.appendChild(polygon);
+    } else if (jumlah === 2) {
+        if (orientasi === 'left' || orientasi === 'right') {
+            const offset = tinggi / 2;
+            const y1 = posisiY - offset;
+            const y2 = posisiY + offset;
+            for (let y of [y1, y2]) {
+                let points = '';
+                if (orientasi === 'left') {
+                    points = `${posisiX - lebar},${y} ${posisiX},${y - tinggi/2} ${posisiX},${y + tinggi/2}`;
+                } else {
+                    points = `${posisiX + lebar},${y} ${posisiX},${y - tinggi/2} ${posisiX},${y + tinggi/2}`;
+                }
+                const polygon = document.createElementNS(svg.namespaceURI, "polygon");
+                polygon.setAttribute("points", points);
+                polygon.setAttribute("fill", warna);
+                polygon.setAttribute("stroke", "none");
+                svg.appendChild(polygon);
+            }
+        } else {
+            const offset = lebar / 2;
+            const x1 = posisiX - offset;
+            const x2 = posisiX + offset;
+            for (let x of [x1, x2]) {
+                let points = '';
+                if (orientasi === 'up') {
+                    points = `${x},${posisiY - tinggi} ${x - lebar/2},${posisiY} ${x + lebar/2},${posisiY}`;
+                } else {
+                    points = `${x},${posisiY + tinggi} ${x - lebar/2},${posisiY} ${x + lebar/2},${posisiY}`;
+                }
+                const polygon = document.createElementNS(svg.namespaceURI, "polygon");
+                polygon.setAttribute("points", points);
+                polygon.setAttribute("fill", warna);
+                polygon.setAttribute("stroke", "none");
+                svg.appendChild(polygon);
+            }
+        }
+    }
+}
+
+function buatSegitigaVertikalTunggal(svg, orientasi, posisiX, posisiY, lebar, tinggi, warna) {
+    let points = '';
+    if (orientasi === 'left') {
+        points = `${posisiX - lebar},${posisiY} ${posisiX},${posisiY - tinggi/2} ${posisiX},${posisiY + tinggi/2}`;
+    } else if (orientasi === 'right') {
+        points = `${posisiX + lebar},${posisiY} ${posisiX},${posisiY - tinggi/2} ${posisiX},${posisiY + tinggi/2}`;
+    }
+    const polygon = document.createElementNS(svg.namespaceURI, "polygon");
+    polygon.setAttribute("points", points);
+    polygon.setAttribute("fill", warna);
+    polygon.setAttribute("stroke", "none");
+    svg.appendChild(polygon);
+}
+
+function buatLingkaran(svg, cx, cy, radius, warna) {
+    const circle = document.createElementNS(svg.namespaceURI, "circle");
+    circle.setAttribute("cx", cx);
+    circle.setAttribute("cy", cy);
+    circle.setAttribute("r", radius);
+    circle.setAttribute("fill", warna);
+    circle.setAttribute("stroke", "none");
+    svg.appendChild(circle);
+}
+
+// ==================== RENDER PENAMPANG BALOK ====================
 window.renderPenampangBalok = function(config, containerId = "svg-container") {
     console.log("🎨 Rendering penampang balok dengan config:", config);
-    
     const container = document.getElementById(containerId);
     if (!container) {
         console.error(`Error: Element dengan ID '${containerId}' tidak ditemukan!`);
         return;
     }
-
     container.innerHTML = "";
-
     const requiredParams = ['lebar', 'tinggi', 'D', 'begel', 'jumlahAtas', 'jumlahBawah', 'selimut', 'm'];
     for (const param of requiredParams) {
         if (config[param] === undefined || config[param] === null) {
@@ -55,19 +227,12 @@ window.renderPenampangBalok = function(config, containerId = "svg-container") {
             return;
         }
     }
-
     const renderConfig = config;
-
-    if (containerId.includes('tumpuan')) {
-        window.cadConfig.tumpuan = { ...renderConfig, containerId };
-    } else if (containerId.includes('lapangan')) {
-        window.cadConfig.lapangan = { ...renderConfig, containerId };
-    }
-
+    if (containerId.includes('tumpuan')) window.cadConfig.tumpuan = { ...renderConfig, containerId };
+    else if (containerId.includes('lapangan')) window.cadConfig.lapangan = { ...renderConfig, containerId };
     const { lebar, tinggi, D, begel, jumlahAtas, jumlahBawah, selimut, m, jumlahTorsi, jarakTorsi, Snv } = renderConfig;
     const r = D / 2;
     const jarakAntarBaris = Math.max(25, D);
-
     const svgNS = "http://www.w3.org/2000/svg";
     const svg = document.createElementNS(svgNS, "svg");
     svg.setAttribute("width", "100%");
@@ -75,10 +240,8 @@ window.renderPenampangBalok = function(config, containerId = "svg-container") {
     svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
     svg.setAttribute("viewBox", `0 0 ${lebar + 60} ${tinggi + 20}`);
     container.appendChild(svg);
-
     const lingkaranData = [];
     const lingkaranTorsiData = [];
-
     const rect = document.createElementNS(svgNS, "rect");
     rect.setAttribute("x", 30);
     rect.setAttribute("y", 10);
@@ -89,7 +252,6 @@ window.renderPenampangBalok = function(config, containerId = "svg-container") {
     rect.setAttribute("stroke-width", 4);
     applyNonScalingStroke(rect);
     svg.appendChild(rect);
-
     const radiusLuar = D/2 + begel;
     const radiusDalam = D/2;
     const rectBegelLuar = document.createElementNS(svgNS, "rect");
@@ -104,7 +266,6 @@ window.renderPenampangBalok = function(config, containerId = "svg-container") {
     rectBegelLuar.setAttribute("stroke-width", 3);
     applyNonScalingStroke(rectBegelLuar);
     svg.appendChild(rectBegelLuar);
-
     const rectBegelDalam = document.createElementNS(svgNS, "rect");
     rectBegelDalam.setAttribute("x", 30 + selimut + begel);
     rectBegelDalam.setAttribute("y", 10 + selimut + begel);
@@ -117,27 +278,21 @@ window.renderPenampangBalok = function(config, containerId = "svg-container") {
     rectBegelDalam.setAttribute("stroke-width", 3);
     applyNonScalingStroke(rectBegelDalam);
     svg.appendChild(rectBegelDalam);
-
-    function buatLingkaran(cx, cy, isTorsi = false) {
+    function buatLingkaranCAD(cx, cy, isTorsi = false) {
         const circle = document.createElementNS(svgNS, "circle");
         const actualCx = 30 + cx;
         const actualCy = 10 + cy;
         circle.setAttribute("cx", actualCx);
         circle.setAttribute("cy", actualCy);
         circle.setAttribute("r", r);
-        if (isTorsi) {
-            circle.setAttribute("fill", "#000000");
-            circle.setAttribute("stroke", "#000000");
-            circle.setAttribute("stroke-width", "3");
-            lingkaranTorsiData.push({ cx, cy, r });
-        } else {
-            circle.setAttribute("fill", "#000000");
-            lingkaranData.push({ cx, cy, r });
-        }
+        circle.setAttribute("fill", "#000000");
+        circle.setAttribute("stroke", "#000000");
+        circle.setAttribute("stroke-width", "2");
         applyNonScalingStroke(circle);
+        if (isTorsi) lingkaranTorsiData.push({ cx, cy, r });
+        else lingkaranData.push({ cx, cy, r });
         svg.appendChild(circle);
     }
-
     function buatBaris(jumlah, cy, isAtas) {
         const barisUtuh = Math.floor(jumlah / m);
         const sisa = jumlah % m;
@@ -147,7 +302,7 @@ window.renderPenampangBalok = function(config, containerId = "svg-container") {
             const spacingX = (lebar - 2 * (selimut + begel + r)) / (m - 1);
             for (let i = 0; i < m; i++) {
                 const cx = selimut + begel + r + i * spacingX;
-                buatLingkaran(cx, cyBaris);
+                buatLingkaranCAD(cx, cyBaris);
             }
         }
         if (sisa > 0) {
@@ -155,46 +310,39 @@ window.renderPenampangBalok = function(config, containerId = "svg-container") {
             const cySisa = cy + (isAtas ? barisUtuh * spacingY : -barisUtuh * spacingY);
             if (sisa === 1) {
                 const cx = selimut + begel + r;
-                buatLingkaran(cx, cySisa);
+                buatLingkaranCAD(cx, cySisa);
             } else {
                 const spacingX = (lebar - 2 * (selimut + begel + r)) / (sisa - 1);
                 for (let i = 0; i < sisa; i++) {
                     const cx = selimut + begel + r + i * spacingX;
-                    buatLingkaran(cx, cySisa);
+                    buatLingkaranCAD(cx, cySisa);
                 }
             }
         }
     }
-
     const cyAtas = selimut + begel + r;
     buatBaris(jumlahAtas, cyAtas, true);
     const cyBawah = tinggi - (selimut + begel + r);
     buatBaris(jumlahBawah, cyBawah, false);
-
     if (jumlahTorsi > 0) {
-        renderTulanganTorsi(jumlahTorsi, jarakTorsi);
-    }
-
-    function renderTulanganTorsi(jumlah, jarak) {
         const actualSnv = Snv || Math.max(25, D);
         const yMid = tinggi / 2;
         const xKiri = selimut + begel + r;
         const xKanan = lebar - selimut - begel - r;
-        const nKanan = Math.ceil(jumlah / 2);
-        const nKiri = Math.floor(jumlah / 2);
+        const nKanan = Math.ceil(jumlahTorsi / 2);
+        const nKiri = Math.floor(jumlahTorsi / 2);
         const jarakPusatKePusat = actualSnv + D;
         for (let i = 1; i <= nKanan; i++) {
             const offsetY = (i - (nKanan + 1) / 2) * jarakPusatKePusat;
             const cy = yMid + offsetY;
-            buatLingkaran(xKanan, cy, true);
+            buatLingkaranCAD(xKanan, cy, true);
         }
         for (let i = 1; i <= nKiri; i++) {
             const offsetY = (i - (nKiri + 1) / 2) * jarakPusatKePusat;
             const cy = yMid + offsetY;
-            buatLingkaran(xKiri, cy, true);
+            buatLingkaranCAD(xKiri, cy, true);
         }
     }
-
     if (containerId.includes('tumpuan')) {
         window.cadConfig.tumpuan.lingkaranData = lingkaranData;
         window.cadConfig.tumpuan.lingkaranTorsiData = lingkaranTorsiData;
@@ -202,43 +350,32 @@ window.renderPenampangBalok = function(config, containerId = "svg-container") {
         window.cadConfig.lapangan.lingkaranData = lingkaranData;
         window.cadConfig.lapangan.lingkaranTorsiData = lingkaranTorsiData;
     }
-
     if (containerId.includes('tumpuan') || !window.cadConfig.activeType) {
         window.config = renderConfig;
         window.lingkaranData = lingkaranData;
         window.lingkaranTorsiData = lingkaranTorsiData;
         window.cadConfig.activeType = 'tumpuan';
     }
-
     console.log(`✅ Penampang ${containerId} berhasil di-render. Total tulangan: ${lingkaranData.length}, Tulangan torsi: ${lingkaranTorsiData.length}`);
     return { config: renderConfig, lingkaranData, lingkaranTorsiData, containerId };
 };
 
-// ==================== RENDER PENAMPANG KOLOM (BIAXIAL - DIPERBAIKI) ====================
+// ==================== RENDER PENAMPANG KOLOM ====================
 window.renderPenampangKolom = function(config, containerId = "svg-container-tumpuan") {
     console.log("🏗️ Rendering penampang kolom dengan config:", config);
-    
     const container = document.getElementById(containerId);
     if (!container) {
         console.error(`Error: Element dengan ID '${containerId}' tidak ditemukan!`);
         return;
     }
-
     container.innerHTML = "";
-
     let renderConfig = config;
     if (!config || Object.keys(config).length === 0) {
         const data = window.loadDataFromStorage('calculationResultKolom') || window.loadDataFromStorage('calculationResult');
         if (data) {
             renderConfig = createKolomConfigFromData(data);
             if (!renderConfig) {
-                container.innerHTML = `
-                    <div style="text-align: center; padding: 2rem; color: #dc3545;">
-                        <p>❌ Data kolom tidak lengkap.</p>
-                        <p style="font-size: 0.9rem;">Perhitungan kolom biaxial tidak menyediakan nX dan nY yang valid.</p>
-                        <p style="font-size: 0.9rem;">Silakan lakukan perhitungan ulang dengan versi terbaru.</p>
-                    </div>
-                `;
+                container.innerHTML = `<div style="text-align: center; padding: 2rem; color: #dc3545;"><p>❌ Data kolom tidak lengkap.</p><p style="font-size: 0.9rem;">Perhitungan kolom biaxial tidak menyediakan nX dan nY yang valid.</p><p style="font-size: 0.9rem;">Silakan lakukan perhitungan ulang dengan versi terbaru.</p></div>`;
                 return;
             }
         } else {
@@ -246,9 +383,6 @@ window.renderPenampangKolom = function(config, containerId = "svg-container-tump
             return;
         }
     }
-
-    console.log("🔧 Config kolom untuk rendering:", renderConfig);
-
     const requiredParams = ['lebar', 'tinggi', 'D', 'begel', 'selimut', 'nX', 'nY'];
     for (const param of requiredParams) {
         if (renderConfig[param] === undefined || renderConfig[param] === null) {
@@ -257,9 +391,7 @@ window.renderPenampangKolom = function(config, containerId = "svg-container-tump
             return;
         }
     }
-
     window.cadConfig.kolom = { ...renderConfig, containerId };
-
     const { lebar, tinggi, D, begel, selimut, nX, nY } = renderConfig;
     const r = D / 2;
     const offset = selimut + begel + r;
@@ -270,9 +402,7 @@ window.renderPenampangKolom = function(config, containerId = "svg-container-tump
     svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
     svg.setAttribute("viewBox", `0 0 ${lebar + 60} ${tinggi + 20}`);
     container.appendChild(svg);
-
     const lingkaranData = [];
-
     const rect = document.createElementNS(svgNS, "rect");
     rect.setAttribute("x", 30);
     rect.setAttribute("y", 10);
@@ -283,7 +413,6 @@ window.renderPenampangKolom = function(config, containerId = "svg-container-tump
     rect.setAttribute("stroke-width", 4);
     applyNonScalingStroke(rect);
     svg.appendChild(rect);
-
     const radiusLuar = D/2 + begel;
     const radiusDalam = D/2;
     const rectBegelLuar = document.createElementNS(svgNS, "rect");
@@ -298,7 +427,6 @@ window.renderPenampangKolom = function(config, containerId = "svg-container-tump
     rectBegelLuar.setAttribute("stroke-width", 3);
     applyNonScalingStroke(rectBegelLuar);
     svg.appendChild(rectBegelLuar);
-
     const rectBegelDalam = document.createElementNS(svgNS, "rect");
     rectBegelDalam.setAttribute("x", 30 + selimut + begel);
     rectBegelDalam.setAttribute("y", 10 + selimut + begel);
@@ -311,8 +439,7 @@ window.renderPenampangKolom = function(config, containerId = "svg-container-tump
     rectBegelDalam.setAttribute("stroke-width", 3);
     applyNonScalingStroke(rectBegelDalam);
     svg.appendChild(rectBegelDalam);
-
-    function buatLingkaran(cx, cy) {
+    function buatLingkaranKolom(cx, cy) {
         const circle = document.createElementNS(svgNS, "circle");
         const actualCx = 30 + cx;
         const actualCy = 10 + cy;
@@ -326,19 +453,15 @@ window.renderPenampangKolom = function(config, containerId = "svg-container-tump
         lingkaranData.push({ cx, cy, r });
         svg.appendChild(circle);
     }
-
-    // Tulangan arah X (vertikal) di dua sisi
     const nXPerSisi = nX / 2;
     const yMin = offset;
     const yMax = tinggi - offset;
     const jarakY = (nXPerSisi > 1) ? (yMax - yMin) / (nXPerSisi - 1) : 0;
     for (let i = 0; i < nXPerSisi; i++) {
         const cy = yMin + i * jarakY;
-        buatLingkaran(offset, cy);
-        buatLingkaran(lebar - offset, cy);
+        buatLingkaranKolom(offset, cy);
+        buatLingkaranKolom(lebar - offset, cy);
     }
-
-    // Tulangan arah Y (horizontal) di dua sisi (sisa setelah 4 sudut)
     let sisaY = nY - 4;
     if (sisaY > 0) {
         const nYPerSisi = sisaY / 2;
@@ -347,39 +470,68 @@ window.renderPenampangKolom = function(config, containerId = "svg-container-tump
         const jarakX = (nYPerSisi > 0) ? (xMax - xMin) / (nYPerSisi + 1) : 0;
         for (let i = 1; i <= nYPerSisi; i++) {
             const cx = xMin + i * jarakX;
-            buatLingkaran(cx, offset);
-            buatLingkaran(cx, tinggi - offset);
+            buatLingkaranKolom(cx, offset);
+            buatLingkaranKolom(cx, tinggi - offset);
         }
-    } else if (sisaY < 0) {
-        console.warn(`⚠️ nY (${nY}) kurang dari 4, tidak ada tulangan horizontal tambahan.`);
     }
-
     window.cadConfig.kolom.lingkaranData = lingkaranData;
-
     if (containerId.includes('tumpuan') || !window.cadConfig.activeType) {
         window.config = renderConfig;
         window.lingkaranData = lingkaranData;
         window.cadConfig.activeType = 'kolom';
     }
-
     console.log(`✅ Penampang kolom biaxial: nX=${nX}, nY=${nY}, total batang = ${lingkaranData.length}`);
     return { config: renderConfig, lingkaranData, containerId };
 };
 
-// ==================== FUNGSI MEMBUAT CONFIG KOLOM DARI DATA SESSION ====================
+// ==================== LOAD DATA DARI STORAGE ====================
+if (!window.loadDataFromStorage) {
+    window.loadDataFromStorage = function(key) {
+        try {
+            const saved = sessionStorage.getItem(key);
+            if (!saved) return null;
+            return JSON.parse(saved);
+        } catch (e) {
+            console.warn(`Gagal load ${key}:`, e);
+            return null;
+        }
+    };
+}
+
+// ==================== CREATE KOLOM CONFIG (DENGAN PATH YANG DIPERBAIKI) ====================
 function createKolomConfigFromData(data) {
     try {
-        console.log("📦 Membuat config kolom dari data:", data);
-        
-        const dimensi = data.inputData?.dimensi || data.rekap?.input?.dimensi || {};
-        const tulangan = data.rekap?.tulangan || data.data?.hasilTulangan || {};
-        const begelData = data.rekap?.begel || data.data?.begel || {};
-        
+        // Cari dimensi dari berbagai kemungkinan lokasi
+        const dimensi =
+            data.inputData?.dimensi ||
+            data.rekap?.input?.dimensi ||
+            data.data?.parsedInput?.dimensi ||
+            data.parsedInput?.dimensi ||
+            data.dimensi ||
+            {};
         const lebar = parseInt(dimensi.b);
         const tinggi = parseInt(dimensi.h);
         const selimut = parseInt(dimensi.sb);
-        const D = tulangan.D || data.data?.D || data.optimizerData?.data?.D;
-        const begel = tulangan.phi || data.data?.phi || data.optimizerData?.data?.phi;
+        
+        const D =
+            data.rekap?.tulangan?.D ||
+            data.data?.D ||
+            data.data?.hasilTulangan?.D ||
+            data.optimizerData?.data?.D ||
+            data.data?.parsedInput?.tulangan?.d_tul ||
+            data.parsedInput?.tulangan?.d_tul ||
+            data.inputData?.tulangan?.d_tul ||
+            null;
+        
+        const begel =
+            data.rekap?.tulangan?.phi ||
+            data.data?.phi ||
+            data.data?.hasilTulangan?.phi ||
+            data.optimizerData?.data?.phi ||
+            data.data?.parsedInput?.tulangan?.phi_tul ||
+            data.parsedInput?.tulangan?.phi_tul ||
+            data.inputData?.tulangan?.phi_tul ||
+            null;
         
         if (!lebar || !tinggi || !selimut || !D || !begel) {
             console.error("❌ Data dimensi atau tulangan dasar tidak lengkap");
@@ -387,16 +539,10 @@ function createKolomConfigFromData(data) {
         }
         
         let nX = null, nY = null;
-        
         if (data.rekap?.tulanganArahX?.n_terpakai) nX = data.rekap.tulanganArahX.n_terpakai;
         if (data.rekap?.tulanganArahY?.n_terpakai) nY = data.rekap.tulanganArahY.n_terpakai;
-        
-        if (!nX && data.data?.hasilArahX?.n_terpakai) nX = data.data.hasilArahX.n_terpakai;
-        if (!nY && data.data?.hasilArahY?.n_terpakai) nY = data.data.hasilArahY.n_terpakai;
-        
         if (!nX && data.data?.hasilTulangan?.hasilArahX?.n_terpakai) nX = data.data.hasilTulangan.hasilArahX.n_terpakai;
         if (!nY && data.data?.hasilTulangan?.hasilArahY?.n_terpakai) nY = data.data.hasilTulangan.hasilArahY.n_terpakai;
-        
         if (!nX && data.optimizerData?.data?.nX) nX = data.optimizerData.data.nX;
         if (!nY && data.optimizerData?.data?.nY) nY = data.optimizerData.data.nY;
         
@@ -407,7 +553,6 @@ function createKolomConfigFromData(data) {
                 if (asumsi % 2 !== 0) asumsi++;
                 nX = nX || asumsi;
                 nY = nY || asumsi;
-                console.warn(`⚠️ Menggunakan nilai asumsi nX=nY=${asumsi} dari total batang ${total}`);
             }
         }
         
@@ -416,327 +561,72 @@ function createKolomConfigFromData(data) {
             return null;
         }
         
-        if (nX % 2 !== 0) { nX++; }
-        if (nY % 2 !== 0) { nY++; }
+        if (nX % 2 !== 0) nX++;
+        if (nY % 2 !== 0) nY++;
         
-        return {
-            lebar, tinggi, D, begel, selimut,
-            nX: nX, nY: nY,
-            tipe: 'kolom',
-            source: 'session-storage-biaxial'
-        };
+        return { lebar, tinggi, D, begel, selimut, nX, nY, tipe: 'kolom', source: 'session-storage-biaxial' };
     } catch (error) {
         console.error("❌ Error membuat config kolom:", error);
         return null;
     }
 }
 
-// ==================== RENDER PENAMPANG FONDASI ====================
-window.renderPenampangFondasi = function(config, containerId = "svg-container-tumpuan") {
-    console.log("🏗️ Rendering penampang fondasi dengan config:", config);
-    
-    const container = document.getElementById(containerId);
-    if (!container) {
-        console.error(`Error: Element dengan ID '${containerId}' tidak ditemukan!`);
-        return;
+window.renderKolomFromStorage = function(containerId = "svg-container-tumpuan") {
+    console.log("🔄 Memuat dan merender kolom dari session storage");
+    const data = window.loadDataFromStorage('calculationResultKolom') || window.loadDataFromStorage('calculationResult');
+    if (!data) {
+        const container = document.getElementById(containerId);
+        if (container) container.innerHTML = `<div style="text-align: center; padding: 2rem; color: #666;"><p>Data kolom tidak ditemukan</p></div>`;
+        return null;
     }
-
-    container.innerHTML = "";
-
+    const config = createKolomConfigFromData(data);
     if (!config) {
-        container.innerHTML = `<div style="text-align: center; padding: 2rem; color: #dc3545;"><p>Data penampang fondasi tidak ditemukan</p><p style="font-size: 0.9rem;">Silakan berikan config yang valid</p></div>`;
-        return;
+        const container = document.getElementById(containerId);
+        if (container) container.innerHTML = `<div style="text-align: center; padding: 2rem; color: #dc3545;"><p>❌ Data kolom tidak lengkap.</p></div>`;
+        return null;
     }
-
-    window.cadConfig.fondasi = { ...config, containerId };
-
-    const { lx, ly, h, bx, by, D, Db, s, jenis } = config;
-    
-    if (jenis === 'samping') {
-        const required = ['lx', 'h', 'bx', 'by'];
-        for (const p of required) if (config[p] === undefined) {
-            container.innerHTML = `<div style="text-align: center; padding: 2rem; color: #dc3545;"><p>Data penampang fondasi tidak lengkap</p><p>Parameter '${p}' diperlukan untuk tampak samping</p></div>`;
-            return;
-        }
-    } else if (jenis === 'atas') {
-        const required = ['lx', 'ly', 'bx', 'by'];
-        for (const p of required) if (config[p] === undefined) {
-            container.innerHTML = `<div style="text-align: center; padding: 2rem; color: #dc3545;"><p>Data penampang fondasi tidak lengkap</p><p>Parameter '${p}' diperlukan untuk tampak atas</p></div>`;
-            return;
-        }
-    } else {
-        container.innerHTML = `<div style="text-align: center; padding: 2rem; color: #dc3545;"><p>Jenis fondasi tidak valid</p><p>Jenis harus 'samping' atau 'atas'</p></div>`;
-        return;
-    }
-
-    const svgNS = "http://www.w3.org/2000/svg";
-    let svg, viewBoxWidth, viewBoxHeight;
-    const STROKE_WIDTH_MAIN = 1.0;
-    const STROKE_WIDTH_DASHED = 0.6;
-    const STROKE_WIDTH_DIMENSION = 0.4;
-    
-    if (jenis === 'samping') {
-        const scale = 0.2;
-        const lxMM = lx * 1000 * scale;
-        const hMM = h * 1000 * scale;
-        const bxMM = bx * scale;
-        let byTerbatas = by;
-        if (by > 1.5 * bx) byTerbatas = bx;
-        else byTerbatas = Math.min(by, 1.5 * bx);
-        const byMM = byTerbatas * scale;
-        viewBoxWidth = lxMM + 100;
-        viewBoxHeight = hMM + 100;
-        svg = document.createElementNS(svgNS, "svg");
-        svg.setAttribute("width", "100%");
-        svg.setAttribute("height", "100%");
-        svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
-        svg.setAttribute("viewBox", `0 0 ${viewBoxWidth} ${viewBoxHeight}`);
-        container.appendChild(svg);
-        
-        const fondasiBawah = document.createElementNS(svgNS, "line");
-        fondasiBawah.setAttribute("x1", 50);
-        fondasiBawah.setAttribute("y1", 50 + hMM);
-        fondasiBawah.setAttribute("x2", 50 + lxMM);
-        fondasiBawah.setAttribute("y2", 50 + hMM);
-        fondasiBawah.setAttribute("stroke", "#000000");
-        fondasiBawah.setAttribute("stroke-width", STROKE_WIDTH_MAIN);
-        applyNonScalingStroke(fondasiBawah);
-        svg.appendChild(fondasiBawah);
-        
-        const fondasiKiri = document.createElementNS(svgNS, "line");
-        fondasiKiri.setAttribute("x1", 50);
-        fondasiKiri.setAttribute("y1", 50);
-        fondasiKiri.setAttribute("x2", 50);
-        fondasiKiri.setAttribute("y2", 50 + hMM);
-        fondasiKiri.setAttribute("stroke", "#000000");
-        fondasiKiri.setAttribute("stroke-width", STROKE_WIDTH_MAIN);
-        applyNonScalingStroke(fondasiKiri);
-        svg.appendChild(fondasiKiri);
-        
-        const fondasiKanan = document.createElementNS(svgNS, "line");
-        fondasiKanan.setAttribute("x1", 50 + lxMM);
-        fondasiKanan.setAttribute("y1", 50);
-        fondasiKanan.setAttribute("x2", 50 + lxMM);
-        fondasiKanan.setAttribute("y2", 50 + hMM);
-        fondasiKanan.setAttribute("stroke", "#000000");
-        fondasiKanan.setAttribute("stroke-width", STROKE_WIDTH_MAIN);
-        applyNonScalingStroke(fondasiKanan);
-        svg.appendChild(fondasiKanan);
-        
-        const kolomX = 50 + (lxMM / 2) - (bxMM / 2);
-        const kolomY = 50 - byMM;
-        const atasFondasiKiri = document.createElementNS(svgNS, "line");
-        atasFondasiKiri.setAttribute("x1", 50);
-        atasFondasiKiri.setAttribute("y1", 50);
-        atasFondasiKiri.setAttribute("x2", kolomX);
-        atasFondasiKiri.setAttribute("y2", 50);
-        atasFondasiKiri.setAttribute("stroke", "#000000");
-        atasFondasiKiri.setAttribute("stroke-width", STROKE_WIDTH_MAIN);
-        applyNonScalingStroke(atasFondasiKiri);
-        svg.appendChild(atasFondasiKiri);
-        
-        const atasFondasiKanan = document.createElementNS(svgNS, "line");
-        atasFondasiKanan.setAttribute("x1", kolomX + bxMM);
-        atasFondasiKanan.setAttribute("y1", 50);
-        atasFondasiKanan.setAttribute("x2", 50 + lxMM);
-        atasFondasiKanan.setAttribute("y2", 50);
-        atasFondasiKanan.setAttribute("stroke", "#000000");
-        atasFondasiKanan.setAttribute("stroke-width", STROKE_WIDTH_MAIN);
-        applyNonScalingStroke(atasFondasiKanan);
-        svg.appendChild(atasFondasiKanan);
-        
-        const kolomKiri = document.createElementNS(svgNS, "line");
-        kolomKiri.setAttribute("x1", kolomX);
-        kolomKiri.setAttribute("y1", 50);
-        kolomKiri.setAttribute("x2", kolomX);
-        kolomKiri.setAttribute("y2", kolomY);
-        kolomKiri.setAttribute("stroke", "#000000");
-        kolomKiri.setAttribute("stroke-width", STROKE_WIDTH_MAIN);
-        applyNonScalingStroke(kolomKiri);
-        svg.appendChild(kolomKiri);
-        
-        const kolomAtas = document.createElementNS(svgNS, "line");
-        kolomAtas.setAttribute("x1", kolomX);
-        kolomAtas.setAttribute("y1", kolomY);
-        kolomAtas.setAttribute("x2", kolomX + bxMM);
-        kolomAtas.setAttribute("y2", kolomY);
-        kolomAtas.setAttribute("stroke", "#000000");
-        kolomAtas.setAttribute("stroke-width", STROKE_WIDTH_DASHED);
-        kolomAtas.setAttribute("stroke-dasharray", `${STROKE_WIDTH_DASHED*10},${STROKE_WIDTH_DASHED*10}`);
-        applyNonScalingStroke(kolomAtas);
-        svg.appendChild(kolomAtas);
-        
-        const kolomKanan = document.createElementNS(svgNS, "line");
-        kolomKanan.setAttribute("x1", kolomX + bxMM);
-        kolomKanan.setAttribute("y1", kolomY);
-        kolomKanan.setAttribute("x2", kolomX + bxMM);
-        kolomKanan.setAttribute("y2", 50);
-        kolomKanan.setAttribute("stroke", "#000000");
-        kolomKanan.setAttribute("stroke-width", STROKE_WIDTH_MAIN);
-        applyNonScalingStroke(kolomKanan);
-        svg.appendChild(kolomKanan);
-        
-        const lineLx1 = document.createElementNS(svgNS, "line");
-        lineLx1.setAttribute("x1", 50);
-        lineLx1.setAttribute("y1", 50 + hMM + 20);
-        lineLx1.setAttribute("x2", 50 + lxMM);
-        lineLx1.setAttribute("y2", 50 + hMM + 20);
-        lineLx1.setAttribute("stroke", "#666");
-        lineLx1.setAttribute("stroke-width", STROKE_WIDTH_DIMENSION);
-        lineLx1.setAttribute("stroke-dasharray", `${STROKE_WIDTH_DIMENSION*10},${STROKE_WIDTH_DIMENSION*10}`);
-        applyNonScalingStroke(lineLx1);
-        svg.appendChild(lineLx1);
-        
-        const textLx = document.createElementNS(svgNS, "text");
-        textLx.setAttribute("x", 50 + lxMM/2);
-        textLx.setAttribute("y", 50 + hMM + 40);
-        textLx.setAttribute("text-anchor", "middle");
-        textLx.setAttribute("font-size", "12");
-        textLx.setAttribute("fill", "#000000");
-        textLx.textContent = `Lx = ${lx}m`;
-        svg.appendChild(textLx);
-        
-    } else if (jenis === 'atas') {
-        const scale = 0.08;
-        const lxMM = lx * 1000 * scale;
-        const bxMM = bx * scale;
-        const byMM = by * scale;
-        let lyTerbatas = Math.min(ly, 3 * lx);
-        const lyMM = lyTerbatas * 1000 * scale;
-        const isLy3TimesLx = ly >= 3 * lx;
-        viewBoxWidth = lxMM + 100;
-        viewBoxHeight = lyMM + 100;
-        svg = document.createElementNS(svgNS, "svg");
-        svg.setAttribute("width", "100%");
-        svg.setAttribute("height", "100%");
-        svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
-        svg.setAttribute("viewBox", `0 0 ${viewBoxWidth} ${viewBoxHeight}`);
-        container.appendChild(svg);
-        
-        const xStart = 50;
-        const yStart = 50;
-        const fondasiKiri = document.createElementNS(svgNS, "line");
-        fondasiKiri.setAttribute("x1", xStart);
-        fondasiKiri.setAttribute("y1", yStart);
-        fondasiKiri.setAttribute("x2", xStart);
-        fondasiKiri.setAttribute("y2", yStart + lyMM);
-        fondasiKiri.setAttribute("stroke", "#000000");
-        fondasiKiri.setAttribute("stroke-width", STROKE_WIDTH_MAIN);
-        applyNonScalingStroke(fondasiKiri);
-        svg.appendChild(fondasiKiri);
-        
-        const fondasiKanan = document.createElementNS(svgNS, "line");
-        fondasiKanan.setAttribute("x1", xStart + lxMM);
-        fondasiKanan.setAttribute("y1", yStart);
-        fondasiKanan.setAttribute("x2", xStart + lxMM);
-        fondasiKanan.setAttribute("y2", yStart + lyMM);
-        fondasiKanan.setAttribute("stroke", "#000000");
-        fondasiKanan.setAttribute("stroke-width", STROKE_WIDTH_MAIN);
-        applyNonScalingStroke(fondasiKanan);
-        svg.appendChild(fondasiKanan);
-        
-        const fondasiAtas = document.createElementNS(svgNS, "line");
-        fondasiAtas.setAttribute("x1", xStart);
-        fondasiAtas.setAttribute("y1", yStart);
-        fondasiAtas.setAttribute("x2", xStart + lxMM);
-        fondasiAtas.setAttribute("y2", yStart);
-        fondasiAtas.setAttribute("stroke", "#000000");
-        fondasiAtas.setAttribute("stroke-width", STROKE_WIDTH_MAIN);
-        if (isLy3TimesLx) fondasiAtas.setAttribute("stroke-dasharray", `${STROKE_WIDTH_MAIN*10},${STROKE_WIDTH_MAIN*10}`);
-        applyNonScalingStroke(fondasiAtas);
-        svg.appendChild(fondasiAtas);
-        
-        const fondasiBawah = document.createElementNS(svgNS, "line");
-        fondasiBawah.setAttribute("x1", xStart);
-        fondasiBawah.setAttribute("y1", yStart + lyMM);
-        fondasiBawah.setAttribute("x2", xStart + lxMM);
-        fondasiBawah.setAttribute("y2", yStart + lyMM);
-        fondasiBawah.setAttribute("stroke", "#000000");
-        fondasiBawah.setAttribute("stroke-width", STROKE_WIDTH_MAIN);
-        if (isLy3TimesLx) fondasiBawah.setAttribute("stroke-dasharray", `${STROKE_WIDTH_MAIN*10},${STROKE_WIDTH_MAIN*10}`);
-        applyNonScalingStroke(fondasiBawah);
-        svg.appendChild(fondasiBawah);
-        
-        const kolomX = xStart + (lxMM / 2) - (bxMM / 2);
-        const kolomY = yStart + (lyMM / 2) - (byMM / 2);
-        const kolomRect = document.createElementNS(svgNS, "rect");
-        kolomRect.setAttribute("x", kolomX);
-        kolomRect.setAttribute("y", kolomY);
-        kolomRect.setAttribute("width", bxMM);
-        kolomRect.setAttribute("height", byMM);
-        kolomRect.setAttribute("fill", "none");
-        kolomRect.setAttribute("stroke", "#000000");
-        kolomRect.setAttribute("stroke-width", STROKE_WIDTH_DASHED);
-        kolomRect.setAttribute("stroke-dasharray", `${STROKE_WIDTH_DASHED*10},${STROKE_WIDTH_DASHED*10}`);
-        applyNonScalingStroke(kolomRect);
-        svg.appendChild(kolomRect);
-        
-        const lineLx1 = document.createElementNS(svgNS, "line");
-        lineLx1.setAttribute("x1", xStart);
-        lineLx1.setAttribute("y1", yStart + lyMM + 20);
-        lineLx1.setAttribute("x2", xStart + lxMM);
-        lineLx1.setAttribute("y2", yStart + lyMM + 20);
-        lineLx1.setAttribute("stroke", "#666");
-        lineLx1.setAttribute("stroke-width", STROKE_WIDTH_DIMENSION);
-        lineLx1.setAttribute("stroke-dasharray", `${STROKE_WIDTH_DIMENSION*10},${STROKE_WIDTH_DIMENSION*10}`);
-        applyNonScalingStroke(lineLx1);
-        svg.appendChild(lineLx1);
-        
-        const textLx = document.createElementNS(svgNS, "text");
-        textLx.setAttribute("x", xStart + lxMM/2);
-        textLx.setAttribute("y", yStart + lyMM + 40);
-        textLx.setAttribute("text-anchor", "middle");
-        textLx.setAttribute("font-size", "12");
-        textLx.setAttribute("fill", "#000000");
-        textLx.textContent = `Lx = ${lx}m`;
-        svg.appendChild(textLx);
-        
-        const lineLy1 = document.createElementNS(svgNS, "line");
-        lineLy1.setAttribute("x1", xStart + lxMM + 20);
-        lineLy1.setAttribute("y1", yStart);
-        lineLy1.setAttribute("x2", xStart + lxMM + 20);
-        lineLy1.setAttribute("y2", yStart + lyMM);
-        lineLy1.setAttribute("stroke", "#666");
-        lineLy1.setAttribute("stroke-width", STROKE_WIDTH_DIMENSION);
-        lineLy1.setAttribute("stroke-dasharray", `${STROKE_WIDTH_DIMENSION*10},${STROKE_WIDTH_DIMENSION*10}`);
-        applyNonScalingStroke(lineLy1);
-        svg.appendChild(lineLy1);
-        
-        const textLy = document.createElementNS(svgNS, "text");
-        textLy.setAttribute("x", xStart + lxMM + 40);
-        textLy.setAttribute("y", yStart + lyMM/2);
-        textLy.setAttribute("text-anchor", "middle");
-        textLy.setAttribute("font-size", "12");
-        textLy.setAttribute("fill", "#000000");
-        textLy.setAttribute("transform", `rotate(-90, ${xStart + lxMM + 40}, ${yStart + lyMM/2})`);
-        if (ly > 3 * lx) textLy.textContent = `Ly = ${ly}m (ditampilkan ${lyTerbatas}m)`;
-        else textLy.textContent = `Ly = ${ly}m`;
-        svg.appendChild(textLy);
-        
-        if (ly > 3 * lx) {
-            const noteText = document.createElementNS(svgNS, "text");
-            noteText.setAttribute("x", xStart + lxMM/2);
-            noteText.setAttribute("y", yStart + lyMM + 60);
-            noteText.setAttribute("text-anchor", "middle");
-            noteText.setAttribute("font-size", "10");
-            noteText.setAttribute("fill", "#666");
-            noteText.setAttribute("font-style", "italic");
-            noteText.textContent = `Ly dibatasi untuk tampilan (maks 3×Lx)`;
-            svg.appendChild(noteText);
-        }
-    }
-
-    if (containerId.includes('tumpuan') || !window.cadConfig.activeType) {
-        window.config = config;
-        window.lingkaranData = [];
-        window.cadConfig.activeType = 'fondasi';
-    }
-
-    console.log(`✅ Penampang fondasi (${jenis}) berhasil di-render`);
-    return { config, containerId };
+    return window.renderPenampangKolom(config, containerId);
 };
 
-// ==================== FUNGSI CAD TEXT DAN LAIN-LAIN (LENGKAP) ====================
+// ==================== REGISTRI PELAT & RENDER UTAMA ====================
+window.pelatRenderers = {
+    dua_arah: null,
+    kantilever: null,
+    satu_arah: null
+};
+
+window.renderPenampangPelat = function(config, containerId) {
+    const jenisPelat = getJenisPelatLengkap();
+    const renderer = window.pelatRenderers[jenisPelat];
+    if (!renderer) {
+        console.error(`Renderer untuk jenis pelat '${jenisPelat}' tidak ditemukan.`);
+        const container = document.getElementById(containerId);
+        if (container) container.innerHTML = `<div style="text-align: center; padding: 2rem; color: #dc3545;"><p>Renderer untuk ${jenisPelat} tidak tersedia.</p></div>`;
+        return { config, containerId, scaleInfo: null, jenisPelat };
+    }
+    return renderer(config, containerId);
+};
+
+// ==================== REGISTRI FONDASI & RENDER UTAMA ====================
+window.foundationRenderers = {
+    tunggal: null,
+    menerus: null
+};
+
+window.renderPenampangFondasiByType = function(jenisFondasi, config, containerId) {
+    const renderer = window.foundationRenderers[jenisFondasi];
+    if (!renderer) {
+        console.error(`Renderer untuk fondasi '${jenisFondasi}' tidak ditemukan.`);
+        const container = document.getElementById(containerId);
+        if (container) container.innerHTML = `<div style="text-align: center; padding: 2rem; color: #dc3545;"><p>Renderer untuk fondasi ${jenisFondasi} tidak tersedia.</p></div>`;
+        return { config, containerId, scaleInfo: null, jenisFondasi };
+    }
+    return renderer(config, containerId);
+};
+
+// ==================== FUNGSI CAD ====================
+window.cadConfig = { tumpuan: null, lapangan: null, kolom: null, fondasi: null, activeType: 'tumpuan' };
+
 function generateCADForPenampangNonCircle(config, offsetX = 0) {
     try {
         const { lebar, tinggi, D, begel, selimut } = config;
@@ -863,38 +753,6 @@ function generateCADForKolomNonCircle(config, offsetX = 0) {
     }
 }
 
-function generateCADForFondasiNonCircle(config, offsetX = 0) {
-    try {
-        const { lx, ly, h, bx, by, jenis } = config;
-        const lxMM = lx * 1000;
-        const lyMM = ly * 1000;
-        const hMM = h * 1000;
-        const cadLines = [];
-        const addOffset = (x, y) => `${x + offsetX},${y}`;
-        if (jenis === 'samping') {
-            cadLines.push(`LINE ${addOffset(0, hMM)} ${addOffset(lxMM, hMM)}`);
-            cadLines.push(`LINE ${addOffset(0, 0)} ${addOffset(0, hMM)}`);
-            cadLines.push(`LINE ${addOffset(lxMM, 0)} ${addOffset(lxMM, hMM)}`);
-            const kolomX = (lxMM / 2) - (bx / 2);
-            cadLines.push(`LINE ${addOffset(0, 0)} ${addOffset(kolomX, 0)}`);
-            cadLines.push(`LINE ${addOffset(kolomX + bx, 0)} ${addOffset(lxMM, 0)}`);
-            const kolomY = -by;
-            cadLines.push(`LINE ${addOffset(kolomX, 0)} ${addOffset(kolomX, kolomY)}`);
-            cadLines.push(`LINE ${addOffset(kolomX, kolomY)} ${addOffset(kolomX + bx, kolomY)} DASHED`);
-            cadLines.push(`LINE ${addOffset(kolomX + bx, kolomY)} ${addOffset(kolomX + bx, 0)}`);
-        } else if (jenis === 'atas') {
-            cadLines.push(`RECTANGLE ${addOffset(0, 0)} ${addOffset(lxMM, lyMM)}`);
-            const kolomX = (lxMM / 2) - (bx / 2);
-            const kolomY = (lyMM / 2) - (by / 2);
-            cadLines.push(`RECTANGLE ${addOffset(kolomX, kolomY)} ${addOffset(kolomX + bx, kolomY + by)} DASHED`);
-        }
-        return cadLines;
-    } catch (error) {
-        console.error("Error in generateCADForFondasiNonCircle:", error);
-        return [];
-    }
-}
-
 function generateCADForCircle(config, lingkaranData, lingkaranTorsiData, offsetX = 0) {
     try {
         const { tinggi } = config;
@@ -933,36 +791,33 @@ window.generateCADText = function() {
         const tumpuan = window.cadConfig.tumpuan;
         const lapangan = window.cadConfig.lapangan;
         const kolom = window.cadConfig.kolom;
-        const fondasi = window.cadConfig.fondasi;
         const combinedLines = [];
-        
-        if (!tumpuan && !lapangan && !kolom && !fondasi) {
-            throw new Error("Tidak ada data penampang! Silakan render penampang terlebih dahulu.");
+        if (!tumpuan && !lapangan && !kolom) {
+            throw new Error("Tidak ada data penampang!");
         }
         
-        if (fondasi && !tumpuan && !lapangan && !kolom) {
-            const fondasiCAD = generateCADForFondasiNonCircle(fondasi, 0);
-            combinedLines.push(...fondasiCAD);
-        }
-        else if (kolom && !tumpuan && !lapangan && !fondasi) {
-            const kolomNonCircle = generateCADForKolomNonCircle(kolom, 0);
+        // KOLOM SAJA (tanpa balok tumpuan/lapangan)
+        if (kolom && !tumpuan && !lapangan) {
+            // Gunakan fungsi balok untuk menggambar persegi & begel (sistem lainnya)
+            const kolomNonCircle = generateCADForPenampangNonCircle(kolom, 0);
             combinedLines.push(...kolomNonCircle);
+            // Tetap gunakan fungsi kolom untuk lingkaran tulangan
             const kolomCircles = generateCADForKolomCircle(kolom, kolom.lingkaranData || [], 0);
             combinedLines.push(...kolomCircles);
         }
-        else if (tumpuan && !lapangan && !kolom && !fondasi) {
+        else if (tumpuan && !lapangan && !kolom) {
             const tumpuanNonCircle = generateCADForPenampangNonCircle(tumpuan, 0);
             combinedLines.push(...tumpuanNonCircle);
             const tumpuanCircles = generateCADForCircle(tumpuan, tumpuan.lingkaranData || [], tumpuan.lingkaranTorsiData || [], 0);
             combinedLines.push(...tumpuanCircles);
         }
-        else if (!tumpuan && lapangan && !kolom && !fondasi) {
+        else if (!tumpuan && lapangan && !kolom) {
             const lapanganNonCircle = generateCADForPenampangNonCircle(lapangan, 0);
             combinedLines.push(...lapanganNonCircle);
             const lapanganCircles = generateCADForCircle(lapangan, lapangan.lingkaranData || [], lapangan.lingkaranTorsiData || [], 0);
             combinedLines.push(...lapanganCircles);
         }
-        else if (tumpuan && lapangan && !kolom && !fondasi) {
+        else if (tumpuan && lapangan && !kolom) {
             const offsetLapangan = tumpuan.lebar + 30;
             const tumpuanNonCircle = generateCADForPenampangNonCircle(tumpuan, 0);
             combinedLines.push(...tumpuanNonCircle);
@@ -990,13 +845,6 @@ window.getActiveCADInfo = function() {
         info.nX = config.nX || 0;
         info.nY = config.nY || 0;
         info.jumlahTulangan = (config.nX || 0) + (config.nY || 0);
-    } else if (activeType === 'fondasi') {
-        info.lx = config.lx || 0;
-        info.ly = config.ly || 0;
-        info.h = config.h || 0;
-        info.bx = config.bx || 0;
-        info.by = config.by || 0;
-        info.jenis = config.jenis || 'samping';
     } else {
         info.jumlahAtas = config.jumlahAtas || 0;
         info.jumlahBawah = config.jumlahBawah || 0;
@@ -1024,406 +872,17 @@ window.switchCADType = function(type) {
         window.lingkaranTorsiData = [];
         window.cadConfig.activeType = 'kolom';
         return true;
-    } else if (type === 'fondasi' && window.cadConfig.fondasi) {
-        window.config = window.cadConfig.fondasi;
-        window.lingkaranData = [];
-        window.lingkaranTorsiData = [];
-        window.cadConfig.activeType = 'fondasi';
-        return true;
     }
     return false;
 };
 
-window.renderKolomFromStorage = function(containerId = "svg-container-tumpuan") {
-    console.log("🔄 Memuat dan merender kolom dari session storage");
-    const data = window.loadDataFromStorage('calculationResultKolom') || window.loadDataFromStorage('calculationResult');
-    if (!data) {
-        const container = document.getElementById(containerId);
-        if (container) container.innerHTML = `<div style="text-align: center; padding: 2rem; color: #666;"><p>Data kolom tidak ditemukan di session storage</p><p style="font-size: 0.9rem;">Silakan lakukan perhitungan kolom terlebih dahulu</p></div>`;
-        return null;
-    }
-    const config = createKolomConfigFromData(data);
-    if (!config) {
-        const container = document.getElementById(containerId);
-        if (container) container.innerHTML = `<div style="text-align: center; padding: 2rem; color: #dc3545;"><p>❌ Data kolom tidak lengkap.</p><p style="font-size: 0.9rem;">Perhitungan kolom biaxial tidak menyediakan nX dan nY yang valid.</p><p style="font-size: 0.9rem;">Silakan lakukan perhitungan ulang dengan versi terbaru.</p></div>`;
-        return null;
-    }
-    return window.renderPenampangKolom(config, containerId);
-};
-
-function createFondasiConfigFromData(data, jenis = 'samping') {
-    try {
-        console.log("📦 Membuat config fondasi dari data:", data);
-        const inputData = data.inputData || {};
-        const fondasiData = inputData.fondasi || {};
-        const dimensiFondasi = fondasiData.dimensi || {};
-        const dataHasil = data.data || {};
-        let requiredData = {};
-        if (jenis === 'samping') {
-            requiredData = {
-                lx: dataHasil.parameter?.lx || dataHasil.dimensiOptimal?.Lx || dimensiFondasi.lx,
-                h: dataHasil.dimensiOptimal?.h || dimensiFondasi.h,
-                bx: parseFloat(dimensiFondasi.bx),
-                by: parseFloat(dimensiFondasi.by)
-            };
-        } else if (jenis === 'atas') {
-            requiredData = {
-                lx: dataHasil.parameter?.lx || dataHasil.dimensiOptimal?.Lx || dimensiFondasi.lx,
-                ly: dataHasil.parameter?.ly || dataHasil.dimensiOptimal?.Ly || dimensiFondasi.ly,
-                bx: parseFloat(dimensiFondasi.bx),
-                by: parseFloat(dimensiFondasi.by)
-            };
-        }
-        for (const [key, value] of Object.entries(requiredData)) {
-            if (value === undefined || value === null || isNaN(value)) {
-                console.error(`❌ Data ${key} tidak ditemukan dalam data fondasi`);
-                return null;
-            }
-        }
-        const tulangan = inputData.tulangan || {};
-        const D = parseFloat(tulangan.d);
-        const Db = parseFloat(tulangan.db);
-        const s = parseFloat(tulangan.s);
-        const config = {
-            lx: parseFloat(requiredData.lx),
-            ly: parseFloat(requiredData.ly) || 0,
-            h: parseFloat(requiredData.h) || 0,
-            bx: requiredData.bx,
-            by: requiredData.by,
-            D: D || undefined,
-            Db: Db || undefined,
-            s: s || undefined,
-            jenis: jenis,
-            tipe: 'fondasi',
-            source: 'session-storage'
-        };
-        return config;
-    } catch (error) {
-        console.error("❌ Error membuat config fondasi:", error);
-        return null;
-    }
-}
-
-window.renderFondasiFromStorage = function(containerId = "svg-container-tumpuan", jenis = 'samping') {
-    console.log("🔄 Memuat dan merender fondasi dari session storage");
-    const data = window.loadDataFromStorage('calculationResultFondasi') || window.loadDataFromStorage('calculationResult');
-    if (!data) {
-        const container = document.getElementById(containerId);
-        if (container) container.innerHTML = `<div style="text-align: center; padding: 2rem; color: #666;"><p>Data fondasi tidak ditemukan di session storage</p><p style="font-size: 0.9rem;">Silakan lakukan perhitungan fondasi terlebih dahulu</p></div>`;
-        return null;
-    }
-    const config = createFondasiConfigFromData(data, jenis);
-    if (!config) return null;
-    return window.renderPenampangFondasi(config, containerId);
-};
-
-window.exportCADKolom = function() {
-    try {
-        if (!window.cadConfig.kolom) window.renderKolomFromStorage();
-        const cadText = window.generateCADText();
-        if (cadText && cadText !== "Error generating CAD text") {
-            navigator.clipboard.writeText(cadText).then(() => alert('Text CAD untuk penampang kolom berhasil disalin ke clipboard!'))
-                .catch(() => {
-                    const textArea = document.createElement('textarea');
-                    textArea.value = cadText;
-                    document.body.appendChild(textArea);
-                    textArea.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(textArea);
-                    alert('Text CAD untuk penampang kolom berhasil disalin ke clipboard!');
-                });
-        } else alert('Tidak ada data CAD yang dapat diekspor. Silakan render penampang kolom terlebih dahulu.');
-    } catch (error) {
-        console.error('Error exporting CAD for kolom:', error);
-        alert('Error saat mengekspor CAD: ' + error.message);
-    }
-};
-
-window.exportCADFondasi = function(jenis = 'samping') {
-    try {
-        if (!window.cadConfig.fondasi || window.cadConfig.fondasi.jenis !== jenis) window.renderFondasiFromStorage('svg-container-tumpuan', jenis);
-        const cadText = window.generateCADText();
-        if (cadText && cadText !== "Error generating CAD text") {
-            navigator.clipboard.writeText(cadText).then(() => alert(`Text CAD untuk penampang fondasi (${jenis}) berhasil disalin ke clipboard!`))
-                .catch(() => {
-                    const textArea = document.createElement('textarea');
-                    textArea.value = cadText;
-                    document.body.appendChild(textArea);
-                    textArea.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(textArea);
-                    alert(`Text CAD untuk penampang fondasi (${jenis}) berhasil disalin ke clipboard!`);
-                });
-        } else alert('Tidak ada data CAD yang dapat diekspor. Silakan render penampang fondasi terlebih dahulu.');
-    } catch (error) {
-        console.error('Error exporting CAD for fondasi:', error);
-        alert('Error saat mengekspor CAD: ' + error.message);
-    }
-};
-
-// ==================== FUNGSI RENDER PENAMPANG PELAT (DENGAN KOTAK SKALA DI BAWAH GAMBAR, UKURAN SERAGAM) ====================
-window.renderPenampangPelat = function(config, containerId) {
-    console.log("🎨 Rendering penampang pelat dengan config:", config, "containerId:", containerId);
-    
-    const container = document.getElementById(containerId);
-    if (!container) {
-        console.error(`❌ Container dengan ID '${containerId}' tidak ditemukan`);
-        return;
-    }
-    
-    container.innerHTML = "";
-    
-    // Parameter dasar
-    const { jenis, lx, ly, h } = config;
-    
-    // Konversi ke satuan mm
-    let lx_mm = lx * 1000;
-    let ly_mm = ly * 1000;
-    let h_mm = h;
-    
-    // Variabel untuk dimensi tampilan
-    let width_display, height_display;
-    let skala_horizontal = 1, skala_vertikal = 1;
-    let needScaleNote = false;
-    
-    // Batas rasio: tampak atas = 1.5 (2:3), tampak depan/samping = 8 (1:8)
-    const RASIO_ATAS_MAKS = 1.5;
-    const RASIO_DEPAN_SAMPING_MAKS = 8;
-    
-    if (jenis === 'atas') {
-        let panjang = Math.max(lx_mm, ly_mm);
-        let pendek = Math.min(lx_mm, ly_mm);
-        if (panjang / pendek > RASIO_ATAS_MAKS) {
-            needScaleNote = true;
-            const faktor = RASIO_ATAS_MAKS * pendek / panjang;
-            if (lx_mm > ly_mm) {
-                skala_horizontal = faktor;
-                skala_vertikal = 1;
-                width_display = lx_mm * faktor;
-                height_display = ly_mm;
-            } else {
-                skala_horizontal = 1;
-                skala_vertikal = faktor;
-                width_display = lx_mm;
-                height_display = ly_mm * faktor;
-            }
-        } else {
-            width_display = lx_mm;
-            height_display = ly_mm;
-        }
-    } 
-    else if (jenis === 'depan') {
-        let lebar = lx_mm;
-        let tinggi = h_mm;
-        if (lebar / tinggi > RASIO_DEPAN_SAMPING_MAKS) {
-            needScaleNote = true;
-            skala_horizontal = RASIO_DEPAN_SAMPING_MAKS * tinggi / lebar;
-            skala_vertikal = 1;
-            width_display = lebar * skala_horizontal;
-            height_display = tinggi;
-        } 
-        else if (tinggi / lebar > RASIO_DEPAN_SAMPING_MAKS) {
-            needScaleNote = true;
-            skala_vertikal = RASIO_DEPAN_SAMPING_MAKS * lebar / tinggi;
-            skala_horizontal = 1;
-            width_display = lebar;
-            height_display = tinggi * skala_vertikal;
-        } 
-        else {
-            width_display = lebar;
-            height_display = tinggi;
-        }
-    }
-    else if (jenis === 'samping') {
-        let lebar = ly_mm;
-        let tinggi = h_mm;
-        if (lebar / tinggi > RASIO_DEPAN_SAMPING_MAKS) {
-            needScaleNote = true;
-            skala_horizontal = RASIO_DEPAN_SAMPING_MAKS * tinggi / lebar;
-            skala_vertikal = 1;
-            width_display = lebar * skala_horizontal;
-            height_display = tinggi;
-        } 
-        else if (tinggi / lebar > RASIO_DEPAN_SAMPING_MAKS) {
-            needScaleNote = true;
-            skala_vertikal = RASIO_DEPAN_SAMPING_MAKS * lebar / tinggi;
-            skala_horizontal = 1;
-            width_display = lebar;
-            height_display = tinggi * skala_vertikal;
-        } 
-        else {
-            width_display = lebar;
-            height_display = tinggi;
-        }
-    }
-    else {
-        width_display = lx_mm;
-        height_display = ly_mm || h_mm;
-    }
-    
-    // Padding yang cukup untuk teks skala (font 24px, 2 baris)
-    const padding = 80;
-    const viewBoxWidth = width_display + padding * 2;
-    const viewBoxHeight = height_display + padding * 2;
-    const offsetX = padding;
-    const offsetY = padding;
-    
-    const svgNS = "http://www.w3.org/2000/svg";
-    const svg = document.createElementNS(svgNS, "svg");
-    svg.setAttribute("width", "100%");
-    svg.setAttribute("height", "100%");
-    svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
-    svg.setAttribute("viewBox", `0 0 ${viewBoxWidth} ${viewBoxHeight}`);
-    container.appendChild(svg);
-    
-    // Gambar kotak utama
-    const rect = document.createElementNS(svgNS, "rect");
-    rect.setAttribute("x", offsetX);
-    rect.setAttribute("y", offsetY);
-    rect.setAttribute("width", width_display);
-    rect.setAttribute("height", height_display);
-    rect.setAttribute("fill", "#f8f9fa");
-    rect.setAttribute("stroke", "#000000");
-    rect.setAttribute("stroke-width", 3);
-    applyNonScalingStroke(rect);
-    svg.appendChild(rect);
-    
-    // Tambahkan keterangan skala jika ada perubahan rasio
-    if (needScaleNote) {
-        const skalaHVal = (1 / skala_horizontal).toFixed(1);
-        const skalaVVal = (1 / skala_vertikal).toFixed(1);
-        
-        const fontSize = 24;
-        const lineHeight = fontSize + 8;
-        const bgWidth = 340;
-        const bgHeight = lineHeight * 2 + 16;
-        // Posisi: di kanan, dan di bawah gambar (tidak menempel tepi viewBox)
-        const marginRight = 20;
-        const jarakDariGambar = 15; // jarak vertikal dari batas bawah gambar ke kotak skala
-        let bgX = viewBoxWidth - bgWidth - marginRight;
-        let bgY = offsetY + height_display + jarakDariGambar;
-        // Pastikan tidak keluar viewBox (jika terlalu ke bawah, geser ke atas)
-        if (bgY + bgHeight > viewBoxHeight - 5) {
-            bgY = viewBoxHeight - bgHeight - 5;
-        }
-        
-        // Background semi-transparan
-        const textBg = document.createElementNS(svgNS, "rect");
-        textBg.setAttribute("x", bgX);
-        textBg.setAttribute("y", bgY);
-        textBg.setAttribute("width", bgWidth);
-        textBg.setAttribute("height", bgHeight);
-        textBg.setAttribute("fill", "white");
-        textBg.setAttribute("fill-opacity", "0.85");
-        textBg.setAttribute("stroke", "#ccc");
-        textBg.setAttribute("stroke-width", "1");
-        applyNonScalingStroke(textBg);
-        svg.appendChild(textBg);
-        
-        // Posisi label dan nilai - jarak diperlebar
-        const labelX = bgX + 12;
-        const valueX = bgX + 230;
-        
-        // Baris 1: Skala Horizontal
-        const label1 = document.createElementNS(svgNS, "text");
-        label1.setAttribute("x", labelX);
-        label1.setAttribute("y", bgY + lineHeight + 4);
-        label1.setAttribute("font-size", fontSize);
-        label1.setAttribute("fill", "#333");
-        label1.setAttribute("font-family", "sans-serif");
-        label1.textContent = "Skala Horizontal:";
-        svg.appendChild(label1);
-        
-        const value1 = document.createElementNS(svgNS, "text");
-        value1.setAttribute("x", valueX);
-        value1.setAttribute("y", bgY + lineHeight + 4);
-        value1.setAttribute("font-size", fontSize);
-        value1.setAttribute("fill", "#333");
-        value1.setAttribute("font-family", "sans-serif");
-        value1.textContent = `1 : ${skalaHVal}`;
-        svg.appendChild(value1);
-        
-        // Baris 2: Skala Vertikal
-        const label2 = document.createElementNS(svgNS, "text");
-        label2.setAttribute("x", labelX);
-        label2.setAttribute("y", bgY + lineHeight * 2 + 4);
-        label2.setAttribute("font-size", fontSize);
-        label2.setAttribute("fill", "#333");
-        label2.setAttribute("font-family", "sans-serif");
-        label2.textContent = "Skala Vertikal:";
-        svg.appendChild(label2);
-        
-        const value2 = document.createElementNS(svgNS, "text");
-        value2.setAttribute("x", valueX);
-        value2.setAttribute("y", bgY + lineHeight * 2 + 4);
-        value2.setAttribute("font-size", fontSize);
-        value2.setAttribute("fill", "#333");
-        value2.setAttribute("font-family", "sans-serif");
-        value2.textContent = `1 : ${skalaVVal}`;
-        svg.appendChild(value2);
-    }
-    
-    console.log(`✅ Penampang pelat (${jenis}) berhasil di-render. Dimensi tampilan: ${width_display} x ${height_display} mm, skala H=${skala_horizontal}, V=${skala_vertikal}`);
-    return { config, containerId };
-};
-
-// Fungsi export CAD untuk pelat (tampak depan, atas, samping) - output dalam meter
-window.exportCADPelatDepan = function() {
-    const cfg = window.lastPelatConfig;
-    if (!cfg) { alert('Data pelat tidak tersedia. Render ulang laporan.'); return; }
-    const cad = `* PELAT TAMPAK DEPAN (Lx=${cfg.lx} m, h=${cfg.h/1000} m)
-RECTANGLE 0,0 ${cfg.lx},${cfg.h/1000}`;
-    copyToClipboard(cad, 'CAD tampak depan');
-};
-
-window.exportCADPelatAtas = function() {
-    const cfg = window.lastPelatConfig;
-    if (!cfg) { alert('Data pelat tidak tersedia. Render ulang laporan.'); return; }
-    const cad = `* PELAT TAMPAK ATAS (Lx=${cfg.lx} m, Ly=${cfg.ly} m)
-RECTANGLE 0,0 ${cfg.lx},${cfg.ly}`;
-    copyToClipboard(cad, 'CAD tampak atas');
-};
-
-window.exportCADSampingPelat = function() {
-    const cfg = window.lastPelatConfig;
-    if (!cfg) { alert('Data pelat tidak tersedia. Render ulang laporan.'); return; }
-    const cad = `* PELAT TAMPAK SAMPING (Ly=${cfg.ly} m, h=${cfg.h/1000} m)
-RECTANGLE 0,0 ${cfg.ly},${cfg.h/1000}`;
-    copyToClipboard(cad, 'CAD tampak samping');
-};
-
-function copyToClipboard(text, label) {
-    navigator.clipboard.writeText(text).then(() => {
-        alert(`Text ${label} berhasil disalin ke clipboard!`);
-    }).catch(() => {
-        const ta = document.createElement('textarea');
-        ta.value = text;
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        document.body.removeChild(ta);
-        alert(`Text ${label} berhasil disalin ke clipboard!`);
-    });
-}
-
-// Simpan config global untuk pelat (akan diisi saat render)
 window.lastPelatConfig = null;
 
-// Inisialisasi otomatis jika halaman adalah report (bisa dipanggil dari report-pelat.js)
 window.addEventListener('DOMContentLoaded', function() {
     const isKolomPage = window.location.pathname.includes('kolom') || document.querySelector('.penampang-section h2')?.textContent.includes('KOLOM');
-    const isFondasiPage = window.location.pathname.includes('fondasi') || document.querySelector('.penampang-section h2')?.textContent.includes('FONDASI');
-    const isPelatPage = window.location.pathname.includes('pelat') || document.querySelector('.penampang-section h2')?.textContent.includes('PELAT');
-    
     if (isKolomPage) {
         setTimeout(() => window.renderKolomFromStorage(), 500);
-    } else if (isFondasiPage) {
-        setTimeout(() => {
-            window.renderFondasiFromStorage('svg-container-tumpuan', 'samping');
-            setTimeout(() => window.renderFondasiFromStorage('svg-container-lapangan', 'atas'), 100);
-        }, 500);
     }
-    // Untuk pelat, render akan dipanggil dari report-pelat.js setelah data tersedia.
 });
 
-console.log("✅ cut-generator.js loaded (FINAL: posisi kotak skala di bawah gambar, tidak menempel tepi, ukuran seragam)");
+console.log("✅ cut-generator.js final (balok, kolom, pelat) dengan perbaikan path pencarian kolom");

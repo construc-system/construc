@@ -1,5 +1,5 @@
 // =====================================================
-// OPTIMIZER UNTUK DESAIN FONDASI - SIMPLE VERSION
+// OPTIMIZER UNTUK DESAIN FONDASI - FIXED VERSION
 // =====================================================
 
 window.optimizeDesainFondasi = function(data) {
@@ -201,21 +201,26 @@ function hitungAsTerpasang(D, s) {
 }
 
 // =====================================================
-// FUNGSI HITUNG AS RINCIAN PER METER (DIPERBAIKI)
+// FUNGSI HITUNG AS RINCIAN PER METER (DIPERBAIKI UNTUK BUJUR_SANGKAR)
 // =====================================================
 
 function hitungAsRincianPerMeter(hasil, D, Db, fondasiMode) {
     const { tulangan, parameter } = hasil;
     
+    // Helper untuk menghasilkan objek Infinity
+    const infinityResult = {
+        asUtamaPerMeter: Infinity,
+        asPusatPerMeter: Infinity,
+        asTepiPerMeter: Infinity,
+        asBagiPerMeter: Infinity,
+        totalAsPerMeter: Infinity,
+        mode: fondasiMode,
+        D: D,
+        Db: Db
+    };
+    
     if (!parameter || parameter.sigma_min <= 0) {
-        return {
-            asUtamaPerMeter: Infinity,
-            asPusatPerMeter: Infinity,
-            asTepiPerMeter: Infinity,
-            asBagiPerMeter: Infinity,
-            totalAsPerMeter: Infinity,
-            mode: fondasiMode
-        };
+        return infinityResult;
     }
     
     let rincian = {
@@ -230,39 +235,47 @@ function hitungAsRincianPerMeter(hasil, D, Db, fondasiMode) {
     };
     
     try {
-        if (tulangan.bujur && tulangan.bujur.s < 100) {
-            return Infinity;
-        }
-        if (tulangan.persegi) {
-            if (tulangan.persegi.s_pusat < 100) {
-                return Infinity;
-            }
-            if (tulangan.persegi.s_tepi < 100) {
-                return Infinity;
-            }
-        }
-        if (tulangan.s_utama && tulangan.s_utama < 100) {
-            return Infinity;
-        }
-        if (tulangan.s_bagi && tulangan.s_bagi < 100) {
-            return Infinity;
+        // Validasi awal untuk spasi minimum
+        if (tulangan.jenis === "bujur_sangkar") {
+            if (tulangan.s < 100) return infinityResult;
+        } else if (tulangan.jenis === "persegi_panjang") {
+            if (tulangan.bujur?.s < 100) return infinityResult;
+            if (tulangan.persegi?.s_pusat < 100) return infinityResult;
+            if (tulangan.persegi?.s_tepi < 100) return infinityResult;
+        } else if (tulangan.jenis === "menerus") {
+            if (tulangan.s_utama < 100) return infinityResult;
+            if (tulangan.s_bagi < 100) return infinityResult;
         }
         
+        // Validasi kontrol K
         if (tulangan.jenis === "bujur_sangkar") {
-            if (tulangan.Kontrol_K !== "AMAN") {
-                return Infinity;
-            }
+            if (tulangan.Kontrol_K !== "AMAN") return infinityResult;
         } else if (tulangan.jenis === "persegi_panjang") {
             if (tulangan.bujur?.Kontrol_K !== "AMAN" || tulangan.persegi?.Kontrol_K !== "AMAN") {
-                return Infinity;
+                return infinityResult;
             }
         } else if (tulangan.jenis === "menerus") {
-            if (tulangan.Kontrol_K !== "AMAN") {
-                return Infinity;
-            }
+            if (tulangan.Kontrol_K !== "AMAN") return infinityResult;
         }
         
-        if (tulangan.bujur && tulangan.persegi) {
+        // ========== PERHITUNGAN BERDASARKAN JENIS ==========
+        
+        // 1. BUJUR SANGKAR
+        if (tulangan.jenis === "bujur_sangkar") {
+            const spasi = tulangan.s;
+            if (!spasi || spasi < 100) return infinityResult;
+            
+            rincian.asUtamaPerMeter = hitungAsTerpasang(D, spasi);
+            // Total As per meter: tulangan utama dipasang dua arah (lx dan ly)
+            rincian.totalAsPerMeter = rincian.asUtamaPerMeter * 2;
+            rincian.spasiUtama = spasi;
+            rincian.asPerluUtama = tulangan.As || 0;
+            if (rincian.asPerluUtama > 0) {
+                rincian.rasioUtama = rincian.asUtamaPerMeter / rincian.asPerluUtama;
+            }
+        }
+        // 2. PERSEGI PANJANG
+        else if (tulangan.bujur && tulangan.persegi) {
             const spasiPanjang = tulangan.bujur.s;
             rincian.asUtamaPerMeter = hitungAsTerpasang(D, spasiPanjang);
             
@@ -275,13 +288,20 @@ function hitungAsRincianPerMeter(hasil, D, Db, fondasiMode) {
             const asPendekRata = (rincian.asPusatPerMeter + rincian.asTepiPerMeter) / 2;
             rincian.totalAsPerMeter = rincian.asUtamaPerMeter + asPendekRata;
             
-        } else if (tulangan.bujur) {
-            const spasi = tulangan.bujur.s;
-            rincian.asUtamaPerMeter = hitungAsTerpasang(D, spasi);
+            rincian.spasiUtama = spasiPanjang;
+            rincian.spasiPusat = spasiPusat;
+            rincian.spasiTepi = spasiTepi;
             
-            rincian.totalAsPerMeter = rincian.asUtamaPerMeter * 2;
+            rincian.asPerluUtama = tulangan.bujur.As || 0;
+            rincian.asPerluPusat = tulangan.persegi.Aspusat || 0;
+            rincian.asPerluTepi = tulangan.persegi.Astepi || 0;
             
-        } else if (tulangan.s_utama) {
+            if (rincian.asPerluUtama > 0) rincian.rasioUtama = rincian.asUtamaPerMeter / rincian.asPerluUtama;
+            if (rincian.asPerluPusat > 0) rincian.rasioPusat = rincian.asPusatPerMeter / rincian.asPerluPusat;
+            if (rincian.asPerluTepi > 0) rincian.rasioTepi = rincian.asTepiPerMeter / rincian.asPerluTepi;
+        }
+        // 3. MENERUS
+        else if (tulangan.s_utama) {
             const spasiUtama = tulangan.s_utama;
             rincian.asUtamaPerMeter = hitungAsTerpasang(D, spasiUtama);
             
@@ -289,49 +309,25 @@ function hitungAsRincianPerMeter(hasil, D, Db, fondasiMode) {
             rincian.asBagiPerMeter = hitungAsTerpasang(Db, spasiBagi);
             
             rincian.totalAsPerMeter = rincian.asUtamaPerMeter + rincian.asBagiPerMeter;
-        }
-        
-        if (tulangan.bujur) {
-            rincian.asPerluUtama = tulangan.bujur.As || 0;
-            rincian.spasiUtama = tulangan.bujur.s || 0;
-        }
-        if (tulangan.persegi) {
-            rincian.asPerluPusat = tulangan.persegi.Aspusat || 0;
-            rincian.asPerluTepi = tulangan.persegi.Astepi || 0;
-            rincian.spasiPusat = tulangan.persegi.s_pusat || 0;
-            rincian.spasiTepi = tulangan.persegi.s_tepi || 0;
-        }
-        if (tulangan.s_utama) {
+            
+            rincian.spasiUtama = spasiUtama;
+            rincian.spasiBagi = spasiBagi;
+            
             rincian.asPerluUtama = tulangan.As || 0;
             rincian.asPerluBagi = tulangan.Asb || 0;
-            rincian.spasiUtama = tulangan.s_utama || 0;
-            rincian.spasiBagi = tulangan.s_bagi || 0;
+            
+            if (rincian.asPerluUtama > 0) rincian.rasioUtama = rincian.asUtamaPerMeter / rincian.asPerluUtama;
+            if (rincian.asPerluBagi > 0) rincian.rasioBagi = rincian.asBagiPerMeter / rincian.asPerluBagi;
         }
-        
-        if (rincian.asPerluUtama > 0) {
-            rincian.rasioUtama = rincian.asUtamaPerMeter / rincian.asPerluUtama;
-        }
-        if (rincian.asPerluPusat > 0) {
-            rincian.rasioPusat = rincian.asPusatPerMeter / rincian.asPerluPusat;
-        }
-        if (rincian.asPerluTepi > 0) {
-            rincian.rasioTepi = rincian.asTepiPerMeter / rincian.asPerluTepi;
-        }
-        if (rincian.asPerluBagi > 0) {
-            rincian.rasioBagi = rincian.asBagiPerMeter / rincian.asPerluBagi;
+        else {
+            // Tidak ada jenis yang dikenali
+            return infinityResult;
         }
         
         return rincian;
         
     } catch (error) {
-        return {
-            asUtamaPerMeter: Infinity,
-            asPusatPerMeter: Infinity,
-            asTepiPerMeter: Infinity,
-            asBagiPerMeter: Infinity,
-            totalAsPerMeter: Infinity,
-            mode: fondasiMode
-        };
+        return infinityResult;
     }
 }
 
@@ -403,7 +399,7 @@ function generateRangeDb(D) {
 }
 
 // =====================================================
-// FUNGSI KONTROL & OPTIMALISASI (DIPERBAIKI TOTAL)
+// FUNGSI KONTROL & OPTIMALISASI
 // =====================================================
 
 function isKontrolFondasiAman(kontrol, hasilData) {

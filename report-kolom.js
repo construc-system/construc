@@ -639,19 +639,19 @@ function renderPenampangKolom(result) {
 
     try {
         const dimensi = inputData.dimensi || {};
-        const lebar = parseFloat(dimensi.b) || 300;
-        const tinggi = parseFloat(dimensi.h) || 500;
-        const sb = parseFloat(dimensi.sb) || 30;
+        const lebar = parseFloat(dimensi.b) || null;
+        const tinggi = parseFloat(dimensi.h) || null;
+        const sb = parseFloat(dimensi.sb) || null;
 
         const tulangan = inputData.tulangan || {};
 
         let D, phi;
         if (mode === 'evaluasi' && tulangan) {
-            D = parseFloat(tulangan.d_tul || tulangan.d) || 19;
-            phi = parseFloat(tulangan.phi_tul || tulangan.phi) || 10;
+            D = parseFloat(tulangan.d_tul || tulangan.d) || null;
+            phi = parseFloat(tulangan.phi_tul || tulangan.phi) || null;
         } else {
-            D = data.D || 19;
-            phi = data.phi || 10;
+            D = data.D || null;
+            phi = data.phi || null;
         }
 
         let jumlahTulangan;
@@ -664,13 +664,13 @@ function renderPenampangKolom(result) {
             if (jumlahTulangan < 0) jumlahTulangan = 0;
             console.log(`📐 Penampang: nX=${nX}, nY=${nY}, total batang = ${jumlahTulangan}D${D}`);
         } else if (mode === 'evaluasi' && tulangan) {
-            jumlahTulangan = parseFloat(tulangan.n_tul || tulangan.n) || 4;
+            jumlahTulangan = parseFloat(tulangan.n_tul || tulangan.n) || null;
         } else {
             jumlahTulangan = data.hasilTulangan?.n_terpakai || 
-                             result.rekap?.tulangan?.n_terpakai || 4;
+                             result.rekap?.tulangan?.n_terpakai || null;
         }
 
-        const m = data.m || 2;
+        const m = data.m || null;
 
         console.log("📐 Data untuk penampang kolom:", {
             lebar, tinggi, D, phi, jumlahTulangan, sb, m
