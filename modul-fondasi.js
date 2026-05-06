@@ -472,7 +472,7 @@ window.modules.fondasi = {
         {label:"b<sub>y</sub>", key:"by_menerus", placeholder:"Panjang Sloof", unit:"mm"},
         {label:"b<sub>x</sub>", key:"bx_menerus", placeholder:"Lebar Penampang Sloof", unit:"mm"},
         {label:"h", key:"h_menerus", placeholder:"Tebal Fondasi", unit:"m"},
-        {label:"α<sub>s</sub>", key:"alpha_s_menerus", placeholder:"Faktor Letak Fondasi", unit:""}
+        {label:"α<sub>s</sub>", key:"alpha_s_menerus", placeholder:"Faktor Letak Fondasi (wajib)", unit:""}
       ];
     }
 
@@ -672,7 +672,7 @@ window.modules.fondasi = {
             <h4>αs (Faktor posisi kolom)</h4>
             <ul>
               <li><strong>Tunggal</strong>: Pilih posisi kolom (Tengah=40, Tepi=30, Sudut=20)</li>
-              <li><strong>Menerus</strong>: Masukkan nilai αs manual</li>
+              <li><strong>Menerus</strong>: Masukkan total kombinasi nilai αs secara manual sesuai dengan posisi kolom yang ada diatas fondasi</li>
             </ul>
             
             <h4>Dimensi Ditentukan Sistem</h4>
@@ -1105,21 +1105,21 @@ window.modules.fondasi = {
       </div>
       <div class="form-grid">
         <div class="field">
-          <label>P<sub>u</sub></label>
+          <label>P<sub>u</sub> *</label>
           <div class="input-with-unit" data-unit="kN">
-            <input data-key="pu" placeholder="Beban Aksial Ultimit" value="${escapeHtml((formState[currentModuleKey] && formState[currentModuleKey][currentMode] && formState[currentModuleKey][currentMode]['pu']) || '')}">
+            <input data-key="pu" placeholder="Beban Aksial Ultimit (wajib)" value="${escapeHtml((formState[currentModuleKey] && formState[currentModuleKey][currentMode] && formState[currentModuleKey][currentMode]['pu']) || '')}">
           </div>
         </div>
         <div class="field">
-          <label>M<sub>uy</sub></label>
+          <label>M<sub>uy</sub> *</label>
           <div class="input-with-unit" data-unit="kNm">
-            <input data-key="muy" placeholder="Momen Ultimit Arah Y" value="${escapeHtml((formState[currentModuleKey] && formState[currentModuleKey][currentMode] && formState[currentModuleKey][currentMode]['muy']) || '')}">
+            <input data-key="muy" placeholder="Momen Ultimit Arah Y (wajib, isi 0 jika tidak ada)" value="${escapeHtml((formState[currentModuleKey] && formState[currentModuleKey][currentMode] && formState[currentModuleKey][currentMode]['muy']) || '')}">
           </div>
         </div>
         <div class="field">
-          <label>M<sub>ux</sub></label>
+          <label>M<sub>ux</sub> *</label>
           <div class="input-with-unit" data-unit="kNm">
-            <input data-key="mux" placeholder="Momen Ultimit Arah X" value="${escapeHtml((formState[currentModuleKey] && formState[currentModuleKey][currentMode] && formState[currentModuleKey][currentMode]['mux']) || '')}">
+            <input data-key="mux" placeholder="Momen Ultimit Arah X (wajib, isi 0 jika tidak ada)" value="${escapeHtml((formState[currentModuleKey] && formState[currentModuleKey][currentMode] && formState[currentModuleKey][currentMode]['mux']) || '')}">
           </div>
         </div>
       </div>
@@ -1501,9 +1501,16 @@ window.modules.fondasi = {
           missingFields.push(`${this.getFieldLabel(field, currentFondasiMode)} (Data Dimensi)`);
         }
       });
-      
-      // Alpha_s wajib untuk fondasi tunggal
-      if (currentFondasiMode === 'tunggal' && (!state['alpha_s_tunggal'] || state['alpha_s_tunggal'].toString().trim() === '')) {
+    }
+    
+    // Validasi alpha_s selalu wajib untuk menerus (terlepas dari autoDimensi)
+    if (currentFondasiMode === 'menerus') {
+      if (!state['alpha_s_menerus'] || state['alpha_s_menerus'].toString().trim() === '') {
+        missingFields.push("αs (Faktor Letak Fondasi) - Data Dimensi");
+      }
+    } else if (currentFondasiMode === 'tunggal' && !autoDimensi) {
+      // Alpha_s wajib untuk fondasi tunggal hanya jika autoDimensi tidak aktif
+      if (!state['alpha_s_tunggal'] || state['alpha_s_tunggal'].toString().trim() === '') {
         missingFields.push("αs (Letak Kolom) - Data Dimensi");
       }
     }
@@ -1555,10 +1562,11 @@ window.modules.fondasi = {
       }
     }
 
-    // Field wajib dari Data Beban (untuk kedua mode)
-    const bebanFields = ['pu'];
+    // Field wajib dari Data Beban: Pu, Mux, Muy (wajib diisi, bisa 0)
+    const bebanFields = ['pu', 'mux', 'muy'];
     bebanFields.forEach(field => {
-      if (!state[field] || state[field].toString().trim() === '') {
+      // Nilai bisa 0, jadi cek undefined atau string kosong
+      if (state[field] === undefined || state[field].toString().trim() === '') {
         missingFields.push(`${this.getFieldLabel(field)} (Data Beban)`);
       }
     });
@@ -1656,7 +1664,7 @@ window.modules.fondasi = {
 
     // PERBAIKAN: Saat autoDimensi aktif, gunakan nilai kosong untuk dimensi
     const autoDimensiKey = `autoDimensi_${currentFondasiMode}`;
-    const isAutoDimensi = state[autoDimensiKey] || false;
+    const isAutoDimensi = currentMode !== 'evaluasi' ? (state[autoDimensiKey] || false) : false;
     
     // Data yang akan dikirim ke calc-fondasi.js
     const calculationData = {
@@ -1664,7 +1672,7 @@ window.modules.fondasi = {
       mode: currentMode,
       fondasi: {
         mode: currentFondasiMode,
-        autoDimensi: currentMode !== 'evaluasi' ? isAutoDimensi : false,
+        autoDimensi: isAutoDimensi,
         dimensi: {
           // Jika autoDimensi aktif, kirim nilai kosong (akan dihitung sistem)
           // Jika tidak aktif, kirim nilai manual dari state
@@ -1695,8 +1703,8 @@ window.modules.fondasi = {
       },
       beban: {
         pu: state.pu,
-        mux: state.mux,
-        muy: state.muy
+        mux: state.mux !== undefined && state.mux !== '' ? state.mux : '0',
+        muy: state.muy !== undefined && state.muy !== '' ? state.muy : '0'
       },
       material: quickInputs,
       lanjutan: {
