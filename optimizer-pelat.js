@@ -281,7 +281,7 @@ async function optimizePelat(inputData) {
         
         return {
             status: "error",
-            message: "Tidak ada kombinasi yang memenuhi kontrol. Coba perbesar dimensi pelat atau kurangi beban.",
+            message: "Tidak ditemukan kombinasi yang memenuhi semua kontrol keamanan. Silahkan periksa input atau perbesar dimensinya",
             analisis: analisisError,
             semua_hasil: semuaHasil
         };

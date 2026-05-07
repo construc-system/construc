@@ -65,8 +65,8 @@ window.optimizeDesain = function(data) {
     
     if (kombinasiValid.length === 0) {
         return {
-            status: 'error', 
-            message: 'Tidak ditemukan kombinasi yang memenuhi semua kontrol. Coba relaksasi kriteria atau periksa input.'
+            status: 'error',
+            message: 'Tidak ditemukan kombinasi yang memenuhi semua kontrol keamanan. Silahkan periksa input atau perbesar dimensinya'
         };
     }
     

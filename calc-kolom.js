@@ -3,6 +3,7 @@
 // Memastikan data hasil perhitungan arah X dan Y tersimpan penuh di sessionStorage
 // PERBAIKAN: Rekap tulangan utama untuk mode desain menggunakan total batang = nX + nY - 4
 // PERUBAHAN: d untuk begel = max(d_X, d_Y)
+// PERBAIKAN: calculateKolomWithRedirect menampilkan alert jika perhitungan gagal (termasuk peringatan)
 // =====================================================
 
 // ===== UTIL =====
@@ -897,6 +898,11 @@ function rekapKolomAll(parsed, D, phi, hasilGabungan, begel, kontrol, Sn){
 
 // ====== SIMPAN DATA KE SESSION ======
 function saveResultAndRedirectKolom(result, inputData){
+  // Hanya simpan dan redirect jika result valid dan status sukses/cek
+  if (result.status !== 'sukses' && result.status !== 'cek') {
+    console.log('⚠️ Tidak menyimpan hasil karena status:', result.status);
+    return false;
+  }
   try{
     const savedData = {
       module: inputData.module || 'kolom',
@@ -916,8 +922,10 @@ function saveResultAndRedirectKolom(result, inputData){
     sessionStorage.setItem(DEFAULTS.resultKey, jsonString);
     console.log("✅ calculationResultKolom disimpan (biaxial) dengan data lengkap arah X dan Y");
     if (typeof window !== 'undefined') window.location.href = 'report.html';
+    return true;
   } catch(e){
     console.warn('Gagal simpan result kolom:', e);
+    return false;
   }
 }
 
@@ -950,6 +958,7 @@ async function calculateKolom(rawInput, options = {}){
           if (options.autoSave) saveResultAndRedirectKolom(result, parsed.raw);
           return result;
         } else if (optRes && optRes.status === "error" && optRes.code === "NO_VALID_COMBINATION") {
+          // Kembalikan status 'peringatan' tanpa menyimpan dan tanpa redirect
           return { status: "peringatan", message: optRes.message || "Tidak ditemukan kombinasi tulangan kolom yang memenuhi seluruh kontrol." };
         }
       } catch(e){
@@ -1033,14 +1042,37 @@ async function calculateKolom(rawInput, options = {}){
   return result;
 }
 
-// Wrapper dengan redirect
+// ====== REDIRECT DENGAN ALERT JIKA GAGAL (PERBAIKAN UNTUK ALERT) ======
 async function calculateKolomWithRedirect(data){
   try {
     const result = await calculateKolom(data, { autoSave: true });
-    if (result && (result.status === 'sukses' || result.status === 'cek' || result.status === 'peringatan')) return result;
-    else return result;
-  } catch (err){
+    
+    // Hanya status 'sukses' atau 'cek' yang dianggap berhasil (redirect sudah dilakukan oleh autoSave)
+    if (result && (result.status === 'sukses' || result.status === 'cek')) {
+      return result;
+    }
+    
+    // Status selain sukses/cek (termasuk 'peringatan' dan 'error') → tampilkan alert
+    let errorMsg = result?.message || 'Perhitungan kolom gagal. Silakan periksa data input.';
+    // Jika result memiliki problems, bisa ditambahkan
+    if (result?.problems && result.problems.length) {
+      errorMsg += '\n\nMasalah: ' + result.problems.join(', ');
+    }
+    if (typeof showAlert === 'function') {
+      showAlert(errorMsg);
+    } else {
+      alert(errorMsg);
+    }
+    return result;
+    
+  } catch (err) {
     console.error('Error dalam calculateKolomWithRedirect:', err);
+    const errorMsg = `Terjadi kesalahan: ${err.message}`;
+    if (typeof showAlert === 'function') {
+      showAlert(errorMsg);
+    } else {
+      alert(errorMsg);
+    }
     throw err;
   }
 }
@@ -1055,4 +1087,4 @@ function calculateKolomSync(rawInput, options={}){
   return (async () => await calculateKolom(rawInput, options))();
 }
 
-console.log("✅ calc-kolom.js loaded — BIAXIAL (Mux & Muy) dengan penyimpanan lengkap data per arah X dan Y di sessionStorage — d untuk begel = max(d_X, d_Y)");
+console.log("✅ calc-kolom.js loaded — BIAXIAL (Mux & Muy) dengan penyimpanan lengkap data per arah X dan Y di sessionStorage — d untuk begel = max(d_X, d_Y) — perbaikan alert untuk perhitungan gagal");

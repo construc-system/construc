@@ -591,7 +591,7 @@ window.modules.balok = {
         // Redirect manual
         window.location.href = 'report.html';
       } else {
-        showAlert(`Perhitungan gagal: ${result.message || 'Terjadi kesalahan'}`);
+        showAlert(`Perhitungan balok gagal: ${result.message || 'Terjadi kesalahan'}`);
       }
     } else {
       const dataStr = JSON.stringify(data, null, 2);

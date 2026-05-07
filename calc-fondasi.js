@@ -1385,11 +1385,7 @@ function saveResultAndRedirectFondasi(result, inputData) {
         kontrol: result.kontrol,
         rekap: result.rekap,
         optimasi: result.optimasi,
-        allVariables: allVariables,
         actualFondasiMode: result.data?.actualFondasiMode || null,
-        loggingEnabled: ENABLE_DETAILED_LOGGING,
-        version: "fondasi_calc_v2.0_complete",
-        generatedAt: new Date().toISOString()
     }));
     
     saveColorSettings();

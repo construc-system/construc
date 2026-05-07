@@ -4,8 +4,6 @@
 const OPTIMIZER_KOLOM = {
     D_KOLOM: [10, 13, 16, 19, 22, 25, 29, 32, 36],
     PHI_KOLOM: [6, 8, 10, 12, 14, 16, 19, 22, 25],
-    MAX_ITERATIONS: 200,
-    CALCULATION_TIMEOUT: 5000
 };
 
 // ============================================================================
@@ -123,7 +121,7 @@ function saveTop10ToSessionStorage(hasilTerbaik, semuaHasil, inputData) {
 }
 
 // ============================================================================
-// OPTIMIZER UTAMA KHUSUS KOLOM (BIAXIAL)
+// OPTIMIZER UTAMA KHUSUS KOLOM (BIAXIAL) - TANPA TIMEOUT
 // ============================================================================
 async function optimizeKolom(inputData) {
     console.log('🚀 OPTIMIZER KOLOM BIAXIAL DIMULAI...');
@@ -178,19 +176,10 @@ async function optimizeKolom(inputData) {
             
             let result;
             try {
-                result = await new Promise((resolve, reject) => {
-                    const timeout = setTimeout(
-                        () => reject(new Error('Timeout')),
-                        OPTIMIZER_KOLOM.CALCULATION_TIMEOUT
-                    );
-                    
-                    window.calculateKolom(inputKolom, { 
-                        autoSave: false, 
-                        skipOptimizer: true 
-                    })
-                        .then(resolve)
-                        .catch(reject)
-                        .finally(() => clearTimeout(timeout));
+                // LANGSUNG PANGGIL calculateKolom TANPA TIMEOUT
+                result = await window.calculateKolom(inputKolom, { 
+                    autoSave: false, 
+                    skipOptimizer: true 
                 });
             } catch (calcError) {
                 semuaHasil.push({ 
@@ -263,7 +252,7 @@ async function optimizeKolom(inputData) {
         return {
             status: "error",
             code: "NO_VALID_COMBINATION",
-            message: "Tidak ditemukan kombinasi tulangan yang memenuhi semua kontrol untuk kolom ini (biaxial)."
+            message: "Perhitungan kolom gagal: Tidak ditemukan kombinasi yang memenuhi semua kontrol keamanan. Silahkan periksa input atau perbesar dimensinya"
         };
     }
     
@@ -282,14 +271,14 @@ async function optimizeKolom(inputData) {
             status_n: hasilTerbaik.result.data.hasilTulangan.status,
             e: hasilTerbaik.result.data.hasilTulangan.e,
             Pu: rawData.beban?.Pu,
-            Mux: rawData.beban?.Mux,   // Ganti Mu dengan Mux
-            Muy: rawData.beban?.Muy,   // Tambah Muy
+            Mux: rawData.beban?.Mux,
+            Muy: rawData.beban?.Muy,
             Pu_phi: hasilTerbaik.result.data.hasilTulangan.Pu_phi,
-            K: hasilTerbaik.result.data.hasilTulangan.K,          // Gabungan
-            K_X: hasilTerbaik.result.data.hasilTulangan.K_X,      // Tambah arah X
-            K_Y: hasilTerbaik.result.data.hasilTulangan.K_Y,      // Tambah arah Y
+            K: hasilTerbaik.result.data.hasilTulangan.K,
+            K_X: hasilTerbaik.result.data.hasilTulangan.K_X,
+            K_Y: hasilTerbaik.result.data.hasilTulangan.K_Y,
             Kmaks: hasilTerbaik.result.data.hasilTulangan.Kmaks,
-            K_ok: hasilTerbaik.result.data.hasilTulangan.K_ok,    // Gabungan
+            K_ok: hasilTerbaik.result.data.hasilTulangan.K_ok,
             K_ok_X: hasilTerbaik.result.data.hasilTulangan.K_ok_X,
             K_ok_Y: hasilTerbaik.result.data.hasilTulangan.K_ok_Y,
             kondisi: hasilTerbaik.kondisi,

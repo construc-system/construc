@@ -126,7 +126,18 @@ window.optimizeDesainFondasi = function(data) {
     const duration = (endTime - startTime) / 1000;
     
     if (kombinasiValid.length === 0) {
-        return fallbackDesainFondasi(data);
+        let errorMessage;
+        if (autoDimensi) {
+            errorMessage = "Tidak ditemukan kombinasi dimensi yang memenuhi seluruh kontrol keamanan. Pastikan seluruh input sesuai. Jika input valid, kemungkinan kebutuhan struktur berada di luar rentang dimensi dan tulangan yang disediakan sistem. Gunakan mode dimensi manual untuk menentukan dimensi yang lebih sesuai.";
+        } else {
+            errorMessage = "Tidak ditemukan kombinasi yang memenuhi semua kontrol keamanan. Silahkan periksa input atau perbesar dimensinya";
+        }
+        return {
+            status: 'error',
+            message: errorMessage,
+            statistik_penolakan: statistikPenolakan,
+            total_kombinasi_dicoba: kombinasiDicoba
+        };
     }
     
     kombinasiValid.sort((a, b) => a.asRincian.totalAsPerMeter - b.asRincian.totalAsPerMeter);
@@ -464,7 +475,7 @@ function isKontrolFondasiAman(kontrol, hasilData) {
 }
 
 // =====================================================
-// FUNGSI FALLBACK
+// FUNGSI FALLBACK (tetap dipertahankan untuk keperluan lain, tapi tidak dipanggil saat kombinasi kosong)
 // =====================================================
 
 function fallbackDesainFondasi(data) {

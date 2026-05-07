@@ -1105,19 +1105,19 @@ window.modules.fondasi = {
       </div>
       <div class="form-grid">
         <div class="field">
-          <label>P<sub>u</sub> *</label>
+          <label>P<sub>u</sub></label>
           <div class="input-with-unit" data-unit="kN">
             <input data-key="pu" placeholder="Beban Aksial Ultimit (wajib)" value="${escapeHtml((formState[currentModuleKey] && formState[currentModuleKey][currentMode] && formState[currentModuleKey][currentMode]['pu']) || '')}">
           </div>
         </div>
         <div class="field">
-          <label>M<sub>uy</sub> *</label>
+          <label>M<sub>uy</sub></label>
           <div class="input-with-unit" data-unit="kNm">
             <input data-key="muy" placeholder="Momen Ultimit Arah Y (wajib, isi 0 jika tidak ada)" value="${escapeHtml((formState[currentModuleKey] && formState[currentModuleKey][currentMode] && formState[currentModuleKey][currentMode]['muy']) || '')}">
           </div>
         </div>
         <div class="field">
-          <label>M<sub>ux</sub> *</label>
+          <label>M<sub>ux</sub></label>
           <div class="input-with-unit" data-unit="kNm">
             <input data-key="mux" placeholder="Momen Ultimit Arah X (wajib, isi 0 jika tidak ada)" value="${escapeHtml((formState[currentModuleKey] && formState[currentModuleKey][currentMode] && formState[currentModuleKey][currentMode]['mux']) || '')}">
           </div>
@@ -1789,7 +1789,7 @@ window.modules.fondasi = {
         const errorMessage = result?.message || "Tidak ditemukan fondasi yang memenuhi syarat";
         showAlert(
           `Perhitungan fondasi gagal: ${errorMessage}`,
-          "❌ Perhitungan Gagal"
+          "‼️ Alert"
         );
       }
       

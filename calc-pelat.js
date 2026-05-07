@@ -1,6 +1,9 @@
 // ============================================================================
 //   calc-pelat.js — versi lengkap dengan sistem kontrol, rekap, dan session storage
 //   REVISI: Mode desain hanya mengembalikan hasil yang aman
+//   REVISI2: Menghilangkan pembedaan perhitungan momen berdasarkan jenis pelat (satu/dua arah)
+//            Seluruh perhitungan momen pada mode auto menggunakan koefisien tabel.
+//   REVISI3: Mode manual juga tidak membedakan jenis pelat, semua momen diisi nilai mu yang sama.
 // ============================================================================
 
 // --------------------------------------------------------
@@ -133,7 +136,8 @@ function getTumpuanHuruf(pattern) {
 }
 
 // --------------------------------------------------------
-// 3. FUNGSI BARU: TENTUKAN JENIS PELAT (SATU ARAH / DUA ARAH)
+// 3. FUNGSI TENTUKAN JENIS PELAT (SATU ARAH / DUA ARAH)
+//    (digunakan hanya untuk keperluan tampilan dan flag arah pada tulangan)
 // --------------------------------------------------------
 function getJenisPelat(ly, lx, pattern) {
     const rasio = ly / lx;
@@ -335,47 +339,38 @@ function hitungPelat(p) {
     let jenisPelat = "dua_arah";
 
     if (beban.mode === "manual") {
-        const tumpuanManual = beban.manual.tumpuan_type;
-        if (tumpuanManual === "Satu Arah" || tumpuanManual === "Kantilever") {
-            jenisPelat = "satu_arah";
-        } else if (tumpuanManual === "Dua Arah") {
-            jenisPelat = "dua_arah";
-        } else {
-            jenisPelat = "dua_arah";
-        }
-        if (jenisPelat === "satu_arah") {
-            Mtx = beban.manual.mu;
-            Mlx = beban.manual.mu;
-            Mly = 0;
-            Mty = 0;
-        } else {
-            Mtx = Mlx = Mly = Mty = beban.manual.mu;
-        }
+        const mu = beban.manual.mu;
+        Mtx = mu;
+        Mlx = mu;
+        Mly = mu;
+        Mty = mu;
         kondisi = "Manual";
         tumpuanHuruf = "-";
         Ctx = Clx = Cly = Cty = 0;
+        // Jenis pelat hanya untuk keperluan tampilan (flag arah tulangan)
+        const tumpuanManual = beban.manual.tumpuan_type;
+        if (tumpuanManual === "Satu Arah" || tumpuanManual === "Kantilever") {
+            jenisPelat = "satu_arah";
+        } else {
+            jenisPelat = "dua_arah";
+        }
     } else {
         const pattern = beban.auto.pattern_binary || "0000";
         tumpuanHuruf = getTumpuanHuruf(pattern);
         kondisi = beban.auto.tumpuan_type.includes("Penuh") ? "Penuh" : "Menerus";
+        // Jenis pelat tetap dihitung untuk keperluan tampilan dan flag arah tulangan
         jenisPelat = getJenisPelat(Ly, Lx, pattern);
-        if (jenisPelat === "satu_arah") {
-            const qu = beban.auto.qu;
-            Mtx = 0;
-            Mlx = (qu * Lx * Lx) / 8;
-            Mly = 0;
-            Mty = 0;
-            Ctx = Clx = Cly = Cty = 0;
-        } else {
-            Ctx = getTabelMomen(kondisi, tumpuanHuruf, "Mtx", rasioTabel);
-            Clx = getTabelMomen(kondisi, tumpuanHuruf, "Mlx", rasioTabel);
-            Cly = getTabelMomen(kondisi, tumpuanHuruf, "Mly", rasioTabel);
-            Cty = getTabelMomen(kondisi, tumpuanHuruf, "Mty", rasioTabel);
-            Mtx = 0.001 * beban.auto.qu * (Lx ** 2) * Ctx;
-            Mlx = 0.001 * beban.auto.qu * (Lx ** 2) * Clx;
-            Mly = 0.001 * beban.auto.qu * (Lx ** 2) * Cly;
-            Mty = 0.001 * beban.auto.qu * (Lx ** 2) * Cty;
-        }
+        const qu = beban.auto.qu;
+
+        Ctx = getTabelMomen(kondisi, tumpuanHuruf, "Mtx", rasioTabel);
+        Clx = getTabelMomen(kondisi, tumpuanHuruf, "Mlx", rasioTabel);
+        Cly = getTabelMomen(kondisi, tumpuanHuruf, "Mly", rasioTabel);
+        Cty = getTabelMomen(kondisi, tumpuanHuruf, "Mty", rasioTabel);
+
+        Mtx = 0.001 * qu * (Lx ** 2) * Ctx;
+        Mlx = 0.001 * qu * (Lx ** 2) * Clx;
+        Mly = 0.001 * qu * (Lx ** 2) * Cly;
+        Mty = 0.001 * qu * (Lx ** 2) * Cty;
     }
 
     const pokokX = hitungTulanganPokok({
@@ -722,4 +717,4 @@ if (typeof window !== 'undefined') {
     window.getJenisPelat = getJenisPelat;
 }
 
-console.log('✅ calc-pelat.js (revisi) loaded — mode desain hanya hasil aman');
+console.log('✅ calc-pelat.js (revisi final) — mode manual dan auto: tidak ada pembedaan perhitungan momen berdasarkan jenis pelat');
