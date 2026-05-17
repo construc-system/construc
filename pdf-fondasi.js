@@ -1525,7 +1525,7 @@
         
         // Header - DIPERBAIKI: Mengubah tampilan header informasi
         blocks.push(`
-            <h1>LAPORAN PERHITUNGAN FONDASI</h1>
+            <h1>LAPORAN PERHITUNGAN FONDASI BETON BERTULANG</h1>
             <div class="header-info">
                 <div>
                     <span><strong>Mode:</strong> ${getData('mode', 'N/A').toUpperCase()}</span>

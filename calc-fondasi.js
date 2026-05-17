@@ -1,7 +1,3 @@
-// =====================================================
-// calc-fondasi.js (versi terstruktur dengan kontrol logging dan validasi lengkap)
-// =====================================================
-
 // ===== UTILITAS DASAR =====
 function ceili(x, i) {
     return Math.ceil(Number(x) / i) * i;
@@ -336,7 +332,7 @@ function hitungDesainFondasi(data, options = {}) {
 }
 
 // =====================================================
-// ===== FUNGSI HITUNG EVALUASI DENGAN ERROR HANDLING =====
+// ===== FUNGSI HITUNG EVALUASI DENGAN ERROR HANDLING - REVISI =====
 function hitungEvaluasiFondasi(data, options = {}) {
     try {
         const input = parseInputFondasi(data);
@@ -530,19 +526,13 @@ function hitungFondasiInti(input) {
 
         const parameter = hitungParameterFondasi(actualFondasiMode, ly, lx, by, bx, h, Pu, Mux, Muy, gammaC, gamma, df, fc, fy, D, sbeton, alpha_s);
         
-        // PERBAIKAN: Validasi sigma_min
-        if (parameter.sigma_min <= 0) {
-            throw new Error("Sigma_min negatif atau nol");
-        }
-        
+        // PERBAIKAN: Tidak melempar error untuk evaluasi, biarkan sigma_min negatif tetap diproses
+        // (Hanya untuk desain di luar fungsi ini yang akan menolak)
         parameter.sigma_status = parameter.sigma_min > 0 ? "AMAN" : "BAHAYA";
         
         const dayaDukung = hitungDayaDukungTanah(phi, lx, ly, df, gamma, c, qc, parameter.sigma_max, mayerhoff, terzaghi, qa, modeTanah);
         
-        // PERBAIKAN: Validasi daya dukung
-        if (dayaDukung.status !== "AMAN") {
-            throw new Error("Daya dukung tanah tidak aman");
-        }
+        // PERBAIKAN: Tidak melempar error untuk evaluasi, biarkan daya dukung tidak aman tetap diproses
         
         let kontrolGeser;
         if (actualFondasiMode === "menerus") {
@@ -588,6 +578,7 @@ function hitungFondasiInti(input) {
         };
         
     } catch (error) {
+        // Untuk evaluasi, kita tetap melempar error karena ini error serius (bukan kontrol)
         throw error;
     }
 }
@@ -810,7 +801,7 @@ function rekapHasilFondasi(hasil, input, mode = "desain") {
 
     const formatTulangan = (s, diameter) => {
         if (!s || s === 0) return "-";
-        return `ɸ${diameter}-${s}`;
+        return `Ø${diameter}-${s}`;
     };
 
     const formatStatus = (aman) => aman ? "✅ AMAN" : "❌ BAHAYA";
@@ -853,6 +844,7 @@ function rekapHasilFondasi(hasil, input, mode = "desain") {
 
 // =====================================================
 // ===== SUB-FUNGSI PERHITUNGAN DETAIL =====
+// (Semua fungsi di bawah ini tetap sama seperti versi sebelumnya)
 
 function hitungParameterFondasi(fondasiMode, Ly, Lx, by, bx, h, Pu, Mux, Muy, Gc, Gamma, Df, fc, fy, D, sbeton, alpha_s) {
     try {
