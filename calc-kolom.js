@@ -1,11 +1,3 @@
-// =====================================================
-// calc-kolom.js (BIAXIAL - LENGKAP DENGAN SEMUA FUNGSI)
-// Memastikan data hasil perhitungan arah X dan Y tersimpan penuh di sessionStorage
-// PERBAIKAN: Rekap tulangan utama untuk mode desain menggunakan total batang = nX + nY - 4
-// PERUBAHAN: d untuk begel = max(d_X, d_Y)
-// PERBAIKAN: calculateKolomWithRedirect menampilkan alert jika perhitungan gagal (termasuk peringatan)
-// =====================================================
-
 // ===== UTIL =====
 function ceil5(x){ return Math.ceil(x/5)*5 }
 function floor5(x){ return Math.floor(x/5)*5 }
@@ -80,10 +72,14 @@ function parseInput(raw){
   const n_kaki = toNum(lanjutan.n_kaki, 2);
 
   const tulangan = data.tulangan || {};
-  const d_tul = toNum(tulangan.d_tul || tulangan.d || tulangan.D);
-  const phi_tul = toNum(tulangan.phi_tul || tulangan.phi);
-  const n_tul = toNum(tulangan.n_tul || tulangan.n);
-  const s_tul = toNum(tulangan.s_tul || tulangan.s);
+  const d_tul   = toNum(tulangan.d_tul   || tulangan.d  || tulangan.D);
+  const phi_tul = toNum(tulangan.phi_tul  || tulangan.phi);
+  const s_tul   = toNum(tulangan.s_tul   || tulangan.s);
+
+  // REVISI: nx_tul dan ny_tul menggantikan n_tul tunggal
+  // Tetap mendukung n_tul lama sebagai fallback agar tidak breaking change
+  const nx_tul = toNum(tulangan.nx_tul || tulangan.nx || tulangan.n_tul || tulangan.n);
+  const ny_tul = toNum(tulangan.ny_tul || tulangan.ny || tulangan.n_tul || tulangan.n);
 
   const parsedData = {
     module, mode,
@@ -91,7 +87,7 @@ function parseInput(raw){
     beban:{Pu, Mux, Muy, Vu},
     material:{fc,fy,fyt},
     lanjutan:{lambda,n_kaki},
-    tulangan:{d_tul,phi_tul,n_tul,s_tul},
+    tulangan:{d_tul, phi_tul, nx_tul, ny_tul, s_tul},
     raw: data
   };
   return parsedData;
@@ -520,7 +516,8 @@ function hitungTulanganKolomCoreSatuArah({
 }
 
 // ====== FUNGSI UTAMA UNTUK BIAXIAL ======
-function hitungTulanganKolomBiaxial(parsed, D, phi, mode, n_input) {
+// REVISI: nx_input untuk arah X (Mux), ny_input untuk arah Y (Muy)
+function hitungTulanganKolomBiaxial(parsed, D, phi, mode, nx_input, ny_input) {
   const b = parsed.dimensi.b;
   const h = parsed.dimensi.h;
   const sb = parsed.dimensi.sb;
@@ -535,19 +532,18 @@ function hitungTulanganKolomBiaxial(parsed, D, phi, mode, n_input) {
   // Hitung dimensi untuk arah Y (momen Muy, lebar = h, tinggi = b)
   const dimY = hitungKolomDimensi({ b: h, h: b, Sb: sb, D, phi, fc });
 
-  // Hitung tulangan untuk arah X
+  // REVISI: Arah X pakai nx_input, arah Y pakai ny_input
   const hasilX = hitungTulanganKolomCoreSatuArah({
-    mode, n_input, Pu, Mu: Mux, b, h, d: dimX.d, ds: dimX.ds,
+    mode, n_input: nx_input, Pu, Mu: Mux, b, h, d: dimX.d, ds: dimX.ds,
     fc, fy, beta1: dimX.beta1, phi, D, m: dimX.m
   });
 
-  // Hitung tulangan untuk arah Y (tukar b dan h)
   const hasilY = hitungTulanganKolomCoreSatuArah({
-    mode, n_input, Pu, Mu: Muy, b: h, h: b, d: dimY.d, ds: dimY.ds,
+    mode, n_input: ny_input, Pu, Mu: Muy, b: h, h: b, d: dimY.d, ds: dimY.ds,
     fc, fy, beta1: dimY.beta1, phi, D, m: dimY.m
   });
 
-  // Gabungkan hasil: ambil nilai terbesar untuk As_tu, n, dll.
+  // Gabungkan hasil: ambil nilai terbesar untuk As_tu
   const As_tu_final = Math.max(hasilX.As_tu, hasilY.As_tu);
   const Ast_u_final = As_tu_final;
   const Ast_satu = hasilX.Ast_satu; // sama untuk kedua arah
@@ -557,7 +553,9 @@ function hitungTulanganKolomBiaxial(parsed, D, phi, mode, n_input) {
   let minimum_detail_final = {};
 
   if (mode === 'evaluasi') {
-    n_final = n_input;
+    // REVISI: total batang = nx + ny - 4 (sudut dihitung dua kali jika dijumlah)
+    const n_total = Math.max(0, nx_input + ny_input - 4);
+    n_final = n_total;
     Ast_i_final = n_final * Ast_satu;
     rho_final = (Ast_i_final / (b * h)) * 100;
     n_terpakai_final = n_final;
@@ -649,6 +647,9 @@ function hitungTulanganKolomBiaxial(parsed, D, phi, mode, n_input) {
     K_Y: hasilY.K,
     Kmaks_Y: hasilY.Kmaks,
     K_melebihi_Kmaks_Y: hasilY.K_melebihi_Kmaks,
+    // REVISI: simpan nx dan ny untuk referensi report/PDF
+    nx_input: nx_input,
+    ny_input: ny_input,
   };
   return hasilGabungan;
 }
@@ -870,6 +871,9 @@ function rekapKolomAll(parsed, D, phi, hasilGabungan, begel, kontrol, Sn){
       faktorPhi_Y: hasilGabungan.faktorPhi_Y,
       minimum_diterapkan: hasilGabungan.minimum_diterapkan,
       minimum_detail: hasilGabungan.minimum_detail,
+      // REVISI: simpan nx dan ny untuk referensi report/PDF
+      nx: hasilGabungan.nx_input,
+      ny: hasilGabungan.ny_input,
     },
     begel: {
       ...begel,
@@ -975,27 +979,32 @@ async function calculateKolom(rawInput, options = {}){
 
   if (!D || !phi) return { status: "error", message: "Diameter tulangan tidak dapat ditentukan" };
 
+  // REVISI: ambil nx_input dan ny_input secara terpisah
+  const nx_input = (mode === 'evaluasi') ? (parsed.tulangan.nx_tul || 0) : 0;
+  const ny_input = (mode === 'evaluasi') ? (parsed.tulangan.ny_tul || 0) : 0;
+
   console.log(`🔧 PERHITUNGAN BIAXIAL DENGAN: D=${D}, φ=${phi}, Mux=${parsed.beban.Mux}, Muy=${parsed.beban.Muy}`);
+  if (mode === 'evaluasi') {
+    console.log(`   Tulangan evaluasi: nx=${nx_input} (arah X), ny=${ny_input} (arah Y), total=${nx_input + ny_input - 4}`);
+  }
 
   const dimX = hitungKolomDimensi({ b: parsed.dimensi.b, h: parsed.dimensi.h, Sb: parsed.dimensi.sb, D, phi, fc: parsed.material.fc });
   const dimY = hitungKolomDimensi({ b: parsed.dimensi.h, h: parsed.dimensi.b, Sb: parsed.dimensi.sb, D, phi, fc: parsed.material.fc });
   
-  // *** PERUBAHAN: d untuk begel diambil dari nilai terbesar antara d_X dan d_Y ***
+  // d untuk begel diambil dari nilai terbesar antara d_X dan d_Y
   const d_begel = Math.max(dimX.d, dimY.d);
   const Sn = dimX.Sn; // Sn sama untuk kedua arah, pakai dari X
 
-  const tulMode = mode;
-  const n_input = (tulMode === 'evaluasi') ? (parsed.tulangan.n_tul || 0) : 0;
-  
-  const hasilGabungan = hitungTulanganKolomBiaxial(parsed, D, phi, tulMode, n_input);
+  // REVISI: teruskan nx_input dan ny_input ke hitungTulanganKolomBiaxial
+  const hasilGabungan = hitungTulanganKolomBiaxial(parsed, D, phi, mode, nx_input, ny_input);
 
-  const s_pasang = (tulMode === 'evaluasi') ? (parsed.tulangan.s_tul || undefined) : (options.s || undefined);
+  const s_pasang = (mode === 'evaluasi') ? (parsed.tulangan.s_tul || undefined) : (options.s || undefined);
   const begel = hitungBegelCore({
     Pu: parsed.beban.Pu,
     Vu: parsed.beban.Vu,
     b: parsed.dimensi.b,
     h: parsed.dimensi.h,
-    d: d_begel,   // <-- menggunakan max(d_X, d_Y)
+    d: d_begel,   // menggunakan max(d_X, d_Y)
     fc: parsed.material.fc,
     fy: parsed.material.fy,
     fyt: parsed.material.fyt || parsed.material.fy,
@@ -1003,12 +1012,12 @@ async function calculateKolom(rawInput, options = {}){
     Ag: parsed.dimensi.b * parsed.dimensi.h,
     lambda: parsed.lanjutan.lambda,
     phi2: DEFAULTS.phi2,
-    mode: tulMode,
+    mode: mode,
     n_val: parsed.lanjutan.n_kaki || 2,
     s_pasang: s_pasang
   });
 
-  if (tulMode === 'desain' && begel.s < 100){
+  if (mode === 'desain' && begel.s < 100){
     begel.s = 100;
     const luas_sengkang = 2 * 0.25 * Math.PI * phi * phi;
     begel.Av_terpakai = (begel.s > 0) ? (luas_sengkang * 1000) / begel.s : 0;
@@ -1042,7 +1051,7 @@ async function calculateKolom(rawInput, options = {}){
   return result;
 }
 
-// ====== REDIRECT DENGAN ALERT JIKA GAGAL (PERBAIKAN UNTUK ALERT) ======
+// ====== REDIRECT DENGAN ALERT JIKA GAGAL ======
 async function calculateKolomWithRedirect(data){
   try {
     const result = await calculateKolom(data, { autoSave: true });
@@ -1054,7 +1063,6 @@ async function calculateKolomWithRedirect(data){
     
     // Status selain sukses/cek (termasuk 'peringatan' dan 'error') → tampilkan alert
     let errorMsg = result?.message || 'Perhitungan kolom gagal. Silakan periksa data input.';
-    // Jika result memiliki problems, bisa ditambahkan
     if (result?.problems && result.problems.length) {
       errorMsg += '\n\nMasalah: ' + result.problems.join(', ');
     }
@@ -1087,4 +1095,4 @@ function calculateKolomSync(rawInput, options={}){
   return (async () => await calculateKolom(rawInput, options))();
 }
 
-console.log("✅ calc-kolom.js loaded — BIAXIAL (Mux & Muy) dengan penyimpanan lengkap data per arah X dan Y di sessionStorage — d untuk begel = max(d_X, d_Y) — perbaikan alert untuk perhitungan gagal");
+console.log("✅ calc-kolom.js loaded — BIAXIAL (Mux & Muy) — evaluasi biaxial nx/ny terpisah per arah — d untuk begel = max(d_X, d_Y)");

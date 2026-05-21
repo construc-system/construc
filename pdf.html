@@ -39,7 +39,7 @@
         
         .a4-page {
             width: 210mm;
-            min-height: 297mm;
+            height: 297mm;
             margin: 0 auto 20mm auto;
             padding: 40mm 30mm 32mm 40mm;
             background-color: white;
@@ -394,7 +394,7 @@
         <div>Membuat PDF, harap tunggu...</div>
     </div>
     
-    <!-- Tombol Kembali -->
+    <!-- Tombol Kembali (tanpa stroke inline, akan diatur oleh JS) -->
     <button class="circle action-button" style="top: 20px; left: 20px; background: #163172;" aria-label="Kembali" onclick="window.location.href='report.html'" title="Kembali">
         <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="M15 18l-6-6 6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -403,16 +403,16 @@
     
     <!-- Tombol Download PDF -->
     <button class="circle action-button" style="bottom: 20px; right: 90px; background: #163172;" aria-label="Download PDF" onclick="downloadPDF()" title="Download PDF">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 15V3"/>
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
             <path d="m7 10 5 5 5-5"/>
         </svg>
     </button>
     
-    <!-- Tombol Toggle Border — disembunyikan -->
+    <!-- Tombol Toggle Border — disembunyikan secara permanen -->
     <button class="circle action-button" style="bottom: 20px; right: 20px; background: #163172; display: none;" aria-label="Toggle Border" onclick="toggleBorder()" title="Toggle Border">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
             <line x1="9" y1="3" x2="9" y2="21"></line>
         </svg>
@@ -519,20 +519,21 @@
         function measureBlockHeight(block) {
             return new Promise(resolve => {
                 const tempContainer = document.createElement('div');
+                const contentWidthPx = (PAGE_WIDTH_MM - MARGIN_LEFT_MM - MARGIN_RIGHT_MM) * MM_TO_PX;
                 tempContainer.style.cssText = `
                     position: absolute;
                     left: -10000px;
                     top: -10000px;
-                    width: ${(PAGE_WIDTH_MM - MARGIN_LEFT_MM - MARGIN_RIGHT_MM) * MM_TO_PX}px;
+                    width: ${contentWidthPx}px;
                     font-family: 'Times New Roman', Times, serif;
                     line-height: 1.3;
                     font-size: 12pt;
                     visibility: hidden;
                 `;
-                const blockClone = block.cloneNode(true);
-                tempContainer.appendChild(blockClone);
+                tempContainer.appendChild(block);
                 document.body.appendChild(tempContainer);
-                renderMathInElement(blockClone, {
+                
+                renderMathInElement(block, {
                     delimiters: [
                         {left: '$$', right: '$$', display: true},
                         {left: '\\[', right: '\\]', display: true},
@@ -541,12 +542,14 @@
                     ],
                     throwOnError: false
                 });
+                
                 setTimeout(() => {
-                    blockClone.offsetHeight;
-                    const height = blockClone.getBoundingClientRect().height;
+                    const marginBottom = parseFloat(window.getComputedStyle(block).marginBottom) || 0;
+                    const height = block.getBoundingClientRect().height + marginBottom;
+                    tempContainer.removeChild(block);
                     document.body.removeChild(tempContainer);
                     resolve(height);
-                }, 100);
+                }, 150);
             });
         }
         
@@ -576,11 +579,6 @@
             }
         }
         
-        // =====================================================
-        // FUNGSI DOWNLOAD PDF
-        // Mengirim 'pdfDownloaded' ke parent (report.html)
-        // setelah selesai, agar iframe bisa dibersihkan.
-        // =====================================================
         async function downloadPDF() {
             const loadingOverlay = document.getElementById('loadingOverlay');
             loadingOverlay.style.display = 'flex';
@@ -634,10 +632,16 @@
                 alert('Terjadi kesalahan saat membuat PDF. Silakan coba lagi.');
             } finally {
                 const actionButtons = document.querySelectorAll('.action-button');
-                actionButtons.forEach(btn => btn.style.display = 'block');
+                actionButtons.forEach(btn => {
+                    // Kecualikan tombol Toggle Border agar tetap tersembunyi
+                    if (btn.getAttribute('aria-label') !== 'Toggle Border') {
+                        btn.style.display = 'block';
+                    }
+                });
+                // Terapkan kembali warna tombol (agar simbol mengikuti tema)
+                applyColorSettings();
                 loadingOverlay.style.display = 'none';
 
-                // ✅ Beri tahu report.html bahwa download sudah selesai
                 if (window.parent && window.parent !== window) {
                     window.parent.postMessage('pdfDownloaded', '*');
                 }
@@ -696,28 +700,8 @@
             }
             
             console.log(`Pagination selesai. Total halaman: ${pages.length}`);
-            
-            document.querySelectorAll('.page-content').forEach(content => {
-                renderMathInElement(content, {
-                    delimiters: [
-                        {left: '$$', right: '$$', display: true},
-                        {left: '\\[', right: '\\]', display: true},
-                        {left: '$', right: '$', display: false},
-                        {left: '\\(', right: '\\)', display: false}
-                    ],
-                    throwOnError: false
-                });
-            });
-
-            // Tunggu 10 detik sekali buat semua KaTeX selesai render
-            await new Promise(resolve => setTimeout(resolve, 1000));
         }
 
-        // =====================================================
-        // MAIN: Jalankan saat halaman dimuat
-        // Mengirim 'pdfReady' ke parent (report.html)
-        // setelah renderReport() selesai.
-        // =====================================================
         document.addEventListener('DOMContentLoaded', async function() {
             if (!resultData || !activeModule) return;
             
@@ -732,7 +716,6 @@
                         window[reportModuleName].setData(resultData);
                         await renderReport();
 
-                        // ✅ Beri tahu report.html bahwa laporan siap untuk di-download
                         if (window.parent && window.parent !== window) {
                             window.parent.postMessage('pdfReady', '*');
                         }

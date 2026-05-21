@@ -1,4 +1,4 @@
-// pdf-kolom.js (Final - Fixed: Tulangan Utama = nX+nY-4, Rasio dihitung ulang)
+// pdf-kolom.js (Final - Fixed: Tulangan Utama = nX+nY-4, Rasio dihitung ulang, Kontrol n per arah)
 (function() {
     // ==============================================
     // CSS YANG DIPERBAIKI UNTUK PAGE BREAK (PRINT MEDIA)
@@ -58,16 +58,25 @@
     }
 
     // ==============================================
-    // FUNGSI UTAMA: Cek Status Kolom Dinamis
+    // FUNGSI UTAMA: Cek Status Kolom Dinamis (PERBAIKI: n_ok per arah)
     // ==============================================
     function cekStatusKolom() {
         const kontrolLentur = getData('kontrol.lentur', {});
         const kontrolGeser = getData('kontrol.geser', {});
         
+        // Ambil data per arah untuk n_ok
+        const hasilX = getData('data.hasilTulangan.hasilArahX', {});
+        const hasilY = getData('data.hasilTulangan.hasilArahY', {});
+        const nX = parseFloat(hasilX.n_terpakai) || 0;
+        const nMaxX = parseFloat(hasilX.n_max) || 0;
+        const nY = parseFloat(hasilY.n_terpakai) || 0;
+        const nMaxY = parseFloat(hasilY.n_max) || 0;
+        const n_ok = (nX <= nMaxX) && (nY <= nMaxY);
+        
         let semuaAman = true;
         
         if (kontrolLentur) {
-            if (!kontrolLentur.Ast_ok || !kontrolLentur.rho_ok || !kontrolLentur.n_ok || !kontrolLentur.K_ok) {
+            if (!kontrolLentur.Ast_ok || !kontrolLentur.rho_ok || !n_ok || !kontrolLentur.K_ok) {
                 semuaAman = false;
             }
         }
@@ -171,17 +180,17 @@
         let html = '<table class="three-col-table" style="break-inside: auto; page-break-inside: auto;">';
         
         if (isDataTable) {
-            html += '<tr>';
+            html += '<thead>';
             html += '<th class="col-param">Parameter</th>';
             html += '<th class="col-value" style="text-align: center">Data</th>';
             html += '<th class="col-unit" style="text-align: center">Satuan</th>';
-            html += '</tr>';
+            html += '</thead>';
         } else {
-            html += '<tr>';
+            html += '<thead>';
             html += '<th class="col-param">Parameter Perhitungan</th>';
             html += '<th class="col-value" style="text-align: center">Hasil</th>';
             html += '<th class="col-unit" style="text-align: center">Satuan</th>';
-            html += '</tr>';
+            html += '</thead>';
         }
         
         rows.forEach(row => {
@@ -242,15 +251,15 @@
 
     function createTwoColumnTable(rows) {
         let html = '<table class="two-col-table" style="break-inside: auto; page-break-inside: auto;">';
-        html += '<tr>';
+        html += '<thead>';
         html += '<th class="col-param-2">Parameter</th>';
         html += '<th class="col-status-2" style="text-align: center">Status</th>';
-        html += '</tr>';
+        html += '</thead>';
         
         rows.forEach(row => {
             if (row.isFullRow) {
                 html += `
-                    <tr>
+                    <tr class="${rowClass}">
                         <td class="col-full-width" colspan="2" style="text-align: center;">
                             ${row.parameter}
                         </td>
@@ -271,13 +280,13 @@
     }
 
     // ==============================================
-    // FUNGSI UNTUK MENDAPATKAN TOTAL BATANG DAN RASIO TOTAL (MODE DESAIN) - DIPERBAIKI
+    // FUNGSI UNTUK MENDAPATKAN TOTAL BATANG DAN RASIO TOTAL (DIPERBAIKI: evaluasi pakai nx+ny-4)
     // ==============================================
     function getTotalBatangDanRasio() {
         const mode = getData('mode', 'evaluasi');
         const dimensi = getData('data.parsedInput.dimensi', {});
-        const b = dimensi.b || 1;
-        const h = dimensi.h || 1;
+        const b = parseFloat(dimensi.b) || 1;
+        const h = parseFloat(dimensi.h) || 1;
         
         let D = getData('data.D', null);
         if (!D) D = getData('data.parsedInput.tulangan.d_tul', null);
@@ -293,14 +302,23 @@
             const rho_total = (Ast_total / (b * h)) * 100;
             return { totalBatang, Ast_total, rho_total, D };
         } else {
-            const n = getData('data.hasilTulangan.n_terpakai', 0);
-            const Ast_total = n * Ast_satu;
+            // Mode evaluasi: hitung total batang dari nx dan ny (harus number)
+            let nx = getData('data.parsedInput.tulangan.nx_tul', 0);
+            if (nx === 'N/A' || nx === undefined) nx = getData('data.parsedInput.tulangan.nx', 0);
+            let ny = getData('data.parsedInput.tulangan.ny_tul', 0);
+            if (ny === 'N/A' || ny === undefined) ny = getData('data.parsedInput.tulangan.ny', 0);
+            // Pastikan parseFloat
+            nx = parseFloat(nx) || 0;
+            ny = parseFloat(ny) || 0;
+            let totalBatang = nx + ny - 4;
+            if (totalBatang < 0) totalBatang = 0;
+            const Ast_total = totalBatang * Ast_satu;
             const rho_total = (Ast_total / (b * h)) * 100;
-            return { totalBatang: n, Ast_total, rho_total, D };
+            return { totalBatang, Ast_total, rho_total, D };
         }
     }
 
-    // Fungsi untuk membuat tabel 2 kolom untuk tulangan terpasang - DIPERBAIKI: total batang = nX+nY-4 dan rasio dihitung ulang
+    // Fungsi untuk membuat tabel 2 kolom untuk tulangan terpasang (DIPERBAIKI: gunakan totalBatang & rho_total)
     function createTulanganTerpasangTable() {
         const mode = getData('mode', 'evaluasi');
         const rekap = getData('rekap', {});
@@ -310,48 +328,28 @@
         let tulanganUtama = 'N/A';
         let rhoTotal = 'N/A';
         
-        if (mode === 'desain') {
-            // Hitung total batang dari nX dan nY
-            const nX = getData('data.hasilTulangan.hasilArahX.n_terpakai', 0);
-            const nY = getData('data.hasilTulangan.hasilArahY.n_terpakai', 0);
-            let totalBatang = nX + nY - 4;
-            if (totalBatang < 0) totalBatang = 0;
-            
-            let D = getData('data.D', null);
-            if (!D) D = getData('data.parsedInput.tulangan.d_tul', null);
-            if (!D) D = getData('data.parsedInput.tulangan.d', 16);
-            
-            if (totalBatang > 0 && D) {
-                tulanganUtama = `${totalBatang}D${D}`;
-                // Hitung ulang rasio berdasarkan total batang
-                const b = getData('data.parsedInput.dimensi.b', 1);
-                const h = getData('data.parsedInput.dimensi.h', 1);
-                const Ast_satu = Math.PI * D * D / 4;
-                const Ast_total = totalBatang * Ast_satu;
-                const rho = (Ast_total / (b * h)) * 100;
-                rhoTotal = formatNumber(rho, 3) + ' %';
+        // Gunakan fungsi getTotalBatangDanRasio untuk mendapatkan nilai yang benar
+        const { totalBatang, rho_total, D } = getTotalBatangDanRasio();
+        
+        if (totalBatang > 0 && D && D !== 'N/A') {
+            tulanganUtama = `${totalBatang}D${D}`;
+            rhoTotal = formatNumber(rho_total, 3) + ' %';
+        } else if (formatted.tulangan_utama) {
+            tulanganUtama = formatted.tulangan_utama;
+            if (rhoTotal === 'N/A' && rekap.tulangan && rekap.tulangan.rho !== undefined) {
+                rhoTotal = formatNumber(rekap.tulangan.rho, 3) + ' %';
             }
-        } else {
-            // Mode evaluasi: ambil dari rekap
-            if (rekap.tulangan) {
-                const n = rekap.tulangan.n_terpakai;
-                const D = rekap.tulangan.D;
-                if (n && D) tulanganUtama = `${n}D${D}`;
-                if (rekap.tulangan.rho !== undefined) rhoTotal = formatNumber(rekap.tulangan.rho, 3) + ' %';
-            }
-            if (tulanganUtama === 'N/A' && formatted.tulangan_utama) tulanganUtama = formatted.tulangan_utama;
         }
         
         // Fallback jika masih N/A
         if (tulanganUtama === 'N/A') {
-            const { totalBatang, rho_total, D } = getTotalBatangDanRasio();
             if (totalBatang > 0 && D) tulanganUtama = `${totalBatang}D${D}`;
             if (rhoTotal === 'N/A') rhoTotal = formatNumber(rho_total, 3) + ' %';
         }
         
         if (begel === 'N/A' && rekap.begel && rekap.begel.s) {
             const phi = getData('data.parsedInput.tulangan.phi_tul', 8);
-            begel = `Φ${phi}-${rekap.begel.s}`;
+            begel = `φ${phi}-${rekap.begel.s}`;
         }
         
         const rows = [
@@ -361,10 +359,10 @@
         ];
         
         let html = '<table class="two-col-table tulangan-terpasang" style="break-inside: auto; page-break-inside: auto;">';
-        html += '<tr>';
+        html += '<thead>';
         html += '<th class="col-tulangan">Tulangan</th>';
         html += '<th class="col-terpasang" style="text-align: center">Terpasang</th>';
-        html += '</tr>';
+        html += '</thead>';
         
         rows.forEach(row => {
             html += `
@@ -419,12 +417,16 @@
         
         const rows = [
             { parameter: "D (Diameter tulangan utama)", hasil: formatNumber(D, 0), satuan: 'mm' },
-            { parameter: "ɸ (Diameter tulangan sengkang)", hasil: formatNumber(phi, 0), satuan: 'mm' }
+            { parameter: "φ (Diameter tulangan sengkang)", hasil: formatNumber(phi, 0), satuan: 'mm' }
         ];
         
         if (mode === 'evaluasi') {
+            // Pastikan nx dan ny diambil sebagai number
+            let nx = tulangan.nx || tulangan.nx_tul || 0;
+            let ny = tulangan.ny || tulangan.ny_tul || 0;
             rows.push(
-                { parameter: "$n$ (Jumlah tulangan)", hasil: formatNumber(tulangan.n || tulangan.n_tul, 0), satuan: 'batang' },
+                { parameter: "$n_x$ (Jumlah tulangan arah X)", hasil: formatNumber(parseFloat(nx), 0), satuan: 'batang' },
+                { parameter: "$n_y$ (Jumlah tulangan arah Y)", hasil: formatNumber(parseFloat(ny), 0), satuan: 'batang' },
                 { parameter: "$s$ (Jarak sengkang)", hasil: formatNumber(tulangan.s || tulangan.s_tul, 0), satuan: 'mm' }
             );
         }
@@ -433,63 +435,76 @@
     }
 
     // ==============================================
-    // TABEL PARAMETER (dengan D yang benar)
+    // TABEL PARAMETER (dengan perhitungan ulang)
     // ==============================================
     function createParameterTable() {
-        const dimensiGlobal = getData('data.Dimensi', {});
+        const dimensi = getData('data.parsedInput.dimensi', {});
+        const b = parseFloat(dimensi.b) || 0;
+        const h = parseFloat(dimensi.h) || 0;
+        const sb = parseFloat(dimensi.sb) || 0;
+        
         const material = getData('data.parsedInput.material', {});
-        const tulangan = getData('data.parsedInput.tulangan', {});
+        const fc = parseFloat(material.fc) || 20;
         
-        const fc = material.fc || 20;
-        const b = dimensiGlobal.b || 300;
-        const h = dimensiGlobal.h || 400;
-        const sb = dimensiGlobal.sb || 40;
-        const phi = tulangan.phi_tul || tulangan.phi || 8;
-        const D = tulangan.d_tul || tulangan.d || getData('data.D', 16);
-        const ds = dimensiGlobal.ds || (sb + phi + D/2);
+        const D = getData('data.D', 0);
+        const phi = getData('data.phi', 0);
         
-        const beta1_calc = fc <= 28 ? 0.85 : (fc < 55 ? 0.85 - 0.05 * ((fc - 28) / 7) : 0.65);
+        const ds = sb + phi + D/2;
+        const d_X = h - ds;
+        const d_Y = b - ds;
         
-        const m_X_calc = Math.floor((b - 2 * ds) / (D + sb)) + 1;
-        const m_Y_calc = Math.floor((h - 2 * ds) / (D + sb)) + 1;
+        const Sn = Math.max(40, 1.5 * D);
         
-        const m_X = getData('data.hasilTulangan.hasilArahX.m', m_X_calc);
-        const m_Y = getData('data.hasilTulangan.hasilArahY.m', m_Y_calc);
+        let beta1;
+        if (fc <= 28) beta1 = 0.85;
+        else if (fc < 55) beta1 = 0.85 - 0.05 * ((fc - 28) / 7);
+        else beta1 = 0.65;
+        
+        const m_X = Math.floor((b - 2 * ds) / (D + sb)) + 1;
+        const m_Y = Math.floor((h - 2 * ds) / (D + sb)) + 1;
+        
+        // Ambil nilai dari data hasil perhitungan jika ada
+        const hasilX = getData('data.hasilTulangan.hasilArahX', {});
+        const hasilY = getData('data.hasilTulangan.hasilArahY', {});
+        const m_X_calc = hasilX.m || m_X;
+        const m_Y_calc = hasilY.m || m_Y;
+        const d_X_calc = hasilX.inputVariables?.d || d_X;
+        const d_Y_calc = hasilY.inputVariables?.d || d_Y;
         
         const rows = [
             { 
                 parameter: "$\\displaystyle d_s = s_b + \\phi + \\dfrac{D}{2}$", 
-                hasil: formatNumber(ds), 
+                hasil: formatNumber(ds, 1), 
                 satuan: 'mm' 
             },
             { 
                 parameter: "$\\displaystyle d_X = h - d_s$ (untuk arah X)", 
-                hasil: formatNumber(dimensiGlobal.d_X || (h - ds)), 
+                hasil: formatNumber(d_X_calc, 1), 
                 satuan: 'mm' 
             },
             { 
                 parameter: "$\\displaystyle d_Y = b - d_s$ (untuk arah Y)", 
-                hasil: formatNumber(dimensiGlobal.d_Y || (b - ds)), 
+                hasil: formatNumber(d_Y_calc, 1), 
                 satuan: 'mm' 
             },
             { 
                 parameter: "$\\displaystyle m_X = \\left\\lfloor \\dfrac{b - 2d_s}{D + s_b} \\right\\rfloor + 1$", 
-                hasil: formatNumber(m_X, 0), 
+                hasil: formatNumber(m_X_calc, 0), 
                 satuan: '-' 
             },
             { 
                 parameter: "$\\displaystyle m_Y = \\left\\lfloor \\dfrac{h - 2d_s}{D + s_b} \\right\\rfloor + 1$", 
-                hasil: formatNumber(m_Y, 0), 
+                hasil: formatNumber(m_Y_calc, 0), 
                 satuan: '-' 
             },
             { 
                 parameter: "$\\displaystyle S_n = \\max(40, 1.5 \\times D)$", 
-                hasil: formatNumber(dimensiGlobal.Sn), 
+                hasil: formatNumber(Sn, 0), 
                 satuan: 'mm' 
             },
             { 
                 parameter: "$\\displaystyle \\beta_1 = \\begin{cases} 0.85 & f'_c \\leq 28 \\text{ MPa} \\\\ 0.85 - 0.05\\dfrac{f'_c - 28}{7} & 28 < f'_c < 55 \\text{ MPa} \\\\ 0.65 & f'_c \\geq 55 \\text{ MPa} \\end{cases}$", 
-                hasil: formatNumber(dimensiGlobal.beta1 || beta1_calc, 3), 
+                hasil: formatNumber(beta1, 3), 
                 satuan: '-' 
             }
         ];
@@ -515,7 +530,7 @@
     }
 
     // ==============================================
-    // BAGIAN 2: ANALISIS TULANGAN LENTUR - DIPERBAIKI (ρ = As/(b*h))
+    // BAGIAN 2: ANALISIS TULANGAN LENTUR - n_ok per arah
     // ==============================================
     function createAnalisisTulanganLenturTableForArah(arah) {
         const hasilArah = getData(`data.hasilTulangan.hasilArah${arah}`, {});
@@ -545,8 +560,11 @@
         const Mu = arah === 'X' ? (beban.Mux || beban.mux || 0) : (beban.Muy || beban.muy || 0);
         const Pu = beban.Pu || beban.pu || 0;
         
+        // Ambil kontrol lentur global untuk Ast_ok, rho_ok, dan K_ok
         const kontrolLentur = getData('kontrol.lentur', {});
         const K_ok = arah === 'X' ? kontrolLentur.K_ok_X : kontrolLentur.K_ok_Y;
+        const Ast_ok = kontrolLentur.Ast_ok;
+        const rho_ok = kontrolLentur.rho_ok;
         
         const d = hasilArah.inputVariables?.d || (arah === 'X' ? getData('data.Dimensi.d_X', 0) : getData('data.Dimensi.d_Y', 0));
         const ds = hasilArah.inputVariables?.ds || getData('data.Dimensi.ds', 0);
@@ -556,7 +574,7 @@
         const b = getData('data.parsedInput.dimensi.b', 300);
         const h = getData('data.parsedInput.dimensi.h', 400);
         
-        // Hitung As_terpasang dari n_terpakai dan D yang valid
+        // Hitung As_terpasang
         const n = hasilArah.n_terpakai !== undefined ? hasilArah.n_terpakai : (hasilArah.n || 'N/A');
         let D_tul = hasilArah.D;
         if (!D_tul) D_tul = getData('data.parsedInput.tulangan.d_tul', null);
@@ -570,13 +588,17 @@
             const Dval = parseFloat(D_tul);
             const Ast_satu = Math.PI * Dval * Dval / 4;
             As_terpasang = nVal * Ast_satu;
-            // PERBAIKAN: ρ per arah = As_terpasang / (b * h) * 100% (bukan b*d)
             const b_val = parseFloat(b);
             const h_val = parseFloat(h);
             if (!isNaN(b_val) && !isNaN(h_val) && b_val > 0 && h_val > 0) {
                 rho_arah = (As_terpasang / (b_val * h_val)) * 100;
             }
         }
+        
+        // Hitung n_ok per arah
+        const n_terpakai_val = parseFloat(n);
+        const n_max_val = hasilArah.n_max || 0;
+        const n_ok_per_arah = (n_terpakai_val <= n_max_val);
         
         const rows = [
             { parameter: "$P_u$", hasil: formatNumber(Pu), satuan: 'kN' },
@@ -658,11 +680,11 @@
         
         rows.push(
             { parameter: "$\\displaystyle n = \\dfrac{A_{s,perlu}}{0.25 \\cdot \\pi \\cdot D^2}$", hasil: formatNumber(n, 0), satuan: 'batang' },
-            { parameter: "$n_{maks} = 2 \\cdot m$", hasil: formatNumber(hasilArah.n_max, 0), satuan: 'batang' },
+            { parameter: "$n_{maks} = 2 \\cdot m$", hasil: formatNumber(n_max_val, 0), satuan: 'batang' },
             { 
                 parameter: "$n \\le n_{maks}$", 
                 isStatus: true, 
-                statusHtml: `<span class="${kontrolLentur.n_ok ? 'status-aman' : 'status-tidak-aman'}">${kontrolLentur.n_ok ? 'AMAN' : 'TIDAK AMAN'}</span>` 
+                statusHtml: `<span class="${n_ok_per_arah ? 'status-aman' : 'status-tidak-aman'}">${n_ok_per_arah ? 'AMAN' : 'TIDAK AMAN'}</span>` 
             },
             { 
                 parameter: "$\\displaystyle A_{s,terpasang} = n \\cdot 0.25 \\cdot \\pi \\cdot D^2$", 
@@ -672,7 +694,7 @@
             { 
                 parameter: "$A_{s,terpasang} \\ge A_{s,perlu}$", 
                 isStatus: true, 
-                statusHtml: `<span class="${kontrolLentur.Ast_ok ? 'status-aman' : 'status-tidak-aman'}">${kontrolLentur.Ast_ok ? 'AMAN' : 'TIDAK AMAN'}</span>` 
+                statusHtml: `<span class="${Ast_ok ? 'status-aman' : 'status-tidak-aman'}">${Ast_ok ? 'AMAN' : 'TIDAK AMAN'}</span>` 
             },
             { 
                 parameter: "$\\displaystyle \\rho = \\dfrac{A_{s,terpasang}}{b \\cdot h} \\times 100\\%$", 
@@ -682,7 +704,7 @@
             { 
                 parameter: "$\\rho_{min} = 1\\%$ (syarat SNI)", 
                 isStatus: true, 
-                statusHtml: `<span class="${kontrolLentur.rho_ok ? 'status-aman' : 'status-tidak-aman'}">${kontrolLentur.rho_ok ? 'AMAN' : 'TIDAK AMAN'}</span>` 
+                statusHtml: `<span class="${rho_ok ? 'status-aman' : 'status-tidak-aman'}">${rho_ok ? 'AMAN' : 'TIDAK AMAN'}</span>` 
             }
         );
         
@@ -828,13 +850,22 @@
     }
 
     // ==============================================
-    // RINGKASAN KONTROL KEAMANAN
+    // RINGKASAN KONTROL KEAMANAN (DIPERBAIKI: n per arah)
     // ==============================================
     function createKontrolTable() {
         const kontrolLentur = getData('kontrol.lentur', {});
         const kontrolGeser = getData('kontrol.geser', {});
-        const hasilTulangan = getData('data.hasilTulangan', {});
-        const kondisi = hasilTulangan.kondisi || '';
+        const hasilX = getData('data.hasilTulangan.hasilArahX', {});
+        const hasilY = getData('data.hasilTulangan.hasilArahY', {});
+        
+        // Hitung n_ok per arah
+        const n_X = parseFloat(hasilX.n_terpakai) || 0;
+        const n_max_X = parseFloat(hasilX.n_max) || 0;
+        const n_ok_X = (n_X <= n_max_X);
+        
+        const n_Y = parseFloat(hasilY.n_terpakai) || 0;
+        const n_max_Y = parseFloat(hasilY.n_max) || 0;
+        const n_ok_Y = (n_Y <= n_max_Y);
         
         const rows = [
             { 
@@ -846,16 +877,22 @@
                 statusHtml: `<span class="${kontrolLentur.rho_ok ? 'status-aman' : 'status-tidak-aman'}">${kontrolLentur.rho_ok ? 'AMAN' : 'TIDAK AMAN'}</span>` 
             },
             { 
-                parameter: "$n \\le n_{maks}$", 
-                statusHtml: `<span class="${kontrolLentur.n_ok ? 'status-aman' : 'status-tidak-aman'}">${kontrolLentur.n_ok ? 'AMAN' : 'TIDAK AMAN'}</span>` 
+                parameter: "$n_X \\le n_{maks,X}$", 
+                statusHtml: `<span class="${n_ok_X ? 'status-aman' : 'status-tidak-aman'}">${n_ok_X ? 'AMAN' : 'TIDAK AMAN'}</span>` 
+            },
+            { 
+                parameter: "$n_Y \\le n_{maks,Y}$", 
+                statusHtml: `<span class="${n_ok_Y ? 'status-aman' : 'status-tidak-aman'}">${n_ok_Y ? 'AMAN' : 'TIDAK AMAN'}</span>` 
             }
         ];
         
-        if (kondisi === 'at2 > ac') {
+        if (kontrolLentur.K_ok_X !== undefined) {
             rows.push({ 
                 parameter: "$K_X \\le K_{maks,X}$", 
                 statusHtml: `<span class="${kontrolLentur.K_ok_X ? 'status-aman' : 'status-tidak-aman'}">${kontrolLentur.K_ok_X ? 'AMAN' : 'TIDAK AMAN'}</span>` 
             });
+        }
+        if (kontrolLentur.K_ok_Y !== undefined) {
             rows.push({ 
                 parameter: "$K_Y \\le K_{maks,Y}$", 
                 statusHtml: `<span class="${kontrolLentur.K_ok_Y ? 'status-aman' : 'status-tidak-aman'}">${kontrolLentur.K_ok_Y ? 'AMAN' : 'TIDAK AMAN'}</span>` 
@@ -876,50 +913,14 @@
         return createTwoColumnTable(rows);
     }
 
+    // ==============================================
+    // KESIMPULAN TANPA REKOMENDASI
+    // ==============================================
     function generateDynamicConclusion() {
         const statusKolom = cekStatusKolom();
         const dimensi = getData('data.parsedInput.dimensi', {});
-        const material = getData('data.parsedInput.material', {});
-        const kontrolLentur = getData('kontrol.lentur', {});
-        const kontrolGeser = getData('kontrol.geser', {});
-        const { totalBatang, D } = getTotalBatangDanRasio();
-        
-        let masalah = [];
-        let rekomendasi = [];
-        
-        if (kontrolLentur) {
-            if (!kontrolLentur.Ast_ok) {
-                masalah.push("Luas tulangan terpasang tidak mencukupi");
-                rekomendasi.push("Tambah jumlah atau diameter tulangan utama");
-            }
-            if (!kontrolLentur.rho_ok) {
-                masalah.push("Rasio tulangan kurang dari 1%");
-                rekomendasi.push("Tambah jumlah tulangan hingga ρ ≥ 1%");
-            }
-            if (!kontrolLentur.n_ok) {
-                masalah.push("Jumlah tulangan melebihi batas maksimum");
-                rekomendasi.push("Kurangi jumlah tulangan atau perbesar dimensi kolom");
-            }
-            if (!kontrolLentur.K_ok_X) {
-                masalah.push("Nilai K arah X melebihi Kmaks (momen terlalu besar)");
-                rekomendasi.push("Perbesar dimensi kolom atau tambah mutu beton untuk arah X");
-            }
-            if (!kontrolLentur.K_ok_Y) {
-                masalah.push("Nilai K arah Y melebihi Kmaks (momen terlalu besar)");
-                rekomendasi.push("Perbesar dimensi kolom atau tambah mutu beton untuk arah Y");
-            }
-        }
-        
-        if (kontrolGeser) {
-            if (!kontrolGeser.Vs_ok) {
-                masalah.push("Kebutuhan tulangan geser melebihi kapasitas maksimum");
-                rekomendasi.push("Perbesar dimensi kolom atau tambah mutu beton");
-            }
-            if (!kontrolGeser.Av_ok) {
-                masalah.push("Luas sengkang tidak mencukupi");
-                rekomendasi.push("Perkecil jarak sengkang atau gunakan diameter sengkang lebih besar");
-            }
-        }
+        const b = dimensi.b || 'N/A';
+        const h = dimensi.h || 'N/A';
         
         let conclusionHTML = `
             <div class="section-group" style="page-break-inside: avoid;">
@@ -933,7 +934,7 @@
         if (statusKolom === 'aman') {
             conclusionHTML += `
                 <p><strong>Status:</strong> <span class="status-aman">SEMUA KONTROL AMAN</span></p>
-                <p>Struktur kolom dengan dimensi ${dimensi.b || 'N/A'} × ${dimensi.h || 'N/A'} mm memenuhi semua persyaratan SNI 2847:2019 untuk:</p>
+                <p>Struktur kolom dengan dimensi ${b} × ${h} mm memenuhi semua persyaratan SNI 2847:2019 untuk:</p>
                 <ul>
                     <li>Kuat lentur aksial dengan eksentrisitas (dua arah)</li>
                     <li>Kuat geser</li>
@@ -941,16 +942,23 @@
                     <li>Batasan jumlah tulangan maksimum</li>
                 </ul>
             `;
-            
-            rekomendasi = [
-                `Gunakan tulangan utama ${totalBatang}D${D}`,
-                `Gunakan sengkang ${getData('rekap.formatted.begel', 'N/A')}`,
-                `Pastikan mutu beton mencapai f'c = ${formatNumber(material.fc)} MPa`,
-                `Pastikan mutu baja mencapai fy = ${formatNumber(material.fy)} MPa`,
-                "Lakukan pengecoran dengan metode yang sesuai standar",
-                "Perhatikan penempatan tulangan dan sengkang sesuai detil"
-            ];
         } else {
+            // Untuk tidak aman, kita tetap tampilkan daftar masalah (tanpa rekomendasi)
+            const masalah = [];
+            const kontrolLentur = getData('kontrol.lentur', {});
+            const kontrolGeser = getData('kontrol.geser', {});
+            const hasilX = getData('data.hasilTulangan.hasilArahX', {});
+            const hasilY = getData('data.hasilTulangan.hasilArahY', {});
+            
+            if (!kontrolLentur.Ast_ok) masalah.push("Luas tulangan terpasang tidak mencukupi");
+            if (!kontrolLentur.rho_ok) masalah.push("Rasio tulangan kurang dari 1%");
+            if (!kontrolLentur.K_ok_X) masalah.push("Nilai K arah X melebihi Kmaks");
+            if (!kontrolLentur.K_ok_Y) masalah.push("Nilai K arah Y melebihi Kmaks");
+            if ((parseFloat(hasilX.n_terpakai) || 0) > (parseFloat(hasilX.n_max) || 0)) masalah.push("Jumlah tulangan arah X melebihi batas maksimum");
+            if ((parseFloat(hasilY.n_terpakai) || 0) > (parseFloat(hasilY.n_max) || 0)) masalah.push("Jumlah tulangan arah Y melebihi batas maksimum");
+            if (!kontrolGeser.Vs_ok) masalah.push("Kebutuhan tulangan geser melebihi kapasitas maksimum");
+            if (!kontrolGeser.Av_ok) masalah.push("Luas sengkang tidak mencukupi");
+            
             conclusionHTML += `
                 <p><strong>Status:</strong> <span class="status-tidak-aman">TIDAK AMAN - PERLU PERBAIKAN DESAIN</span></p>
                 <p>Ditemukan masalah pada beberapa aspek desain:</p>
@@ -958,22 +966,9 @@
                     ${masalah.length > 0 ? masalah.map(m => `<p class="problem-item">• ${m}</p>`).join('') : '<p class="problem-item">• Terdapat masalah pada satu atau lebih kontrol keamanan</p>'}
                 </div>
             `;
-            
-            if (masalah.length === 0) {
-                rekomendasi.push("Tinjau kembali dimensi kolom: " + (dimensi.b || 'N/A') + " × " + (dimensi.h || 'N/A') + " mm");
-                rekomendasi.push("Evaluasi ulang mutu material yang digunakan");
-                rekomendasi.push("Pertimbangkan untuk menggunakan tulangan dengan diameter lebih besar");
-                rekomendasi.push("Periksa kembali konfigurasi tulangan dan sengkang");
-            }
         }
         
-        conclusionHTML += `
-            <p style="margin-top: 8px;"><strong>Rekomendasi:</strong></p>
-            <div style="margin: 8px 0 12px 0; padding: 8px; background-color: #f0f8ff; border-radius: 4px;">
-                ${rekomendasi.map(r => `<p class="recommendation-item">• ${r}</p>`).join('')}
-            </div>
-        `;
-        
+        // Catatan (tetap ada)
         conclusionHTML += `
             <p style="margin-top: 8px; font-size: 10pt; color: #666;">
                 <strong>Catatan:</strong> Hasil perhitungan ini berdasarkan SNI 2847:2019 (Persyaratan Beton Struktural untuk Bangunan Gedung). 
@@ -991,7 +986,7 @@
     }
 
     // ==============================================
-    // FUNGSI UTAMA: Generate Content Blocks
+    // FUNGSI UTAMA: Generate Content Blocks (DIPERBAIKI: struktur HTML Bagian B dan C)
     // ==============================================
     function generateContentBlocks() {
         const blocks = [];
@@ -1039,14 +1034,12 @@
             </div>
         `);
         
-        // BAGIAN B: PERHITUNGAN TULANGAN LENTUR (DUA ARAH)
+        // BAGIAN B: PERHITUNGAN TULANGAN LENTUR KOLOM
         blocks.push(`
             <div class="header-content-group">
                 <h2>B. PERHITUNGAN TULANGAN LENTUR KOLOM</h2>
                 <p class="note">Perhitungan tulangan lentur dengan beban aksial dan momen dua arah (kolom biaxial)</p>
-        `);
-        
-        blocks.push(`
+            </div>
             <div class="section-group">
                 <h3>1. Perhitungan Kondisi Penampang Kolom Arah X</h3>
                 ${createKondisiPenampangTableForArah('X')}
@@ -1073,8 +1066,6 @@
                 ${createAnalisisTulanganLenturTableForArah('Y')}
             </div>
         `);
-        
-        blocks.push(`</div>`);
         
         // BAGIAN C: PERHITUNGAN TULANGAN GESER
         blocks.push(`

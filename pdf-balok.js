@@ -564,7 +564,7 @@
     }
     
     // ==============================================
-    // FUNGSI BARU: Kesimpulan Fleksibel (DIPERBAIKI)
+    // FUNGSI BARU: Kesimpulan Fleksibel (TANPA REKOMENDASI)
     // ==============================================
     function generateDynamicConclusion() {
         // Hitung status balok secara dinamis
@@ -581,7 +581,6 @@
         
         // Analisis status per komponen
         let masalah = [];
-        let rekomendasi = [];
         
         // Analisis Lentur
         if (kontrolLentur) {
@@ -639,8 +638,6 @@
             if (lenturProblems.length > 0) {
                 masalah.push(`<strong>Masalah pada tulangan lentur (${lenturCount} masalah):</strong>`);
                 masalah.push(...lenturProblems.map(p => `<span class="problem-item">• ${p}</span>`));
-                rekomendasi.push("Perlu penambahan atau perubahan tulangan lentur");
-                rekomendasi.push("Pertimbangkan untuk menambah jumlah atau diameter tulangan");
             }
         }
         
@@ -683,8 +680,6 @@
             if (geserProblems.length > 0) {
                 masalah.push(`<strong>Masalah pada tulangan geser (${geserCount} masalah):</strong>`);
                 masalah.push(...geserProblems.map(p => `<span class="problem-item">• ${p}</span>`));
-                rekomendasi.push("Perlu penambahan atau pengurangan jarak sengkang");
-                rekomendasi.push("Pertimbangkan untuk menambah jumlah kaki sengkang atau diameter sengkang");
             }
         }
         
@@ -709,12 +704,10 @@
             if (torsiProblems.length > 0) {
                 masalah.push(`<strong>Masalah pada tulangan torsi (${torsiCount} masalah):</strong>`);
                 masalah.push(...torsiProblems.map(p => `<span class="problem-item">• ${p}</span>`));
-                rekomendasi.push("Perlu penambahan tulangan torsi longitudinal");
-                rekomendasi.push("Periksa kebutuhan tulangan torsi tambahan");
             }
         }
         
-        // Buat HTML kesimpulan dinamis
+        // Buat HTML kesimpulan dinamis (tanpa rekomendasi)
         let conclusionHTML = `
             <div class="section-group">
                 <h3>3. Kesimpulan</h3>
@@ -736,16 +729,6 @@
                     <li>Persyaratan detail tulangan</li>
                 </ul>
             `;
-            
-            // Rekomendasi untuk kondisi aman
-            rekomendasi = [
-                "Gunakan tulangan D" + tulanganInfo.D + " untuk tulangan lentur",
-                "Gunakan sengkang ɸ" + tulanganInfo.phi + " dengan jarak sesuai hasil perhitungan",
-                "Pasang tulangan torsi sesuai hasil perhitungan",
-                "Pastikan mutu beton mencapai f'c = " + (material.fc || 'N/A') + " MPa",
-                "Pastikan mutu baja mencapai fy = " + (material.fy || 'N/A') + " MPa",
-                "Lakukan pengecoran dengan metode yang sesuai standar"
-            ];
         } else {
             conclusionHTML += `
                 <p><strong>Status:</strong> <span class="status-tidak-aman">TIDAK AMAN - PERLU PERBAIKAN DESAIN</span></p>
@@ -754,23 +737,7 @@
                     ${masalah.length > 0 ? masalah.join('') : '<p class="problem-item">• Terdapat masalah pada satu atau lebih kontrol keamanan</p>'}
                 </div>
             `;
-            
-            // Rekomendasi tambahan untuk kondisi tidak aman
-            if (masalah.length === 0) {
-                rekomendasi.push("Tinjau kembali dimensi balok: " + (dimensi.b || 'N/A') + " × " + (dimensi.h || 'N/A') + " mm");
-                rekomendasi.push("Evaluasi ulang mutu material yang digunakan");
-                rekomendasi.push("Pertimbangkan untuk menggunakan tulangan dengan diameter lebih besar");
-                rekomendasi.push("Periksa kembali konfigurasi tulangan torsi dan geser");
-            }
         }
-        
-        // Rekomendasi
-        conclusionHTML += `
-            <p style="margin-top: 8px;"><strong>Rekomendasi:</strong></p>
-            <div style="margin: 8px 0 12px 0; padding: 8px; background-color: #f0f8ff; border-radius: 4px;">
-                ${rekomendasi.map(r => `<p class="recommendation-item">• ${r}</p>`).join('')}
-            </div>
-        `;
         
         // Catatan teknis
         conclusionHTML += `
@@ -1181,7 +1148,7 @@
             </div>
         `);
         
-        // Gunakan fungsi baru untuk kesimpulan dinamis
+        // Gunakan fungsi kesimpulan dinamis tanpa rekomendasi
         blocks.push(generateDynamicConclusion());
         
         // Referensi

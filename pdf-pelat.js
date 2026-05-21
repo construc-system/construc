@@ -189,17 +189,17 @@
         let html = '<table class="three-col-table">';
         
         if (isDataTable) {
-            html += '<tr>';
+            html += '<thead>';
             html += '<th class="col-param">Parameter</th>';
             html += '<th class="col-value" style="text-align: center">Data</th>';
             html += '<th class="col-unit" style="text-align: center">Satuan</th>';
-            html += '</tr>';
+            html += '</thead>';
         } else {
-            html += '<tr>';
+            html += '<thead>';
             html += '<th class="col-param">Parameter Perhitungan</th>';
             html += '<th class="col-value" style="text-align: center">Hasil</th>';
             html += '<th class="col-unit" style="text-align: center">Satuan</th>';
-            html += '</tr>';
+            html += '</thead>';
         }
         
         rows.forEach(row => {
@@ -261,10 +261,10 @@
     // Fungsi untuk membuat tabel 2 kolom
     function createTwoColumnTable(rows) {
         let html = '<table class="two-col-table">';
-        html += '<tr>';
+        html += '<thead>';
         html += '<th class="col-param-2">Parameter</th>';
         html += '<th class="col-status-2" style="text-align: center">Status</th>';
-        html += '</tr>';
+        html += '</thead>';
         
         rows.forEach(row => {
             if (row.isFullRow) {
@@ -418,7 +418,7 @@
     }
 
     // ==============================================
-    // FUNGSI BARU: Kesimpulan Fleksibel untuk Pelat
+    // FUNGSI BARU: Kesimpulan Fleksibel untuk Pelat (TANPA REKOMENDASI)
     // ==============================================
     function generateDynamicConclusion() {
         // Hitung status pelat secara dinamis
@@ -433,9 +433,8 @@
         const lentur = kontrol.lentur || {};
         const bagi = kontrol.bagi || {};
         
-        // Analisis status per komponen
+        // Analisis status per komponen (hanya untuk menampilkan masalah, tanpa rekomendasi)
         let masalah = [];
-        let rekomendasi = [];
         
         // Analisis Lentur Arah X
         if (lentur.arahX) {
@@ -473,19 +472,7 @@
             masalah.push(`<span class="problem-item">• Tulangan bagi arah Y tidak memenuhi persyaratan minimum</span>`);
         }
         
-        // Rekomendasi berdasarkan masalah
-        if (masalah.length > 0) {
-            rekomendasi.push("Perlu penambahan atau perubahan tulangan pokok");
-            rekomendasi.push("Pertimbangkan untuk menambah jumlah atau diameter tulangan");
-            rekomendasi.push("Evaluasi ulang dimensi pelat jika masalah berlanjut");
-        } else {
-            rekomendasi.push(`Gunakan tulangan pokok ${rekap.tulangan_pokok_x || 'N/A'}`);
-            rekomendasi.push(`Gunakan tulangan bagi ${rekap.tulangan_bagi_x || 'N/A'}`);
-            rekomendasi.push(`Pastikan mutu beton mencapai f'c = ${formatNumber(material.fc)} MPa`);
-            rekomendasi.push(`Pastikan mutu baja mencapai fy = ${formatNumber(material.fy)} MPa`);
-        }
-        
-        // Buat HTML kesimpulan dinamis
+        // Buat HTML kesimpulan tanpa rekomendasi
         let conclusionHTML = `
             <div class="section-group">
                 <h3>3. Kesimpulan</h3>
@@ -517,15 +504,7 @@
             `;
         }
         
-        // Rekomendasi
-        conclusionHTML += `
-            <p style="margin-top: 8px;"><strong>Rekomendasi:</strong></p>
-            <div style="margin: 8px 0 12px 0; padding: 8px; background-color: #f0f8ff; border-radius: 4px;">
-                ${rekomendasi.map(r => `<p class="recommendation-item">• ${r}</p>`).join('')}
-            </div>
-        `;
-        
-        // Catatan teknis
+        // Catatan teknis (tetap ada)
         conclusionHTML += `
             <p style="margin-top: 8px; font-size: 10pt; color: #666;">
                 <strong>Catatan:</strong> Hasil perhitungan ini berdasarkan SNI 2847:2019 (Persyaratan Beton Struktural untuk Bangunan Gedung) 
@@ -832,7 +811,7 @@
             </div>
         `);
         
-        // Gunakan fungsi baru untuk kesimpulan dinamis
+        // Gunakan fungsi baru untuk kesimpulan dinamis (tanpa rekomendasi)
         blocks.push(generateDynamicConclusion());
         
         // Referensi

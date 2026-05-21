@@ -148,6 +148,7 @@ window.modules.kolom = {
     container.parentNode.insertBefore(bebanCard, container.nextSibling);
   },
 
+  // REVISI: renderTulanganCard — n diganti nx dan ny untuk biaxial
   renderTulanganCard: function(container) {
     const tulanganCard = document.createElement('div');
     tulanganCard.className = 'card';
@@ -182,9 +183,15 @@ window.modules.kolom = {
           </div>
         </div>
         <div class="field">
-          <label>n</label>
+          <label>n<sub>x</sub></label>
           <div class="input-with-unit" data-unit="">
-            <input data-key="n" placeholder="Jumlah Tulangan Utama" value="${escapeHtml(currentState['n'] || '')}">
+            <input data-key="nx" placeholder="Jumlah Tulangan Arah X" value="${escapeHtml(currentState['nx'] || '')}">
+          </div>
+        </div>
+        <div class="field">
+          <label>n<sub>y</sub></label>
+          <div class="input-with-unit" data-unit="">
+            <input data-key="ny" placeholder="Jumlah Tulangan Arah Y" value="${escapeHtml(currentState['ny'] || '')}">
           </div>
         </div>
         <div class="field">
@@ -223,7 +230,7 @@ window.modules.kolom = {
       <div class="collapse-content" id="lanjutanContent">
         <div class="form-grid">
           <div class="field">
-            <label>λ</label>
+            <label>&#x03BB;</label>
             <div class="input-with-unit" data-unit="">
               <input data-key="lambda" placeholder="Faktor Beton = 1" value="${escapeHtml(currentState['lambda'] || '')}">
             </div>
@@ -256,8 +263,8 @@ window.modules.kolom = {
         tipsContent.innerHTML = `
           <h3>Data Lanjutan</h3>
           <div style="line-height: 1.6;">
-            <p><strong>λ</strong> — Faktor reduksi kekuatan untuk beton ringan, dimana untuk beton normal nilainya <strong>1.0</strong>, untuk beton ringan sebagian nilainya <strong>0.85</strong>, dan untuk beton ringan penuh nilainya <strong>0.75</strong>. Jika nilainya dikosongi maka akan dianggap sebagai beton normal dengan nilai faktor <strong>1</strong>.</p>
-            <p><strong>n</strong> — merupakan jumlah kaki begel, yang digunakan pada kolom. Jumlah kaki yang umum dipakai adalah <strong>2</strong>, <strong>3</strong>, dan <strong>4</strong>. Jika nilainya dikosongi maka dihitung dengan jumlah kaki begel sebanyak <strong>2</strong>.</p>
+            <p><strong>&#x03BB;</strong> &mdash; Faktor reduksi kekuatan untuk beton ringan, dimana untuk beton normal nilainya <strong>1.0</strong>, untuk beton ringan sebagian nilainya <strong>0.85</strong>, dan untuk beton ringan penuh nilainya <strong>0.75</strong>. Jika nilainya dikosongi maka akan dianggap sebagai beton normal dengan nilai faktor <strong>1</strong>.</p>
+            <p><strong>n</strong> &mdash; merupakan jumlah kaki begel, yang digunakan pada kolom. Jumlah kaki yang umum dipakai adalah <strong>2</strong>, <strong>3</strong>, dan <strong>4</strong>. Jika nilainya dikosongi maka dihitung dengan jumlah kaki begel sebanyak <strong>2</strong>.</p>
           </div>
         `;
         document.getElementById('tipsModal').classList.add('active');
@@ -348,9 +355,10 @@ window.modules.kolom = {
       }
     });
 
-    // Field wajib dari Data Tulangan (hanya untuk mode evaluasi)
+    // REVISI: Field wajib dari Data Tulangan (hanya untuk mode evaluasi)
+    // nx dan ny menggantikan n tunggal untuk mendukung biaxial
     if (currentMode === 'evaluasi') {
-      const tulanganFields = ['d', 'phi', 'n', 's'];
+      const tulanganFields = ['d', 'phi', 'nx', 'ny', 's'];
       tulanganFields.forEach(field => {
         if (!state[field] || state[field].toString().trim() === '') {
           missingFields.push(`${this.getTulanganFieldLabel(field)} (Data Tulangan)`);
@@ -380,12 +388,14 @@ window.modules.kolom = {
     return labels[field] || field;
   },
 
+  // REVISI: Tambah label nx dan ny, hapus n tunggal
   getTulanganFieldLabel: function(field) {
     const labels = {
-      'd': 'D (Diameter Tulangan Utama)',
+      'd':   'D (Diameter Tulangan Utama)',
       'phi': 'ɸ (Diameter Tulangan Begel)',
-      'n': 'n (Jumlah Tulangan Utama)',
-      's': 's (Jarak Tulangan Begel)'
+      'nx':  'nx (Jumlah Tulangan Arah X)',
+      'ny':  'ny (Jumlah Tulangan Arah Y)',
+      's':   's (Jarak Tulangan Begel)'
     };
     return labels[field] || field;
   },
@@ -422,13 +432,17 @@ window.modules.kolom = {
       }
     };
 
-    // Tambahkan data tulangan hanya untuk mode evaluasi
+    // REVISI: Tambahkan data tulangan hanya untuk mode evaluasi
+    // nx = jumlah tulangan yang dievaluasi terhadap Mux (arah X)
+    // ny = jumlah tulangan yang dievaluasi terhadap Muy (arah Y)
+    // total batang terpasang di penampang = nx + ny - 4
     if (currentMode === 'evaluasi') {
       calculationData.tulangan = {
-        d: state.d,
+        d:   state.d,
         phi: state.phi,
-        n: state.n,
-        s: state.s
+        nx:  state.nx,
+        ny:  state.ny,
+        s:   state.s
       };
     }
 
@@ -476,6 +490,7 @@ window.modules.kolom = {
     }
   },
 
+  // REVISI: formatVariablesList — tampilkan nx dan ny, hapus n tunggal
   formatVariablesList: function(data) {
     let variablesList = [];
     
@@ -508,7 +523,8 @@ window.modules.kolom = {
       variablesList.push("\n=== DATA TULANGAN ===");
       variablesList.push(`d: ${data.tulangan.d} mm`);
       variablesList.push(`phi: ${data.tulangan.phi} mm`);
-      variablesList.push(`n: ${data.tulangan.n}`);
+      variablesList.push(`nx: ${data.tulangan.nx} (arah X, untuk Mux)`);
+      variablesList.push(`ny: ${data.tulangan.ny} (arah Y, untuk Muy)`);
       variablesList.push(`s: ${data.tulangan.s} mm`);
     }
     

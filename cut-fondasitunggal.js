@@ -103,20 +103,25 @@
         if (isBujurSangkar) {
             spasiUtama = getData('data.tulangan.s', null);
             if (fondasiData && fondasiData.rekap && fondasiData.rekap.tulangan_utama) {
-                const match = fondasiData.rekap.tulangan_utama.match(/ɸ(\d+)/);
+                const match = fondasiData.rekap.tulangan_utama.match(/[Øɸ](\d+)/);
                 if (match) diameterUtama = parseInt(match[1], 10);
             }
         } else {
             spasiUtama = getData('data.tulangan.bujur.s', null);
             if (spasiUtama && fondasiData && fondasiData.rekap && fondasiData.rekap.tulangan_panjang) {
-                const match = fondasiData.rekap.tulangan_panjang.match(/ɸ(\d+)/);
+                const match = fondasiData.rekap.tulangan_panjang.match(/[Øɸ](\d+)/);
                 if (match) diameterUtama = parseInt(match[1], 10);
             }
             spasiTepi = getData('data.tulangan.persegi.s_tepi', null);
             spasiPusat = getData('data.tulangan.persegi.s_pusat', null);
-            if (fondasiData && fondasiData.rekap && fondasiData.rekap.tulangan_pendek_tepi) {
-                const match = fondasiData.rekap.tulangan_pendek_tepi.match(/ɸ(\d+)/);
-                if (match) diameterPendek = parseInt(match[1], 10);
+            
+            // Cari diameter tulangan pendek dari rekap (dukungan Ø dan ɸ)
+            if (fondasiData && fondasiData.rekap) {
+                let tulanganPendekStr = fondasiData.rekap.tulangan_pendek_tepi || fondasiData.rekap.tulangan_pendek_pusat;
+                if (tulanganPendekStr) {
+                    const match = tulanganPendekStr.match(/[Øɸ](\d+)/);
+                    if (match) diameterPendek = parseInt(match[1], 10);
+                }
             }
         }
 
@@ -507,319 +512,324 @@
 
     window.foundationRenderers.tunggal = renderFondasiTunggal;
     console.log("✅ cut-fondasitunggal.js (tampak atas biru/merah, dot biru/merah, dot pusat dengan batasan spasiPusat)");
+
     function generateCADFondasiTunggal(jenisTampak) {
-    try {
-        // Ambil data dari session storage
-        let fondasiData = null;
         try {
-            const saved = sessionStorage.getItem('calculationResultFondasi') || sessionStorage.getItem('calculationResult');
-            if (saved) fondasiData = JSON.parse(saved);
-        } catch(e) { console.warn("Gagal baca session storage", e); }
+            // Ambil data dari session storage
+            let fondasiData = null;
+            try {
+                const saved = sessionStorage.getItem('calculationResultFondasi') || sessionStorage.getItem('calculationResult');
+                if (saved) fondasiData = JSON.parse(saved);
+            } catch(e) { console.warn("Gagal baca session storage", e); }
 
-        function getData(path, defaultValue = null) {
-            if (!fondasiData) return defaultValue;
-            const parts = path.split('.');
-            let current = fondasiData;
-            for (let p of parts) {
-                if (current[p] === undefined) return defaultValue;
-                current = current[p];
+            function getData(path, defaultValue = null) {
+                if (!fondasiData) return defaultValue;
+                const parts = path.split('.');
+                let current = fondasiData;
+                for (let p of parts) {
+                    if (current[p] === undefined) return defaultValue;
+                    current = current[p];
+                }
+                return current;
             }
-            return current;
-        }
 
-        // Ambil dimensi fondasi
-        if (fondasiData && fondasiData.inputData?.fondasi?.dimensi) {
-            const dim = fondasiData.inputData.fondasi.dimensi;
-            lx = parseFloat(dim.lx) || lx;
-            ly = parseFloat(dim.ly) || ly;
-            h = parseFloat(dim.h) || h;
-            bx = parseFloat(dim.bx) || bx;
-            by = parseFloat(dim.by) || by;
-        } else if (fondasiData && fondasiData.data?.parameter) {
-            lx = parseFloat(fondasiData.data.parameter.lx) || lx;
-            ly = parseFloat(fondasiData.data.parameter.ly) || ly;
-            h = parseFloat(fondasiData.data.parameter.h) || h;
-        } else if (fondasiData && fondasiData.rekap?.dimensi) {
-            const match = fondasiData.rekap.dimensi.match(/([\d.]+)\s*[×x]\s*([\d.]+)\s*[×x]\s*([\d.]+)/);
-            if (match) {
-                lx = parseFloat(match[1]);
-                ly = parseFloat(match[2]);
-                h = parseFloat(match[3]);
+            // Ambil dimensi fondasi (default jika tidak ada)
+            let lx = 2, ly = 2.8, h = 0.4, bx = 0.4, by = 0.4;
+            if (fondasiData && fondasiData.inputData?.fondasi?.dimensi) {
+                const dim = fondasiData.inputData.fondasi.dimensi;
+                lx = parseFloat(dim.lx) || lx;
+                ly = parseFloat(dim.ly) || ly;
+                h = parseFloat(dim.h) || h;
+                bx = parseFloat(dim.bx) || bx;
+                by = parseFloat(dim.by) || by;
+            } else if (fondasiData && fondasiData.data?.parameter) {
+                lx = parseFloat(fondasiData.data.parameter.lx) || lx;
+                ly = parseFloat(fondasiData.data.parameter.ly) || ly;
+                h = parseFloat(fondasiData.data.parameter.h) || h;
+            } else if (fondasiData && fondasiData.rekap?.dimensi) {
+                const match = fondasiData.rekap.dimensi.match(/([\d.]+)\s*[×x]\s*([\d.]+)\s*[×x]\s*([\d.]+)/);
+                if (match) {
+                    lx = parseFloat(match[1]);
+                    ly = parseFloat(match[2]);
+                    h = parseFloat(match[3]);
+                }
             }
-        }
 
-        const isBujurSangkar = Math.abs(lx - ly) < 0.001;
-        const selimutBeton = 75; // default, bisa diambil dari storage jika ada
+            const isBujurSangkar = Math.abs(lx - ly) < 0.001;
+            const selimutBeton = 75; // default
 
-        // Data tulangan
-        let spasiUtama = 250, diameterUtama = 22;
-        let spasiTepi = 250, spasiPusat = 250, diameterPendek = 16;
-
-        if (isBujurSangkar) {
-            spasiUtama = getData('data.tulangan.s', 250);
-            if (fondasiData?.rekap?.tulangan_utama) {
-                const match = fondasiData.rekap.tulangan_utama.match(/ɸ(\d+)/);
-                if (match) diameterUtama = parseInt(match[1], 10);
-            }
-        } else {
-            spasiUtama = getData('data.tulangan.bujur.s', 250);
-            if (fondasiData?.rekap?.tulangan_panjang) {
-                const match = fondasiData.rekap.tulangan_panjang.match(/ɸ(\d+)/);
-                if (match) diameterUtama = parseInt(match[1], 10);
-            }
-            spasiTepi = getData('data.tulangan.persegi.s_tepi', 250);
-            spasiPusat = getData('data.tulangan.persegi.s_pusat', 250);
-            if (fondasiData?.rekap?.tulangan_pendek_tepi) {
-                const match = fondasiData.rekap.tulangan_pendek_tepi.match(/ɸ(\d+)/);
-                if (match) diameterPendek = parseInt(match[1], 10);
-            }
-        }
-
-        // Dimensi dalam mm
-        const Lx_mm = lx * 1000;
-        const Ly_mm = ly * 1000;
-        const H_mm = h * 1000;
-
-        // Helper CAD
-        const lingkaran = (cx, cy, diameter) => `CIRCLE ${cx},${cy} ${diameter/2} `;
-        const garis = (x1, y1, x2, y2) => `LINE ${x1},${y1} ${x2},${y2} `;
-        const polyline = (points, tebal, closed = false) => {
-            if (!points.length) return '';
-            let cmd = `PL ${points[0][0]},${points[0][1]} W ${tebal} ${tebal} `;
-            for (let i = 1; i < points.length; i++) {
-                const dx = points[i][0] - points[i-1][0];
-                const dy = points[i][1] - points[i-1][1];
-                cmd += `@${dx},${dy} `;
-            }
-            if (closed) cmd += 'C ';
-            return cmd;
-        };
-
-        function hitungPosisiTitikCAD(startXmm, endXmm, stepmm, diameterMM) {
-            let positions = [];
-            if (startXmm >= endXmm) return positions;
-            let current = startXmm;
-            while (current <= endXmm) {
-                positions.push(current);
-                current += stepmm;
-            }
-            const last = positions[positions.length - 1];
-            if (endXmm - last >= 3 * diameterMM) positions.push(endXmm);
-            else positions[positions.length - 1] = endXmm;
-            return positions;
-        }
-
-        const flipY = (y, tinggiTotal) => tinggiTotal - y;
-        let cadLines = [];
-
-        // Tentukan tinggi total untuk flip Y
-        let tinggiTotal;
-        if (jenisTampak === 'depan') tinggiTotal = H_mm;
-        else if (jenisTampak === 'atas') tinggiTotal = Lx_mm;
-        else tinggiTotal = H_mm; // samping
-
-        // Frame kotak
-        if (jenisTampak === 'depan') {
-            cadLines.push(garis(0, 0, Ly_mm, 0));
-            cadLines.push(garis(Ly_mm, 0, Ly_mm, H_mm));
-            cadLines.push(garis(Ly_mm, H_mm, 0, H_mm));
-            cadLines.push(garis(0, H_mm, 0, 0));
-        } else if (jenisTampak === 'atas') {
-            cadLines.push(garis(0, 0, Ly_mm, 0));
-            cadLines.push(garis(Ly_mm, 0, Ly_mm, Lx_mm));
-            cadLines.push(garis(Ly_mm, Lx_mm, 0, Lx_mm));
-            cadLines.push(garis(0, Lx_mm, 0, 0));
-        } else if (jenisTampak === 'samping') {
-            cadLines.push(garis(0, 0, Lx_mm, 0));
-            cadLines.push(garis(Lx_mm, 0, Lx_mm, H_mm));
-            cadLines.push(garis(Lx_mm, H_mm, 0, H_mm));
-            cadLines.push(garis(0, H_mm, 0, 0));
-        }
-
-        const ukuranSegitiga = 0.035 * Lx_mm; // 3.5% dari Lx
-
-        // ========== TAMPAK ATAS ==========
-        if (jenisTampak === 'atas') {
-            const y_atas = selimutBeton;
-            const y_bawah = Lx_mm - selimutBeton;
-            const y_segitiga = Lx_mm * (7/15);
+            // Data tulangan
+            let spasiUtama = 250, diameterUtama = 22;
+            let spasiTepi = 250, spasiPusat = 250, diameterPendek = 16;
 
             if (isBujurSangkar) {
-                const x_tengah = Ly_mm * (7/15);
-                const delta = ukuranSegitiga;
-                cadLines.push(polyline([
-                    [x_tengah - delta, flipY(y_atas + delta, tinggiTotal)],
-                    [x_tengah, flipY(y_atas, tinggiTotal)],
-                    [x_tengah, flipY(y_bawah, tinggiTotal)],
-                    [x_tengah - delta, flipY(y_bawah - delta, tinggiTotal)]
-                ], diameterUtama));
-                cadLines.push(buatSegitigaCAD(x_tengah, flipY(y_segitiga, tinggiTotal), 'left', ukuranSegitiga, diameterUtama));
-                cadLines.push(buatSegitigaCAD(x_tengah, flipY(y_segitiga, tinggiTotal)+ukuranSegitiga, 'left', ukuranSegitiga, diameterUtama));
+                spasiUtama = getData('data.tulangan.s', 250);
+                if (fondasiData?.rekap?.tulangan_utama) {
+                    const match = fondasiData.rekap.tulangan_utama.match(/[Øɸ](\d+)/);
+                    if (match) diameterUtama = parseInt(match[1], 10);
+                }
             } else {
-                // Persegi panjang: tiga garis vertikal (tepi biru, tengah merah)
-                const jarakSamping = (Ly_mm - Lx_mm) / 2;
-                const x_kiri = jarakSamping;
-                const x_kanan = Ly_mm - jarakSamping;
-                const x_tengah = Ly_mm * (7/15);
-                // Garis kiri (biru)
-                cadLines.push(polyline([
-                    [x_kiri - ukuranSegitiga, y_atas + ukuranSegitiga],
-                    [x_kiri, y_atas],
-                    [x_kiri, y_bawah],
-                    [x_kiri - ukuranSegitiga, y_bawah - ukuranSegitiga]
-                ], diameterPendek));
-                // Segitiga kiri
-                cadLines.push(buatSegitigaCAD(x_kiri, flipY(y_segitiga, tinggiTotal), 'left', ukuranSegitiga, diameterPendek));
-                cadLines.push(buatSegitigaCAD(x_kiri, flipY(y_segitiga, tinggiTotal)+ukuranSegitiga, 'left', ukuranSegitiga, diameterPendek));
-                // Garis tengah (merah)
-                cadLines.push(polyline([
-                    [x_tengah - ukuranSegitiga, y_atas + ukuranSegitiga],
-                    [x_tengah, y_atas],
-                    [x_tengah, y_bawah],
-                    [x_tengah - ukuranSegitiga, y_bawah - ukuranSegitiga]
-                ], diameterPendek));
-                cadLines.push(buatSegitigaCAD(x_tengah, flipY(y_segitiga, tinggiTotal), 'left', ukuranSegitiga, diameterPendek));
-                cadLines.push(buatSegitigaCAD(x_tengah, flipY(y_segitiga, tinggiTotal)+ukuranSegitiga, 'left', ukuranSegitiga, diameterPendek));
-                // Garis kanan (biru)
-                cadLines.push(polyline([
-                    [x_kanan - ukuranSegitiga, y_atas + ukuranSegitiga],
-                    [x_kanan, y_atas],
-                    [x_kanan, y_bawah],
-                    [x_kanan - ukuranSegitiga, y_bawah - ukuranSegitiga]
-                ], diameterPendek));
-                cadLines.push(buatSegitigaCAD(x_kanan, flipY(y_segitiga, tinggiTotal), 'left', ukuranSegitiga, diameterPendek));
-                cadLines.push(buatSegitigaCAD(x_kanan, flipY(y_segitiga, tinggiTotal)+ukuranSegitiga, 'left', ukuranSegitiga, diameterPendek));
+                spasiUtama = getData('data.tulangan.bujur.s', 250);
+                if (fondasiData?.rekap?.tulangan_panjang) {
+                    const match = fondasiData.rekap.tulangan_panjang.match(/[Øɸ](\d+)/);
+                    if (match) diameterUtama = parseInt(match[1], 10);
+                }
+                spasiTepi = getData('data.tulangan.persegi.s_tepi', 250);
+                spasiPusat = getData('data.tulangan.persegi.s_pusat', 250);
+                // Cari diameter pendek dari rekap
+                if (fondasiData?.rekap) {
+                    let tulanganPendekStr = fondasiData.rekap.tulangan_pendek_tepi || fondasiData.rekap.tulangan_pendek_pusat;
+                    if (tulanganPendekStr) {
+                        const match = tulanganPendekStr.match(/[Øɸ](\d+)/);
+                        if (match) diameterPendek = parseInt(match[1], 10);
+                    }
+                }
             }
 
-            // Garis horizontal (selalu hitam)
-            const y_garis_hor = Lx_mm * (8/15);
-            const x_kiri_hor = selimutBeton;
-            const x_kanan_hor = Ly_mm - selimutBeton;
-            const x_segitiga_hor = x_kiri_hor + (8/15) * (x_kanan_hor - x_kiri_hor);
-            cadLines.push(polyline([
-                [x_kiri_hor + ukuranSegitiga, flipY(y_garis_hor - ukuranSegitiga, tinggiTotal)],
-                [x_kiri_hor, flipY(y_garis_hor, tinggiTotal)],
-                [x_kanan_hor, flipY(y_garis_hor, tinggiTotal)],
-                [x_kanan_hor - ukuranSegitiga, flipY(y_garis_hor - ukuranSegitiga, tinggiTotal)]
-            ], diameterUtama));
-            cadLines.push(buatSegitigaCAD(x_segitiga_hor, flipY(y_garis_hor, tinggiTotal), 'down', ukuranSegitiga, diameterUtama));
-        }
+            // Dimensi dalam mm
+            const Lx_mm = lx * 1000;
+            const Ly_mm = ly * 1000;
+            const H_mm = h * 1000;
 
-        // ========== TAMPAK DEPAN ==========
-        if (jenisTampak === 'depan') {
-            const x_kiri = selimutBeton;
-            const x_kanan = Ly_mm - selimutBeton;
-            const y_garis = (selimutBeton + (isBujurSangkar ? diameterUtama : diameterPendek) + diameterUtama/2);
+            // Helper CAD
+            const lingkaran = (cx, cy, diameter) => `CIRCLE ${cx},${cy} ${diameter/2} `;
+            const garis = (x1, y1, x2, y2) => `LINE ${x1},${y1} ${x2},${y2} `;
+            const polyline = (points, tebal, closed = false) => {
+                if (!points.length) return '';
+                let cmd = `PL ${points[0][0]},${points[0][1]} W ${tebal} ${tebal} `;
+                for (let i = 1; i < points.length; i++) {
+                    const dx = points[i][0] - points[i-1][0];
+                    const dy = points[i][1] - points[i-1][1];
+                    cmd += `@${dx},${dy} `;
+                }
+                if (closed) cmd += 'C ';
+                return cmd;
+            };
 
-            // Garis tulangan horizontal
-            cadLines.push(polyline([[x_kiri, y_garis], [x_kanan, y_garis]], diameterUtama));
+            function hitungPosisiTitikCAD(startXmm, endXmm, stepmm, diameterMM) {
+                let positions = [];
+                if (startXmm >= endXmm) return positions;
+                let current = startXmm;
+                while (current <= endXmm) {
+                    positions.push(current);
+                    current += stepmm;
+                }
+                const last = positions[positions.length - 1];
+                if (endXmm - last >= 3 * diameterMM) positions.push(endXmm);
+                else positions[positions.length - 1] = endXmm;
+                return positions;
+            }
 
-            const y_titik = selimutBeton + (isBujurSangkar ? diameterUtama : diameterPendek)/2;
+            const flipY = (y, tinggiTotal) => tinggiTotal - y;
+            let cadLines = [];
 
-            if (isBujurSangkar) {
-                const step = spasiUtama * (Ly_mm / Ly_mm); // step dalam mm
+            // Tentukan tinggi total untuk flip Y
+            let tinggiTotal;
+            if (jenisTampak === 'depan') tinggiTotal = H_mm;
+            else if (jenisTampak === 'atas') tinggiTotal = Lx_mm;
+            else tinggiTotal = H_mm; // samping
+
+            // Frame kotak
+            if (jenisTampak === 'depan') {
+                cadLines.push(garis(0, 0, Ly_mm, 0));
+                cadLines.push(garis(Ly_mm, 0, Ly_mm, H_mm));
+                cadLines.push(garis(Ly_mm, H_mm, 0, H_mm));
+                cadLines.push(garis(0, H_mm, 0, 0));
+            } else if (jenisTampak === 'atas') {
+                cadLines.push(garis(0, 0, Ly_mm, 0));
+                cadLines.push(garis(Ly_mm, 0, Ly_mm, Lx_mm));
+                cadLines.push(garis(Ly_mm, Lx_mm, 0, Lx_mm));
+                cadLines.push(garis(0, Lx_mm, 0, 0));
+            } else if (jenisTampak === 'samping') {
+                cadLines.push(garis(0, 0, Lx_mm, 0));
+                cadLines.push(garis(Lx_mm, 0, Lx_mm, H_mm));
+                cadLines.push(garis(Lx_mm, H_mm, 0, H_mm));
+                cadLines.push(garis(0, H_mm, 0, 0));
+            }
+
+            const ukuranSegitiga = 0.035 * Lx_mm;
+
+            // ========== TAMPAK ATAS ==========
+            if (jenisTampak === 'atas') {
+                const y_atas = selimutBeton;
+                const y_bawah = Lx_mm - selimutBeton;
+                const y_segitiga = Lx_mm * (7/15);
+
+                if (isBujurSangkar) {
+                    const x_tengah = Ly_mm * (7/15);
+                    const delta = ukuranSegitiga;
+                    cadLines.push(polyline([
+                        [x_tengah - delta, flipY(y_atas + delta, tinggiTotal)],
+                        [x_tengah, flipY(y_atas, tinggiTotal)],
+                        [x_tengah, flipY(y_bawah, tinggiTotal)],
+                        [x_tengah - delta, flipY(y_bawah - delta, tinggiTotal)]
+                    ], diameterUtama));
+                    cadLines.push(buatSegitigaCAD(x_tengah, flipY(y_segitiga, tinggiTotal), 'left', ukuranSegitiga, diameterUtama));
+                    cadLines.push(buatSegitigaCAD(x_tengah, flipY(y_segitiga, tinggiTotal)+ukuranSegitiga, 'left', ukuranSegitiga, diameterUtama));
+                } else {
+                    // Persegi panjang: tiga garis vertikal (tepi biru, tengah merah)
+                    const jarakSamping = (Ly_mm - Lx_mm) / 2;
+                    const x_kiri = jarakSamping;
+                    const x_kanan = Ly_mm - jarakSamping;
+                    const x_tengah = Ly_mm * (7/15);
+                    // Garis kiri (biru)
+                    cadLines.push(polyline([
+                        [x_kiri - ukuranSegitiga, y_atas + ukuranSegitiga],
+                        [x_kiri, y_atas],
+                        [x_kiri, y_bawah],
+                        [x_kiri - ukuranSegitiga, y_bawah - ukuranSegitiga]
+                    ], diameterPendek));
+                    // Segitiga kiri
+                    cadLines.push(buatSegitigaCAD(x_kiri, flipY(y_segitiga, tinggiTotal), 'left', ukuranSegitiga, diameterPendek));
+                    cadLines.push(buatSegitigaCAD(x_kiri, flipY(y_segitiga, tinggiTotal)+ukuranSegitiga, 'left', ukuranSegitiga, diameterPendek));
+                    // Garis tengah (merah)
+                    cadLines.push(polyline([
+                        [x_tengah - ukuranSegitiga, y_atas + ukuranSegitiga],
+                        [x_tengah, y_atas],
+                        [x_tengah, y_bawah],
+                        [x_tengah - ukuranSegitiga, y_bawah - ukuranSegitiga]
+                    ], diameterPendek));
+                    cadLines.push(buatSegitigaCAD(x_tengah, flipY(y_segitiga, tinggiTotal), 'left', ukuranSegitiga, diameterPendek));
+                    cadLines.push(buatSegitigaCAD(x_tengah, flipY(y_segitiga, tinggiTotal)+ukuranSegitiga, 'left', ukuranSegitiga, diameterPendek));
+                    // Garis kanan (biru)
+                    cadLines.push(polyline([
+                        [x_kanan - ukuranSegitiga, y_atas + ukuranSegitiga],
+                        [x_kanan, y_atas],
+                        [x_kanan, y_bawah],
+                        [x_kanan - ukuranSegitiga, y_bawah - ukuranSegitiga]
+                    ], diameterPendek));
+                    cadLines.push(buatSegitigaCAD(x_kanan, flipY(y_segitiga, tinggiTotal), 'left', ukuranSegitiga, diameterPendek));
+                    cadLines.push(buatSegitigaCAD(x_kanan, flipY(y_segitiga, tinggiTotal)+ukuranSegitiga, 'left', ukuranSegitiga, diameterPendek));
+                }
+
+                // Garis horizontal (selalu hitam)
+                const y_garis_hor = Lx_mm * (8/15);
+                const x_kiri_hor = selimutBeton;
+                const x_kanan_hor = Ly_mm - selimutBeton;
+                const x_segitiga_hor = x_kiri_hor + (8/15) * (x_kanan_hor - x_kiri_hor);
+                cadLines.push(polyline([
+                    [x_kiri_hor + ukuranSegitiga, flipY(y_garis_hor - ukuranSegitiga, tinggiTotal)],
+                    [x_kiri_hor, flipY(y_garis_hor, tinggiTotal)],
+                    [x_kanan_hor, flipY(y_garis_hor, tinggiTotal)],
+                    [x_kanan_hor - ukuranSegitiga, flipY(y_garis_hor - ukuranSegitiga, tinggiTotal)]
+                ], diameterUtama));
+                cadLines.push(buatSegitigaCAD(x_segitiga_hor, flipY(y_garis_hor, tinggiTotal), 'down', ukuranSegitiga, diameterUtama));
+            }
+
+            // ========== TAMPAK DEPAN ==========
+            if (jenisTampak === 'depan') {
+                const x_kiri = selimutBeton;
+                const x_kanan = Ly_mm - selimutBeton;
+                const y_garis = (selimutBeton + (isBujurSangkar ? diameterUtama : diameterPendek) + diameterUtama/2);
+
+                // Garis tulangan horizontal
+                cadLines.push(polyline([[x_kiri, y_garis], [x_kanan, y_garis]], diameterUtama));
+
+                const y_titik = selimutBeton + (isBujurSangkar ? diameterUtama : diameterPendek)/2;
+
+                if (isBujurSangkar) {
+                    const step = spasiUtama;
+                    const posTitik = hitungPosisiTitikCAD(x_kiri + diameterUtama/2, x_kanan - diameterUtama/2, step, diameterUtama);
+                    for (let x of posTitik) {
+                        cadLines.push(lingkaran(x, y_titik, diameterUtama));
+                    }
+                } else {
+                    // Persegi panjang: tepi biru, pusat merah
+                    const lebarFondasi = Ly_mm;
+                    const panjangFondasi = Lx_mm;
+                    const jarakTepi = (lebarFondasi - panjangFondasi) / 2;
+                    const batasTepiKanan = jarakTepi;
+                    const batasTepiKiri = lebarFondasi - jarakTepi;
+
+                    const stepTepi = spasiTepi;
+                    const stepPusat = spasiPusat;
+                    const diameter = diameterPendek;
+
+                    // Tepi kiri
+                    const posTepiKiri = hitungPosisiTitikCAD(x_kiri + diameter/2, batasTepiKanan - diameter/2, stepTepi, diameter);
+                    for (let x of posTepiKiri) {
+                        cadLines.push(lingkaran(x, y_titik, diameter));
+                    }
+                    // Tepi kanan
+                    const posTepiKanan = hitungPosisiTitikCAD(batasTepiKiri + diameter/2, x_kanan - diameter/2, stepTepi, diameter);
+                    for (let x of posTepiKanan) {
+                        cadLines.push(lingkaran(x, y_titik, diameter));
+                    }
+                    // Pusat
+                    const offsetPusat = stepPusat;
+                    const batasPusatKanan = batasTepiKanan + offsetPusat;
+                    const batasPusatKiri = batasTepiKiri - offsetPusat;
+                    if (batasPusatKanan < batasPusatKiri) {
+                        const posPusat = hitungPosisiTitikCAD(batasPusatKanan + diameter/2, batasPusatKiri - diameter/2, stepPusat, diameter);
+                        for (let x of posPusat) {
+                            cadLines.push(lingkaran(x, y_titik, diameter));
+                        }
+                    } else {
+                        const tengahX = (batasTepiKanan + batasTepiKiri) / 2;
+                        cadLines.push(lingkaran(tengahX, y_titik, diameter));
+                    }
+                }
+            }
+
+            // ========== TAMPAK SAMPING ==========
+            if (jenisTampak === 'samping') {
+                const gap = selimutBeton;
+                const x_kiri = gap;
+                const x_kanan = Lx_mm - gap;
+                const y_garis = selimutBeton + (isBujurSangkar ? diameterUtama : diameterPendek)/2;
+                if (isBujurSangkar) {
+                    cadLines.push(polyline([[x_kiri, y_garis], [x_kanan, y_garis]], diameterUtama));
+                } else {
+                    cadLines.push(polyline([[x_kiri, y_garis], [x_kanan, y_garis]], diameterPendek));
+                }
+                const y_titik = selimutBeton + (isBujurSangkar ? diameterUtama : diameterPendek) + diameterUtama/2;
+                const step = spasiUtama;
                 const posTitik = hitungPosisiTitikCAD(x_kiri + diameterUtama/2, x_kanan - diameterUtama/2, step, diameterUtama);
                 for (let x of posTitik) {
                     cadLines.push(lingkaran(x, y_titik, diameterUtama));
                 }
-            } else {
-                // Persegi panjang: tepi biru, pusat merah
-                const lebarFondasi = Ly_mm;
-                const panjangFondasi = Lx_mm;
-                const jarakTepi = (lebarFondasi - panjangFondasi) / 2;
-                const batasTepiKanan = jarakTepi;
-                const batasTepiKiri = lebarFondasi - jarakTepi;
-
-                const stepTepi = spasiTepi;
-                const stepPusat = spasiPusat;
-                const diameter = diameterPendek;
-
-                // Tepi kiri
-                const posTepiKiri = hitungPosisiTitikCAD(x_kiri + diameter/2, batasTepiKanan - diameter/2, stepTepi, diameter);
-                for (let x of posTepiKiri) {
-                    cadLines.push(lingkaran(x, y_titik, diameter));
-                }
-                // Tepi kanan
-                const posTepiKanan = hitungPosisiTitikCAD(batasTepiKiri + diameter/2, x_kanan - diameter/2, stepTepi, diameter);
-                for (let x of posTepiKanan) {
-                    cadLines.push(lingkaran(x, y_titik, diameter));
-                }
-                // Pusat
-                const offsetPusat = stepPusat;
-                const batasPusatKanan = batasTepiKanan + offsetPusat;
-                const batasPusatKiri = batasTepiKiri - offsetPusat;
-                if (batasPusatKanan < batasPusatKiri) {
-                    const posPusat = hitungPosisiTitikCAD(batasPusatKanan + diameter/2, batasPusatKiri - diameter/2, stepPusat, diameter);
-                    for (let x of posPusat) {
-                        cadLines.push(lingkaran(x, y_titik, diameter));
-                    }
-                } else {
-                    const tengahX = (batasTepiKanan + batasTepiKiri) / 2;
-                    cadLines.push(lingkaran(tengahX,y_titik , diameter));
-                }
             }
+
+            return cadLines.join("\n");
+        } catch (error) {
+            console.error("Gagal generate CAD fondasi tunggal:", error);
+            return "ERROR DETECTED: " + error.message + "\n" + error.stack;
         }
+    }
 
-        // ========== TAMPAK SAMPING ==========
-        if (jenisTampak === 'samping') {
-            const gap = selimutBeton;
-            const x_kiri = gap;
-            const x_kanan = Lx_mm - gap;
-            const y_garis = selimutBeton+(isBujurSangkar ? diameterUtama : diameterPendek)/2;
-            if (isBujurSangkar) {
-            cadLines.push(polyline([[x_kiri, y_garis], [x_kanan, y_garis]], diameterUtama));
-            } else {
-            cadLines.push(polyline([[x_kiri, y_garis], [x_kanan, y_garis]], diameterPendek));
-            }
-            const y_titik = selimutBeton+(isBujurSangkar ? diameterUtama : diameterPendek)+diameterUtama/2; // offset di atas garis
-            const step = spasiUtama;
-            const posTitik = hitungPosisiTitikCAD(x_kiri + diameterUtama/2, x_kanan - diameterUtama/2, step, diameterUtama);
-            for (let x of posTitik) {
-                cadLines.push(lingkaran(x, y_titik, diameterUtama));
-            }
+    // Fungsi helper buat segitiga untuk CAD
+    function buatSegitigaCAD(centerX, centerY, arah, ukuran, tebal) {
+        const setengah = ukuran / 2;
+        let p1, p2, p3;
+        if (arah === 'up') {
+            p1 = [centerX - setengah, centerY];
+            p2 = [centerX + setengah, centerY];
+            p3 = [centerX, centerY - ukuran];
+        } else if (arah === 'down') {
+            p1 = [centerX - setengah, centerY];
+            p2 = [centerX + setengah, centerY];
+            p3 = [centerX, centerY + ukuran];
+        } else if (arah === 'left') {
+            p1 = [centerX, centerY - setengah];
+            p2 = [centerX, centerY + setengah];
+            p3 = [centerX - ukuran, centerY];
+        } else if (arah === 'right') {
+            p1 = [centerX, centerY - setengah];
+            p2 = [centerX, centerY + setengah];
+            p3 = [centerX + ukuran, centerY];
+        } else {
+            return '';
         }
-
-        return cadLines.join("\n");
-    } catch (error) {
-        console.error("Gagal generate CAD fondasi tunggal:", error);
-        return "ERROR DETECTED: " + error.message + "\n" + error.stack;
+        let cmd = `PL ${p1[0]},${p1[1]} W ${tebal} ${tebal} `;
+        cmd += `@${p2[0]-p1[0]},${p2[1]-p1[1]} `;
+        cmd += `@${p3[0]-p2[0]},${p3[1]-p2[1]} `;
+        cmd += `C `;
+        return cmd;
     }
-}
 
-// Fungsi helper buat segitiga untuk CAD (sama seperti pada pelat)
-function buatSegitigaCAD(centerX, centerY, arah, ukuran, tebal) {
-    const setengah = ukuran / 2;
-    let p1, p2, p3;
-    if (arah === 'up') {
-        p1 = [centerX - setengah, centerY];
-        p2 = [centerX + setengah, centerY];
-        p3 = [centerX, centerY - ukuran];
-    } else if (arah === 'down') {
-        p1 = [centerX - setengah, centerY];
-        p2 = [centerX + setengah, centerY];
-        p3 = [centerX, centerY + ukuran];
-    } else if (arah === 'left') {
-        p1 = [centerX, centerY - setengah];
-        p2 = [centerX, centerY + setengah];
-        p3 = [centerX - ukuran, centerY];
-    } else if (arah === 'right') {
-        p1 = [centerX, centerY - setengah];
-        p2 = [centerX, centerY + setengah];
-        p3 = [centerX + ukuran, centerY];
-    } else {
-        return '';
-    }
-    // Polyline tertutup
-    let cmd = `PL ${p1[0]},${p1[1]} W ${tebal} ${tebal} `;
-    cmd += `@${p2[0]-p1[0]},${p2[1]-p1[1]} `;
-    cmd += `@${p3[0]-p2[0]},${p3[1]-p2[1]} `;
-    cmd += `C `;
-    return cmd;
-}
+    // Ekspos fungsi ke global
+    window.generateCADFondasiTunggal = generateCADFondasiTunggal;
+    window.buatSegitigaCAD = buatSegitigaCAD;
 
-// Ekspos fungsi ke global
-window.generateCADFondasiTunggal = generateCADFondasiTunggal;
-window.buatSegitigaCAD = buatSegitigaCAD;
-
-console.log("✅ cut-fondasitunggal.js - fungsi CAD untuk fondasi tunggal (bujur sangkar & persegi panjang) selesai");
+    console.log("✅ cut-fondasitunggal.js - fungsi CAD untuk fondasi tunggal (bujur sangkar & persegi panjang) selesai");
 })();

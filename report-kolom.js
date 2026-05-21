@@ -1,9 +1,3 @@
-// report-kolom.js - Renderer khusus untuk laporan kolom (Biaxial dengan format step terpisah)
-// PERBAIKAN: 
-// 1. Menampilkan jumlah tulangan utama yang benar (nX + nY - 4) di rekap tulangan dan gambar penampang
-// 2. Menghapus poin "Penerapan Persyaratan Minimum" dari ringkasan step
-// 3. Mengambil data per arah dari rekap.hasilPerhitunganArahX/Y
-
 // Generator untuk step number - dibuat sebagai fungsi factory
 function createStepNumberGenerator() {
     let step = 1;
@@ -106,6 +100,7 @@ function renderInputDataKolom(inputData) {
     }
 
     // DATA TULANGAN (hanya untuk mode evaluasi)
+    // REVISI: tampilkan nx dan ny secara terpisah, plus total = nx + ny - 4
     const isEvaluasiMode = inputData.mode === 'evaluasi';
     
     if (isEvaluasiMode && inputData.tulangan) {
@@ -128,17 +123,41 @@ function renderInputDataKolom(inputData) {
         if (inputData.tulangan.phi_tul || inputData.tulangan.phi) {
             html += `
                 <div class="data-row">
-                    <span class="data-label">ɸ</span>
+                    <span class="data-label">&#x03D5;</span>
                     <span class="data-value">${inputData.tulangan.phi_tul || inputData.tulangan.phi} mm</span>
                 </div>
             `;
         }
-        
-        if (inputData.tulangan.n_tul || inputData.tulangan.n) {
+
+        // REVISI: nx menggantikan n tunggal untuk arah X
+        if (inputData.tulangan.nx_tul || inputData.tulangan.nx) {
             html += `
                 <div class="data-row">
-                    <span class="data-label">n</span>
-                    <span class="data-value">${inputData.tulangan.n_tul || inputData.tulangan.n}</span>
+                    <span class="data-label">n<sub>x</sub></span>
+                    <span class="data-value">${inputData.tulangan.nx_tul || inputData.tulangan.nx}</span>
+                </div>
+            `;
+        }
+
+        // REVISI: ny untuk arah Y
+        if (inputData.tulangan.ny_tul || inputData.tulangan.ny) {
+            html += `
+                <div class="data-row">
+                    <span class="data-label">n<sub>y</sub></span>
+                    <span class="data-value">${inputData.tulangan.ny_tul || inputData.tulangan.ny}</span>
+                </div>
+            `;
+        }
+
+        // Tampilkan total batang = nx + ny - 4 sebagai informasi tambahan
+        const nx = parseFloat(inputData.tulangan.nx_tul || inputData.tulangan.nx) || 0;
+        const ny = parseFloat(inputData.tulangan.ny_tul || inputData.tulangan.ny) || 0;
+        if (nx > 0 && ny > 0) {
+            const nTotal = Math.max(0, nx + ny - 4);
+            html += `
+                <div class="data-row">
+                    <span class="data-label">n<sub>total</sub></span>
+                    <span class="data-value">${nTotal} batang</span>
                 </div>
             `;
         }
@@ -173,7 +192,7 @@ function renderInputDataKolom(inputData) {
         if (showLambda) {
             html += `
                 <div class="data-row">
-                    <span class="data-label">λ</span>
+                    <span class="data-label">&#x03BB;</span>
                     <span class="data-value">${lambda}</span>
                 </div>
             `;
@@ -253,8 +272,8 @@ function renderHasilPerhitunganKolom(result) {
                 <div style="text-align: center; padding: 1rem;">
                     <div style="font-size: 1.5rem; font-weight: bold; margin-bottom: 0.5rem;">
                         ${statusKeamanan.aman ? 
-                          '<span class="status-aman" style="font-size: 1.2rem; padding: 0.5rem 1rem;">✓ STRUKTUR AMAN</span>' : 
-                          '<span class="status-tidak-aman" style="font-size: 1.2rem; padding: 0.5rem 1rem;">✗ PERLU PERBAIKAN</span>'}
+                          '<span class="status-aman" style="font-size: 1.2rem; padding: 0.5rem 1rem;">&#x2713; STRUKTUR AMAN</span>' : 
+                          '<span class="status-tidak-aman" style="font-size: 1.2rem; padding: 0.5rem 1rem;">&#x2717; PERLU PERBAIKAN</span>'}
                     </div>
                     <p style="margin: 0.5rem 0; color: #666;">${statusKeamanan.detail}</p>
                     
@@ -284,7 +303,7 @@ function renderHasilPerhitunganKolom(result) {
                 <h4>STATUS KEAMANAN STRUKTUR</h4>
                 <div style="text-align: center; padding: 1rem;">
                     <div style="font-size: 1.5rem; font-weight: bold; margin-bottom: 0.5rem;">
-                        <span style="font-size: 1.2rem; padding: 0.5rem 1rem; background: #fff3cd; color: #856404;">⚠ DATA KONTROL TIDAK TERSEDIA</span>
+                        <span style="font-size: 1.2rem; padding: 0.5rem 1rem; background: #fff3cd; color: #856404;">&#x26A0; DATA KONTROL TIDAK TERSEDIA</span>
                     </div>
                     <p style="margin: 0.5rem 0; color: #666;">Tidak dapat menampilkan status keamanan karena data kontrol tidak ditemukan</p>
                 </div>
@@ -429,13 +448,13 @@ function renderParameterDasarKolomArah(hasilArah, arah, getStepNumber) {
         html += renderStepKolom(
             getStepNumber(),
             `Faktor Reduksi Kekuatan Arah ${arah === 'X' ? 'x' : 'y'}`,
-            `∅ = ${faktorPhi?.toFixed(3) || 'N/A'}`
+            `&#x2205; = ${faktorPhi?.toFixed(3) || 'N/A'}`
         );
     } else {
         html += renderStepKolom(
             getStepNumber(),
             `Faktor Reduksi Kekuatan Arah ${arah === 'X' ? 'x' : 'y'}`,
-            `∅ = N/A (data tidak tersedia)`
+            `&#x2205; = N/A (data tidak tersedia)`
         );
     }
     
@@ -501,7 +520,7 @@ function renderKontrolLenturPerArah(hasilArah, kontrolLentur, arah, getStepNumbe
     html += renderStepKolom(
         getStepNumber(),
         `Kontrol Rasio Tulangan Minimum Arah ${arah === 'X' ? 'x' : 'y'}`,
-        `ρ = ${rhoFormatted}% ≥ 1%`,
+        `&#x03C1; = ${rhoFormatted}% &#x2265; 1%`,
         rho_ok
     );
     
@@ -511,7 +530,7 @@ function renderKontrolLenturPerArah(hasilArah, kontrolLentur, arah, getStepNumbe
     html += renderStepKolom(
         getStepNumber(),
         `Kontrol Jumlah Tulangan Arah ${arah === 'X' ? 'x' : 'y'}`,
-        `n = ${nFormatted} ≤ 2m = ${nMaxFormatted}`,
+        `n = ${nFormatted} &#x2264; 2m = ${nMaxFormatted}`,
         n_ok
     );
     
@@ -521,7 +540,7 @@ function renderKontrolLenturPerArah(hasilArah, kontrolLentur, arah, getStepNumbe
     html += renderStepKolom(
         getStepNumber(),
         `Kontrol Kapasitas Tulangan Arah ${arah === 'X' ? 'x' : 'y'}`,
-        `A<sub>s,terpasang</sub> = ${Ast_iFormatted} mm² ≥ A<sub>s,diperlukan</sub> = ${Ast_uFormatted} mm²`,
+        `A<sub>s,terpasang</sub> = ${Ast_iFormatted} mm&#xB2; &#x2265; A<sub>s,diperlukan</sub> = ${Ast_uFormatted} mm&#xB2;`,
         Ast_ok
     );
     
@@ -532,7 +551,7 @@ function renderKontrolLenturPerArah(hasilArah, kontrolLentur, arah, getStepNumbe
         html += renderStepKolom(
             getStepNumber(),
             `Kontrol Rasio Momen (K) Arah ${arah === 'X' ? 'x' : 'y'}`,
-            `K = ${KFormatted} ≤ K<sub>maks</sub> = ${KmaksFormatted}`,
+            `K = ${KFormatted} &#x2264; K<sub>maks</sub> = ${KmaksFormatted}`,
             K_ok
         );
     }
@@ -561,7 +580,7 @@ function renderKontrolGeserKolom(kontrolGeser, rekap, getStepNumber) {
         html += renderStepKolom(
             getStepNumber(),
             'Kontrol Tegangan Geser',
-            `V<sub>s</sub> = ${Vs?.toFixed(2) || 'N/A'} kN ≤ V<sub>s,maks</sub> = ${Vs_max?.toFixed(2) || 'N/A'} kN`,
+            `V<sub>s</sub> = ${Vs?.toFixed(2) || 'N/A'} kN &#x2264; V<sub>s,maks</sub> = ${Vs_max?.toFixed(2) || 'N/A'} kN`,
             Vs_ok === true
         );
     } else {
@@ -585,7 +604,7 @@ function renderKontrolGeserKolom(kontrolGeser, rekap, getStepNumber) {
         html += renderStepKolom(
             getStepNumber(),
             'Kontrol Tulangan Geser',
-            `A<sub>v,terpasang</sub> = ${Av_terpakai?.toFixed(2) || 'N/A'} mm²/m ≥ A<sub>v,diperlukan</sub> = ${Av_u?.toFixed(2) || 'N/A'} mm²/m`,
+            `A<sub>v,terpasang</sub> = ${Av_terpakai?.toFixed(2) || 'N/A'} mm&#xB2;/m &#x2265; A<sub>v,diperlukan</sub> = ${Av_u?.toFixed(2) || 'N/A'} mm&#xB2;/m`,
             Av_ok === true
         );
     } else {
@@ -603,7 +622,7 @@ function renderKontrolGeserKolom(kontrolGeser, rekap, getStepNumber) {
 // Helper function untuk render step kolom
 function renderStepKolom(number, desc, formula, aman = null) {
     const statusHtml = aman !== null ? 
-        `<div class="step-result">${aman ? '<span class="status-aman">✓ AMAN</span>' : '<span class="status-tidak-aman">✗ TIDAK AMAN</span>'}</div>` : 
+        `<div class="step-result">${aman ? '<span class="status-aman">&#x2713; AMAN</span>' : '<span class="status-tidak-aman">&#x2717; TIDAK AMAN</span>'}</div>` : 
         '';
     
     return `
@@ -662,9 +681,13 @@ function renderPenampangKolom(result) {
             const nY = data.hasilTulangan.hasilArahY.n_terpakai || 0;
             jumlahTulangan = nX + nY - 4;
             if (jumlahTulangan < 0) jumlahTulangan = 0;
-            console.log(`📐 Penampang: nX=${nX}, nY=${nY}, total batang = ${jumlahTulangan}D${D}`);
+            console.log(`📐 Penampang desain: nX=${nX}, nY=${nY}, total batang = ${jumlahTulangan}D${D}`);
         } else if (mode === 'evaluasi' && tulangan) {
-            jumlahTulangan = parseFloat(tulangan.n_tul || tulangan.n) || null;
+            // REVISI: Hitung total dari nx + ny - 4 untuk evaluasi biaxial
+            const nx = parseFloat(tulangan.nx_tul || tulangan.nx) || 0;
+            const ny = parseFloat(tulangan.ny_tul || tulangan.ny) || 0;
+            jumlahTulangan = Math.max(0, nx + ny - 4) || null;
+            console.log(`📐 Penampang evaluasi: nx=${nx}, ny=${ny}, total batang = ${jumlahTulangan}D${D}`);
         } else {
             jumlahTulangan = data.hasilTulangan?.n_terpakai || 
                              result.rekap?.tulangan?.n_terpakai || null;
@@ -680,7 +703,7 @@ function renderPenampangKolom(result) {
             <div style="text-align: center; padding: 1rem; color: #666;">
                 <p>Memuat gambar penampang kolom...</p>
                 <p style="font-size: 0.8rem; margin-top: 0.5rem;">
-                    ${jumlahTulangan}D${D}, begel ɸ${phi}
+                    ${jumlahTulangan}D${D}, begel &#x03D5;${phi}
                 </p>
             </div>
         `;
@@ -829,4 +852,4 @@ window.renderKolomReport = renderKolomReport;
 window.exportCADKolom = exportCADKolom;
 window.updateReportTitle = updateReportTitle;
 
-console.log("✅ report-kolom.js loaded successfully (Biaxial dengan koreksi tulangan utama nX+nY-4)");
+console.log("✅ report-kolom.js loaded — Biaxial evaluasi nx/ny terpisah — total penampang = nx+ny-4");
