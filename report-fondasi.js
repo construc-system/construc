@@ -1,7 +1,7 @@
+// report-fondasi.js (final)
 (function() {
     'use strict';
 
-    // Generator untuk step number
     function* createStepNumber() {
         let step = 1;
         while (true) yield step++;
@@ -16,10 +16,18 @@
             cleanupLegacyPenampang();
             updateReportTitle(result);
             renderInputDataFondasi(result.inputData || {});
-            renderHasilPerhitunganFondasi(result);
+
+            // 1. Rekap Tulangan + Status Keamanan (dalam satu container)
+            renderRekapDanStatusFondasi(result);
+
+            // 2. Penampang Fondasi (ditempatkan setelah resultContainer)
+            const resultContainer = document.getElementById('resultContainer');
+            renderPenampangFondasi(result, resultContainer);
+
+            // 3. Ringkasan Kontrol (step-step)
             renderRingkasanFondasi(result);
-            renderPenampangFondasi(result);
-            console.log("✅ Laporan fondasi berhasil di-render");
+
+            console.log("✅ Laporan fondasi berhasil di-render (urutan: rekap+status → penampang → kontrol)");
         } catch (error) {
             console.error('Error rendering fondasi report:', error);
             showError(`Error merender laporan fondasi: ${error.message}`);
@@ -48,32 +56,23 @@
     }
 
     // ========================
-    // INPUT DATA
+    // INPUT DATA (tidak berubah)
     // ========================
     function renderInputDataFondasi(inputData) {
         const container = document.getElementById('inputDataContainer');
-        if (!container) {
-            console.error("Element #inputDataContainer tidak ditemukan");
-            return;
-        }
+        if (!container) return;
         if (!inputData || Object.keys(inputData).length === 0) {
             container.innerHTML = '<div class="data-card"><p>Tidak ada data input</p></div>';
             return;
         }
 
         let html = '';
+        html += `<div class="data-card"><h3>Material</h3>
+            <div class="data-row"><span class="data-label">f'<sub>c</sub></span><span class="data-value">${inputData.material?.fc || 'N/A'} MPa</span></div>
+            <div class="data-row"><span class="data-label">f<sub>y</sub></span><span class="data-value">${inputData.material?.fy || 'N/A'} MPa</span></div>
+            <div class="data-row"><span class="data-label">ɣ<sub>beton</sub></span><span class="data-value">${inputData.material?.gammaC || 'N/A'} kN/m³</span></div>
+        </div>`;
 
-        // MATERIAL
-        html += `
-            <div class="data-card">
-                <h3>Material</h3>
-                <div class="data-row"><span class="data-label">f'<sub>c</sub></span><span class="data-value">${inputData.material?.fc || 'N/A'} MPa</span></div>
-                <div class="data-row"><span class="data-label">f<sub>y</sub></span><span class="data-value">${inputData.material?.fy || 'N/A'} MPa</span></div>
-                <div class="data-row"><span class="data-label">ɣ<sub>beton</sub></span><span class="data-value">${inputData.material?.gammaC || 'N/A'} kN/m³</span></div>
-            </div>
-        `;
-
-        // DIMENSI FONDASI
         const fondasi = inputData.fondasi || {};
         const dimensi = fondasi.dimensi || {};
         const fondasiMode = fondasi.mode || 'bujur_sangkar';
@@ -91,7 +90,6 @@
         html += `<div class="data-row"><span class="data-label">α<sub>s</sub></span><span class="data-value">${dimensi.alpha_s || '40'}</span></div>
             </div>`;
 
-        // BEBAN
         const beban = inputData.beban || {};
         html += `<div class="data-card"><h3>Beban</h3>
             <div class="data-row"><span class="data-label">P<sub>u</sub></span><span class="data-value">${beban.pu || 'N/A'} kN</span></div>`;
@@ -99,7 +97,6 @@
         if (beban.muy) html += `<div class="data-row"><span class="data-label">M<sub>uy</sub></span><span class="data-value">${beban.muy} kNm</span></div>`;
         html += `</div>`;
 
-        // TANAH
         const tanah = inputData.tanah || {};
         const tanahMode = tanah.mode || 'auto';
         html += `<div class="data-card"><h3>Data Tanah</h3>`;
@@ -118,7 +115,6 @@
         }
         html += `</div>`;
 
-        // TULANGAN (mode evaluasi)
         const isEvaluasiMode = inputData.mode === 'evaluasi';
         const tulangan = inputData.tulangan || {};
         if (isEvaluasiMode) {
@@ -131,7 +127,6 @@
             if (tulangan.sb) html += `<div class="data-row"><span class="data-label">s<sub>bagi</sub></span><span class="data-value">${tulangan.sb} mm</span></div>`;
             html += `</div>`;
         }
-
         container.innerHTML = html;
     }
 
@@ -146,28 +141,26 @@
     }
 
     // ========================
-    // HASIL PERHITUNGAN & STATUS KEAMANAN
+    // REKAP + STATUS KEAMANAN (digabung dalam satu container)
     // ========================
-    function renderHasilPerhitunganFondasi(result) {
+    function renderRekapDanStatusFondasi(result) {
         const container = document.getElementById('resultContainer');
         if (!container) return;
-        if (!result.rekap) {
-            container.innerHTML = '<div class="result-item"><p>Data hasil perhitungan tidak tersedia</p></div>';
-            return;
-        }
-
-        const { rekap, kontrol, inputData, data, optimasi } = result;
+        const { rekap, kontrol, data, optimasi, inputData } = result;
+        
         let html = '';
-
-        // REKAP TULANGAN
+        
+        // --- Bagian Rekap Tulangan ---
         if (rekap) {
             html += `<div class="result-item" style="grid-column: 1 / -1;"><h4>Rekap Tulangan</h4>`;
             const lx = data?.parameter?.lx || data?.dimensiOptimal?.Lx || optimasi?.kombinasi_terpilih?.Lx || inputData?.fondasi?.dimensi?.lx;
             const ly = data?.parameter?.ly || data?.dimensiOptimal?.Ly || optimasi?.kombinasi_terpilih?.Ly || inputData?.fondasi?.dimensi?.ly;
             const h = data?.dimensiOptimal?.h || optimasi?.kombinasi_terpilih?.h || data?.parameter?.h || inputData?.fondasi?.dimensi?.h;
-            if (lx && ly && h) html += `<p><strong>Dimensi Fondasi:</strong> ${parseFloat(lx).toFixed(2)}m × ${parseFloat(ly).toFixed(2)}m × ${parseFloat(h).toFixed(2)}m</p>`;
-            else if (rekap.dimensi) html += `<p><strong>Dimensi Fondasi:</strong> ${rekap.dimensi}</p>`;
-
+            if (lx && ly && h) {
+                html += `<p><strong>Dimensi Fondasi:</strong> ${parseFloat(lx).toFixed(2)}m × ${parseFloat(ly).toFixed(2)}m × ${parseFloat(h).toFixed(2)}m</p>`;
+            } else if (rekap.dimensi) {
+                html += `<p><strong>Dimensi Fondasi:</strong> ${rekap.dimensi}</p>`;
+            }
             const tulanganFields = ['tulangan_utama', 'tulangan_bagi', 'tulangan_panjang', 'tulangan_pendek_pusat', 'tulangan_pendek_tepi'];
             for (const field of tulanganFields) {
                 if (rekap[field] && rekap[field] !== '-') {
@@ -176,9 +169,11 @@
                 }
             }
             html += `</div>`;
+        } else {
+            html += `<div class="result-item"><p>Data rekap tulangan tidak tersedia</p></div>`;
         }
 
-        // STATUS KEAMANAN
+        // --- Bagian Status Keamanan ---
         if (kontrol) {
             const statusKeamanan = getStatusKeamananFondasi(kontrol);
             html += `<div class="result-item" style="grid-column: 1 / -1; background: ${statusKeamanan.aman ? '#d4edda' : '#f8d7da'} !important;">
@@ -217,7 +212,7 @@
     }
 
     // ========================
-    // RINGKASAN (STEP KONTROL)
+    // RINGKASAN KONTROL (step-step)
     // ========================
     function renderRingkasanFondasi(result) {
         const container = document.getElementById('controlContainer');
@@ -264,7 +259,6 @@
         const Kmax = parameter?.Kmax || 0;
         const jenis = detail.jenis || fondasiMode;
         let html = '';
-
         if (jenis === "bujur_sangkar") {
             if (detail.K !== undefined) html += renderStepFondasi(stepNumberGenerator.next().value, 'Faktor Momen Pikul Tulangan', `K = ${detail.K?.toFixed(6)} ≤ K<sub>max</sub> = ${Kmax?.toFixed(6)}`, detail.Kontrol_K === "AMAN");
             const As_perlu = detail.As_perlu || Math.max(detail.As1, detail.As2, detail.As3);
@@ -334,26 +328,29 @@
     }
 
     // ========================
-    // PENAMPANG FONDASI (3 TAMPILAN) - Menggunakan registry dari cut-generator.js
+    // PENAMPANG FONDASI (diletakkan setelah resultContainer)
     // ========================
-    function renderPenampangFondasi(result) {
-        cleanupLegacyPenampang();
+    function renderPenampangFondasi(result, insertAfterElement = null) {
+        // Hapus penampang lama jika ada
+        const existingSection = document.querySelector('.penampang-section');
+        if (existingSection) existingSection.remove();
 
-        // Buat container utama
         const container = document.createElement('div');
         container.className = 'penampang-section';
         container.innerHTML = '<h2>PENAMPANG FONDASI</h2><div class="penampang-grid"></div>';
 
-        const controlContainer = document.getElementById('controlContainer');
-        if (controlContainer && controlContainer.parentNode) {
-            controlContainer.parentNode.insertBefore(container, controlContainer.nextSibling);
+        if (insertAfterElement && insertAfterElement.parentNode) {
+            insertAfterElement.parentNode.insertBefore(container, insertAfterElement.nextSibling);
         } else {
-            document.body.appendChild(container);
+            const controlContainer = document.getElementById('controlContainer');
+            if (controlContainer && controlContainer.parentNode) {
+                controlContainer.parentNode.insertBefore(container, controlContainer.nextSibling);
+            } else {
+                document.body.appendChild(container);
+            }
         }
 
         const grid = container.querySelector('.penampang-grid');
-
-        // Ambil data fondasi
         const { data, inputData, optimasi } = result;
         const lx = data?.parameter?.lx || data?.dimensiOptimal?.Lx || optimasi?.kombinasi_terpilih?.Lx || inputData?.fondasi?.dimensi?.lx || 2.0;
         const ly = data?.parameter?.ly || data?.dimensiOptimal?.Ly || optimasi?.kombinasi_terpilih?.Ly || inputData?.fondasi?.dimensi?.ly || 2.0;
@@ -367,107 +364,59 @@
 
         window.lastFondasiConfig = { lx, ly, h, bx, by, D, Db, s, fondasiMode };
 
-        // Tiga tampilan: depan, atas, samping
         const tampilan = [
             { jenis: 'depan', title: 'Tampak Depan', containerId: 'svg-fondasi-depan', exportFunc: 'exportCADFondasiDepan' },
             { jenis: 'atas', title: 'Tampak Atas', containerId: 'svg-fondasi-atas', exportFunc: 'exportCADFondasiAtas' },
             { jenis: 'samping', title: 'Tampak Samping', containerId: 'svg-fondasi-samping', exportFunc: 'exportCADFondasiSamping' }
         ];
 
-        // === MAP MODE FONDASI KE RENDERER YANG TERSEDIA ===
-        // 'bujur_sangkar' dan 'persegi_panjang' menggunakan renderer 'tunggal'
-        // 'menerus' menggunakan renderer 'menerus'
-        let rendererType = 'tunggal';
-        if (fondasiMode === 'menerus') {
-            rendererType = 'menerus';
-        } else {
-            rendererType = 'tunggal';
-        }
+        let rendererType = (fondasiMode === 'menerus') ? 'menerus' : 'tunggal';
 
         tampilan.forEach(t => {
-            // Tentukan item legenda berdasarkan mode fondasi dan jenis tampilan
             let legendItems = [];
             const isPersegiPanjang = (fondasiMode === 'persegi_panjang');
             const isDepanAtas = (t.jenis === 'depan' || t.jenis === 'atas');
-            
             if (isPersegiPanjang) {
                 if (isDepanAtas) {
-                    // Tampak depan & atas: perlihatkan Tulangan Panjang + Tulangan Pendek (Pusat & Tepi)
                     legendItems = [
                         { color: '#000000', label: 'Tulangan Panjang' },
                         { color: '#ff0000', label: 'Tulangan Pendek Pusat' },
                         { color: '#0000ff', label: 'Tulangan Pendek Tepi' }
                     ];
                 } else {
-                    // Tampak samping untuk persegi panjang: Tulangan Panjang & Tulangan Pendek (tanpa rincian pusat/tepi)
                     legendItems = [
                         { color: '#000000', label: 'Tulangan Panjang' },
                         { color: '#ff0000', label: 'Tulangan Pendek' }
                     ];
                 }
             } else {
-                // Mode lain (bujur_sangkar atau menerus)
                 legendItems = [
                     { color: '#000000', label: 'Tulangan Utama' },
                     { color: '#ff0000', label: 'Tulangan Bagi' }
                 ];
             }
-            
-            const legendHtml = legendItems.map(item => `
-                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <span style="display: inline-block; width: 12px; height: 12px; background-color: ${item.color}; border-radius: 50%;"></span>
-                    <span>${item.label}</span>
-                </div>
-            `).join('');
-
+            const legendHtml = legendItems.map(item => `<div style="display: flex; align-items: center; gap: 0.5rem;"><span style="display: inline-block; width: 12px; height: 12px; background-color: ${item.color}; border-radius: 50%;"></span><span>${item.label}</span></div>`).join('');
             const card = document.createElement('div');
             card.className = 'penampang-card';
             card.innerHTML = `
                 <h3>${t.title}</h3>
                 <div id="${t.containerId}" class="svg-container" style="min-height: 250px; background: #fafafa; border-radius: 8px; margin-bottom: 0.5rem;"></div>
                 <div class="penampang-footer" style="display: flex; justify-content: space-between; align-items: flex-start; margin: 0.5rem 0 0.75rem 0;">
-                    <div class="legend" style="display: flex; flex-direction: column; align-items: flex-start; gap: 0.25rem; font-size: 0.9rem; color: #000000;">
-                        ${legendHtml}
-                    </div>
+                    <div class="legend" style="display: flex; flex-direction: column; align-items: flex-start; gap: 0.25rem; font-size: 0.9rem; color: #000000;">${legendHtml}</div>
                     <div class="scale-info"></div>
                 </div>
-                <div class="cad-actions">
-                    <button class="btn secondary" onclick="${t.exportFunc}()">Copy ke CAD</button>
-                </div>
-                <div class="penampang-disclaimer">
-                    *Penampang ini hanya ilustrasi dan tidak 100% sesuai dengan CAD
-                </div>
+                <div class="cad-actions"><button class="btn secondary" onclick="${t.exportFunc}()">Copy ke CAD</button></div>
+                <div class="penampang-disclaimer">*Penampang ini hanya ilustrasi dan tidak 100% sesuai dengan CAD</div>
             `;
             grid.appendChild(card);
-
-            // Bangun konfigurasi sesuai dengan rendererType
             let renderConfig;
             if (rendererType === 'tunggal') {
-                // Untuk tunggal, semua varian (bujur_sangkar, persegi_panjang) pakai lx, ly, h, bx, by
-                renderConfig = {
-                    jenis: t.jenis,
-                    lx: parseFloat(lx),
-                    ly: parseFloat(ly),
-                    h: parseFloat(h),
-                    bx: parseFloat(bx),
-                    by: parseFloat(by)
-                };
-            } else { // menerus
-                renderConfig = {
-                    jenis: t.jenis,
-                    L: parseFloat(lx),
-                    B: parseFloat(ly),
-                    H: parseFloat(h),
-                    bx: parseFloat(bx),
-                    by: parseFloat(by)
-                };
+                renderConfig = { jenis: t.jenis, lx: parseFloat(lx), ly: parseFloat(ly), h: parseFloat(h), bx: parseFloat(bx), by: parseFloat(by) };
+            } else {
+                renderConfig = { jenis: t.jenis, L: parseFloat(lx), B: parseFloat(ly), H: parseFloat(h), bx: parseFloat(bx), by: parseFloat(by) };
             }
-
-            // Panggil renderer melalui cut-generator.js
             if (typeof window.renderPenampangFondasiByType === 'function') {
                 const renderResult = window.renderPenampangFondasiByType(rendererType, renderConfig, t.containerId);
-
-                // Tampilkan skala
                 const scaleDiv = card.querySelector('.scale-info');
                 let skalaH = '1 : 1', skalaV = '1 : 1';
                 if (renderResult?.scaleInfo?.needScaleNote) {
@@ -480,20 +429,17 @@
                 const [firstV, secondV] = splitScale(skalaV);
                 scaleDiv.innerHTML = `<span class="scale-label">Skala Horizontal</span><span class="scale-first">${firstH}</span><span class="scale-second">${secondH}</span><span class="scale-label">Skala Vertikal</span><span class="scale-first">${firstV}</span><span class="scale-second">${secondV}</span>`;
             } else {
-                document.getElementById(t.containerId).innerHTML = '<p style="color:red;">Renderer fondasi tidak tersedia. Pastikan cut-generator.js dan file fondasi sudah dimuat.</p>';
+                document.getElementById(t.containerId).innerHTML = '<p style="color:red;">Renderer fondasi tidak tersedia.</p>';
                 const scaleDiv = card.querySelector('.scale-info');
                 if (scaleDiv) scaleDiv.innerHTML = `<span class="scale-label">Skala Horizontal</span><span class="scale-first">1 :</span><span class="scale-second">1</span><span class="scale-label">Skala Vertikal</span><span class="scale-first">1 :</span><span class="scale-second">1</span>`;
             }
         });
-
         ensureResponsiveGridStyle();
     }
 
     function splitScale(scaleStr) {
         const parts = scaleStr.split(':');
-        if (parts.length >= 2) {
-            return [parts[0].trim() + ' :', parts.slice(1).join(':').trim()];
-        }
+        if (parts.length >= 2) return [parts[0].trim() + ' :', parts.slice(1).join(':').trim()];
         return [scaleStr, ''];
     }
 
@@ -505,82 +451,49 @@
             .penampang-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
             .penampang-card .scale-info { display: grid; grid-template-columns: auto auto 1fr; gap: 0.25rem 0.5rem; margin-right: 10px; font-size: 0.9rem; }
             .scale-label, .scale-first, .scale-second { text-align: right; white-space: nowrap; }
-            
-            /* DISCLAIMER STYLES - pojok kanan bawah */
-            .penampang-disclaimer {
-                text-align: right;
-                font-size: 0.7rem;
-                color: #888;
-                margin-top: 8px;
-                border-top: 1px solid #eee;
-                padding-top: 6px;
-            }
-            
+            .penampang-disclaimer { text-align: right; font-size: 0.7rem; color: #888; margin-top: 8px; border-top: 1px solid #eee; padding-top: 6px; }
             @media (max-width: 768px) {
                 .penampang-grid { grid-template-columns: 1fr; }
                 .penampang-footer { flex-direction: column-reverse !important; align-items: flex-start !important; }
                 .penampang-card .scale-info { margin-right: 0 !important; margin-bottom: 0 !important; justify-self: start; font-size: 0.9rem; }
                 .scale-label, .scale-first, .scale-second { text-align: left !important; }
                 .penampang-card .legend { margin-top: 0 !important; padding-top: 0 !important; }
-                .penampang-disclaimer {
-                    text-align: right;
-                    font-size: 0.65rem;
-                }
+                .penampang-disclaimer { text-align: right; font-size: 0.65rem; }
             }
         `;
         document.head.appendChild(style);
     }
 
     // ========================
-    // EKSPORT CAD (memanggil generator yang sesuai)
+    // EKSPORT CAD
     // ========================
     function exportCADFondasiDepan() { exportCADFondasiWithType('depan'); }
     function exportCADFondasiSamping() { exportCADFondasiWithType('samping'); }
     function exportCADFondasiAtas() { exportCADFondasiWithType('atas'); }
-    
     function exportCADFondasiWithType(jenis) {
-        // Tentukan jenis fondasi dari storage
-        let fondasiMode = 'bujur_sangkar'; // default
+        let fondasiMode = 'bujur_sangkar';
         try {
             const saved = sessionStorage.getItem('calculationResultFondasi') || sessionStorage.getItem('calculationResult');
             if (saved) {
                 const data = JSON.parse(saved);
-                fondasiMode = data.inputData?.fondasi?.mode || 
-                              data.optimasi?.as_rincian_per_meter?.mode_fondasi || 
-                              data.data?.actualFondasiMode || 
-                              'bujur_sangkar';
+                fondasiMode = data.inputData?.fondasi?.mode || data.optimasi?.as_rincian_per_meter?.mode_fondasi || data.data?.actualFondasiMode || 'bujur_sangkar';
             }
         } catch(e) { console.warn(e); }
-
         let cadText = '';
         if (fondasiMode === 'menerus') {
-            if (typeof window.generateCADFondasiMenerus === 'function') {
-                cadText = window.generateCADFondasiMenerus(jenis);
-            } else {
-                alert('Modul CAD untuk fondasi menerus belum tersedia.');
-                return;
-            }
+            if (typeof window.generateCADFondasiMenerus === 'function') cadText = window.generateCADFondasiMenerus(jenis);
+            else { alert('Modul CAD untuk fondasi menerus belum tersedia.'); return; }
         } else {
-            // bujur_sangkar atau persegi_panjang -> gunakan tunggal
-            if (typeof window.generateCADFondasiTunggal === 'function') {
-                cadText = window.generateCADFondasiTunggal(jenis);
-            } else {
-                alert('Modul CAD untuk fondasi tunggal belum tersedia.');
-                return;
-            }
+            if (typeof window.generateCADFondasiTunggal === 'function') cadText = window.generateCADFondasiTunggal(jenis);
+            else { alert('Modul CAD untuk fondasi tunggal belum tersedia.'); return; }
         }
-
         if (cadText && cadText.trim() !== '') {
-            navigator.clipboard.writeText(cadText)
-                .then(() => alert(`Text CAD untuk penampang fondasi (${jenis}) berhasil disalin ke clipboard!`))
-                .catch(err => { console.error('Gagal menyalin text: ', err); alert('Gagal menyalin text CAD. Silakan coba lagi.'); });
+            navigator.clipboard.writeText(cadText).then(() => alert(`Text CAD untuk penampang fondasi (${jenis}) berhasil disalin ke clipboard!`)).catch(err => { console.error(err); alert('Gagal menyalin text CAD.'); });
         } else {
             alert(`Gagal menghasilkan kode CAD untuk fondasi ${fondasiMode} tampak ${jenis}`);
         }
     }
-
     function exportCADFondasi() { exportCADFondasiDepan(); }
-
     function showError(message) {
         const errorDiv = document.createElement('div');
         errorDiv.style.cssText = `position: fixed; top: 20px; right: 20px; background: #f8d7da; color: #721c24; padding: 1rem; border-radius: 4px; z-index: 1000; max-width: 400px;`;
@@ -589,12 +502,11 @@
         setTimeout(() => errorDiv.remove(), 5000);
     }
 
-    // EXPOSED GLOBALS
     window.renderFondasiReport = renderFondasiReport;
     window.exportCADFondasi = exportCADFondasi;
     window.exportCADFondasiDepan = exportCADFondasiDepan;
     window.exportCADFondasiSamping = exportCADFondasiSamping;
     window.exportCADFondasiAtas = exportCADFondasiAtas;
 
-    console.log("✅ report-fondasi.js loaded (memetakan bujur_sangkar/persegi_panjang ke renderer tunggal + CAD sesuai jenis)");
+    console.log("✅ report-fondasi.js final: rekap+status → penampang → kontrol");
 })();

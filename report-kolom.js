@@ -249,73 +249,58 @@ function renderHasilPerhitunganKolom(result) {
         }
     }
 
-    // REKAP TULANGAN - menggunakan nilai yang sudah dikoreksi
+    // REKAP TULANGAN - menggunakan nilai yang sudah dikoreksi, tanpa Sn
     if (rekap.formatted || tulanganUtamaDisplay) {
         html += `
             <div class="result-item" style="grid-column: 1 / -1;">
                 <h4>Rekap Tulangan</h4>
                 ${tulanganUtamaDisplay ? `<p><strong>Tulangan Utama:</strong> ${tulanganUtamaDisplay}</p>` : ''}
                 ${rekap.formatted?.begel ? `<p><strong>Begel:</strong> ${rekap.formatted.begel}</p>` : ''}
-                ${rekap.formatted?.Sn_info ? `<p><strong>Spasi Bersih Minimum (Sn):</strong> ${rekap.formatted.Sn_info}</p>` : ''}
             </div>
         `;
     }
 
-    // KESIMPULAN KEAMANAN
-    if (kontrol) {
-        const statusKeamanan = getStatusKeamananKolom(kontrol);
-        console.log("Status Keamanan Kolom:", statusKeamanan);
+    // KESIMPULAN KEAMANAN - menggunakan fungsi yang sudah diperbaiki dengan parameter tambahan rekap
+    const statusKeamanan = getStatusKeamananKolom(kontrol, rekap);
+    console.log("Status Keamanan Kolom:", statusKeamanan);
 
-        html += `
-            <div class="result-item" style="grid-column: 1 / -1; background: ${statusKeamanan.aman ? '#d4edda' : '#f8d7da'} !important;">
-                <h4>STATUS KEAMANAN STRUKTUR</h4>
-                <div style="text-align: center; padding: 1rem;">
-                    <div style="font-size: 1.5rem; font-weight: bold; margin-bottom: 0.5rem;">
-                        ${statusKeamanan.aman ? 
-                          '<span class="status-aman" style="font-size: 1.2rem; padding: 0.5rem 1rem;">&#x2713; STRUKTUR AMAN</span>' : 
-                          '<span class="status-tidak-aman" style="font-size: 1.2rem; padding: 0.5rem 1rem;">&#x2717; PERLU PERBAIKAN</span>'}
-                    </div>
-                    <p style="margin: 0.5rem 0; color: #666;">${statusKeamanan.detail}</p>
-                    
-                    ${statusKeamanan.kontrolTidakAman && statusKeamanan.kontrolTidakAman.length > 0 ? `
-                        <div style="margin-top: 1rem; text-align: left;">
-                            <strong>Bagian yang perlu diperbaiki:</strong>
-                            <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
-                                ${statusKeamanan.kontrolTidakAman.map(k => `<li>${k}</li>`).join('')}
-                            </ul>
-                        </div>
-                    ` : ''}
-                    
-                    ${statusKeamanan.saranPerbaikan && statusKeamanan.saranPerbaikan.length > 0 ? `
-                        <div style="margin-top: 1rem; text-align: left;">
-                            <strong>Saran perbaikan:</strong>
-                            <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
-                                ${statusKeamanan.saranPerbaikan.map(s => `<li>${s}</li>`).join('')}
-                            </ul>
-                        </div>
-                    ` : ''}
+    html += `
+        <div class="result-item" style="grid-column: 1 / -1; background: ${statusKeamanan.aman ? '#d4edda' : '#f8d7da'} !important;">
+            <h4>STATUS KEAMANAN STRUKTUR</h4>
+            <div style="text-align: center; padding: 1rem;">
+                <div style="font-size: 1.5rem; font-weight: bold; margin-bottom: 0.5rem;">
+                    ${statusKeamanan.aman ? 
+                      '<span class="status-aman" style="font-size: 1.2rem; padding: 0.5rem 1rem;">&#x2713; STRUKTUR AMAN</span>' : 
+                      '<span class="status-tidak-aman" style="font-size: 1.2rem; padding: 0.5rem 1rem;">&#x2717; PERLU PERBAIKAN</span>'}
                 </div>
-            </div>
-        `;
-    } else {
-        html += `
-            <div class="result-item" style="grid-column: 1 / -1; background: #fff3cd !important;">
-                <h4>STATUS KEAMANAN STRUKTUR</h4>
-                <div style="text-align: center; padding: 1rem;">
-                    <div style="font-size: 1.5rem; font-weight: bold; margin-bottom: 0.5rem;">
-                        <span style="font-size: 1.2rem; padding: 0.5rem 1rem; background: #fff3cd; color: #856404;">&#x26A0; DATA KONTROL TIDAK TERSEDIA</span>
+                <p style="margin: 0.5rem 0; color: #666;">${statusKeamanan.detail}</p>
+                
+                ${statusKeamanan.kontrolTidakAman && statusKeamanan.kontrolTidakAman.length > 0 ? `
+                    <div style="margin-top: 1rem; text-align: left;">
+                        <strong>Bagian yang perlu diperbaiki:</strong>
+                        <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
+                            ${statusKeamanan.kontrolTidakAman.map(k => `<li>${k}</li>`).join('')}
+                        </ul>
                     </div>
-                    <p style="margin: 0.5rem 0; color: #666;">Tidak dapat menampilkan status keamanan karena data kontrol tidak ditemukan</p>
-                </div>
+                ` : ''}
+                
+                ${statusKeamanan.saranPerbaikan && statusKeamanan.saranPerbaikan.length > 0 ? `
+                    <div style="margin-top: 1rem; text-align: left;">
+                        <strong>Saran perbaikan:</strong>
+                        <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
+                            ${statusKeamanan.saranPerbaikan.map(s => `<li>${s}</li>`).join('')}
+                        </ul>
+                    </div>
+                ` : ''}
             </div>
-        `;
-    }
+        </div>
+    `;
 
     container.innerHTML = html;
 }
 
-// Fungsi untuk mendapatkan status keamanan struktur kolom (Biaxial)
-function getStatusKeamananKolom(kontrol) {
+// Fungsi untuk mendapatkan status keamanan struktur kolom (Biaxial) - DIPERBAIKI untuk cek per arah
+function getStatusKeamananKolom(kontrol, rekap) {
     if (!kontrol) {
         return {
             aman: false,
@@ -327,6 +312,10 @@ function getStatusKeamananKolom(kontrol) {
 
     const kontrolTidakAman = [];
     const saranPerbaikan = [];
+
+    // Ambil data hasil per arah dari rekap
+    const hasilArahX = rekap?.hasilPerhitunganArahX;
+    const hasilArahY = rekap?.hasilPerhitunganArahY;
 
     // Cek kontrol lentur
     if (kontrol.lentur) {
@@ -342,9 +331,31 @@ function getStatusKeamananKolom(kontrol) {
             saranPerbaikan.push('Tambahkan jumlah tulangan untuk mencapai rasio minimum 1%');
         }
         
-        if (!lentur.n_ok) {
-            kontrolTidakAman.push('Jumlah tulangan melebihi kapasitas penampang');
-            saranPerbaikan.push('Kurangi jumlah tulangan atau perbesar dimensi kolom');
+        // PERBAIKAN: Cek jumlah tulangan per arah (nx dan ny) bukan total
+        let n_ok_X = true;
+        let n_ok_Y = true;
+        if (hasilArahX && hasilArahY) {
+            const nx = hasilArahX.n_terpakai;
+            const ny = hasilArahY.n_terpakai;
+            const n_max_X = hasilArahX.n_max;
+            const n_max_Y = hasilArahY.n_max;
+            
+            if (nx !== undefined && n_max_X !== undefined && nx > n_max_X) {
+                n_ok_X = false;
+                kontrolTidakAman.push(`Jumlah tulangan arah X (nx = ${nx}) melebihi kapasitas penampang (n_max = ${n_max_X})`);
+                saranPerbaikan.push('Kurangi jumlah tulangan arah X atau perbesar dimensi kolom');
+            }
+            if (ny !== undefined && n_max_Y !== undefined && ny > n_max_Y) {
+                n_ok_Y = false;
+                kontrolTidakAman.push(`Jumlah tulangan arah Y (ny = ${ny}) melebihi kapasitas penampang (n_max = ${n_max_Y})`);
+                saranPerbaikan.push('Kurangi jumlah tulangan arah Y atau perbesar dimensi kolom');
+            }
+        } else {
+            // Fallback ke properti lama jika data per arah tidak tersedia
+            if (!lentur.n_ok) {
+                kontrolTidakAman.push('Jumlah tulangan melebihi kapasitas penampang');
+                saranPerbaikan.push('Kurangi jumlah tulangan atau perbesar dimensi kolom');
+            }
         }
         
         // Kontrol K untuk arah X
@@ -524,7 +535,7 @@ function renderKontrolLenturPerArah(hasilArah, kontrolLentur, arah, getStepNumbe
         rho_ok
     );
     
-    // 2. Kontrol jumlah tulangan
+    // 2. Kontrol jumlah tulangan per arah (nx atau ny)
     let nFormatted = (n_terpakai !== undefined) ? n_terpakai : 'N/A';
     let nMaxFormatted = (n_max !== undefined) ? n_max : 'N/A';
     html += renderStepKolom(
@@ -852,4 +863,4 @@ window.renderKolomReport = renderKolomReport;
 window.exportCADKolom = exportCADKolom;
 window.updateReportTitle = updateReportTitle;
 
-console.log("✅ report-kolom.js loaded — Biaxial evaluasi nx/ny terpisah — total penampang = nx+ny-4");
+console.log("✅ report-kolom.js loaded — Biaxial evaluasi nx/ny terpisah — total penampang = nx+ny-4 — Sn dihapus — status keamanan cek per arah");
