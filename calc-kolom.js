@@ -925,6 +925,8 @@ function saveResultAndRedirectKolom(result, inputData){
     }, 2);
     sessionStorage.setItem(DEFAULTS.resultKey, jsonString);
     console.log("✅ calculationResultKolom disimpan (biaxial) dengan data lengkap arah X dan Y");
+    // PERUBAHAN: Simpan warna sebelum redirect
+    if (typeof saveColorSettings === 'function') saveColorSettings();
     if (typeof window !== 'undefined') window.location.href = 'report.html';
     return true;
   } catch(e){
