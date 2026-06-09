@@ -380,7 +380,7 @@ function hitungBalok(params) {
     
     const ds1 = ceil5(selimut + phi + D / 2);
     const ds2 = ceil5(ds1 + (D + Snv) / 2);
-    const ds3 = ceil5(ds1 + ds2 + (D + Snv)/2);
+    const ds3 = ceil5(ds1 + (D + Snv) + (D + Snv)/2);
     
     const m = Math.max(1, Math.floor((b - 2 * ds1) / (D + sb)) + 1);
 
