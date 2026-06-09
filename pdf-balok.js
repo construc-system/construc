@@ -60,42 +60,6 @@
         }
     }
     
-    function getTorsionData(path) {
-        const keys = path.split('.');
-        const location = keys[1];
-        const property = keys[2];
-        
-        if (!resultData.data || !resultData.data[location]) {
-            return undefined;
-        }
-        
-        const torsion = resultData.data[location];
-        
-        if (property === 'A1_formula1') {
-            return torsion.A11 !== undefined ? torsion.A11 : torsion.A1_formula1;
-        }
-        if (property === 'A1_formula2') {
-            return torsion.A12 !== undefined ? torsion.A12 : torsion.A1_formula2;
-        }
-        if (property === 'A1') {
-            return torsion.A1;
-        }
-        if (property === 'A1_terpasang') {
-            return torsion.A1_terpasang;
-        }
-        if (property === 'amanTorsi1') {
-            return torsion.amanTorsi1 !== undefined ? torsion.amanTorsi1 : torsion.amanTorsi;
-        }
-        if (property === 'amanTorsi2') {
-            return torsion.amanTorsi2 !== undefined ? torsion.amanTorsi2 : torsion.amanTorsi;
-        }
-        if (property in torsion) {
-            return torsion[property];
-        }
-        
-        return undefined;
-    }
-
     function formatNumber(num, decimals = 2) {
         if (num === null || num === undefined || num === 'N/A' || isNaN(num)) return 'N/A';
         const numFloat = parseFloat(num);
@@ -123,7 +87,7 @@
         let html = '<table class="three-col-table">';
         
         if (isDataTable) {
-            html += '</tr>';
+            html += '<tr>';
             html += '<th class="col-param">Parameter</th>';
             html += '<th class="col-value" style="text-align: center">Data</th>';
             html += '<th class="col-unit" style="text-align: center">Satuan</th>';
@@ -291,13 +255,11 @@
         
         const luasSengkang = nKaki * 0.25 * Math.PI * diameterSengkang ** 2;
         
-        // s1 = n * 0.25 * π * ɸ² * 1000 / Av_u
         let s1 = 600;
         if (Av_u_calc > 0 && luasSengkang > 0) {
             s1 = (luasSengkang * 1000) / Av_u_calc;
         }
         
-        // Kondisi kuat geser: apakah Vs > 0.5 Vs_maks?
         const kondisiKuatGeser = (Vu > phiVc && Vs > 0.5 * Vs_maks);
         let rumus_s2 = kondisiKuatGeser ? "$\\displaystyle s_2 = \\frac{d}{4}$" : "$\\displaystyle s_2 = \\frac{d}{2}$";
         let rumus_s3 = kondisiKuatGeser ? "$s_3 = 300$" : "$s_3 = 600$";
@@ -384,9 +346,10 @@
     }
     
     // ==============================================
-    // FUNGSI TORSI DENGAN URUTAN YANG DIPERBAIKI
+    // FUNGSI TORSI DENGAN SUMBER DATA DARI TORSIX
     // ==============================================
     function createTorsiTableDetail(data, lokasi, status, fc, fy, fyt, b, h, nKaki = 2, diameterSengkang = 8, diameterTulangan = 19) {
+        // Ambil nilai langsung dari data torsi (torsikiri, torsitengah, torsikanan)
         const Tu = parseFloat(data?.Tu) || 0;
         const Tn = parseFloat(data?.Tn) || 0;
         const Tu_min = parseFloat(data?.Tu_min) || 0;
@@ -394,16 +357,15 @@
         const n = data?.n || 0;
         const At_per_S = parseFloat(data?.At_per_S) || 0;
         
-        const A1_formula1 = parseFloat(data?.A11 || data?.A1_formula1 || 0);
-        const A1_formula2 = parseFloat(data?.A12 || data?.A1_formula2 || 0);
+        const A1_formula1 = parseFloat(data?.A11 || 0);
+        const A1_formula2 = parseFloat(data?.A12 || 0);
         const A1 = parseFloat(data?.A1) || 0;
         const A1_terpasang = parseFloat(data?.A1_terpasang) || 0;
-        const luasTulanganMemanjang = parseFloat(data?.luasTulanganMemanjang) || 0;
         const Avt = parseFloat(data?.Avt) || 0;
         const amanBegel1 = data?.amanBegel1 || false;
         const amanBegel2 = data?.amanBegel2 || false;
-        const amanTorsi1 = data?.amanTorsi1 || data?.amanTorsi || false;
-        const amanTorsi2 = data?.amanTorsi2 || data?.amanTorsi || false;
+        const amanTorsi1 = data?.amanTorsi1 || false;
+        const amanTorsi2 = data?.amanTorsi2 || false;
         const Acp = parseFloat(data?.Acp) || 0;
         const Pcp = parseFloat(data?.Pcp) || 0;
         const A0h = parseFloat(data?.A0h) || 0;
@@ -411,18 +373,10 @@
         const A0 = parseFloat(data?.A0) || 0;
         const At = parseFloat(data?.At) || 0;
         
-        let s = 100;
-        if (lokasi.toLowerCase().includes('kiri')) {
-            s = parseFloat(getData('data.begelkiri.sTerkecil', 100));
-        } else if (lokasi.toLowerCase().includes('kanan')) {
-            s = parseFloat(getData('data.begelkanan.sTerkecil', 100));
-        } else if (lokasi.toLowerCase().includes('lapangan')) {
-            s = parseFloat(getData('data.begeltengah.sTerkecil', 100));
-        }
-        if (isNaN(s) || s <= 0) s = 100;
-        
-        const kontrolNilai1 = 0.062 * Math.sqrt(fc) * b * s / fyt;
-        const kontrolNilai2 = 0.35 * b * s / fyt;
+        // Gunakan nilai kontrolBegel1, kontrolBegel2, kontrolTorsi dari data torsi
+        const kontrolBegel1 = parseFloat(data?.kontrolBegel1) || 0;
+        const kontrolBegel2 = parseFloat(data?.kontrolBegel2) || 0;
+        const kontrolTorsiVal = parseFloat(data?.kontrolTorsi) || 0;
         
         let rows = [];
         
@@ -441,11 +395,15 @@
                 { parameter: "$A_{1,formula2} = 0.42 \\dfrac{\\sqrt{f'_c} \\times A_{cp}}{f_y} - \\dfrac{A_t}{s} \\times p_h \\times \\dfrac{f_{yt}}{f_y}$", hasil: formatNumber(A1_formula2, 2), satuan: 'mm²' },
                 { parameter: "$A_1 = \\max(A_{1,formula1}, A_{1,formula2})$", hasil: formatNumber(A1, 2), satuan: 'mm²' },
                 { parameter: "$(A_v + A_t)$", hasil: formatNumber(Avt, 2), satuan: 'mm²' },
-                { parameter: "$0.062 \\sqrt{f'_c} \\dfrac{b \\cdot s}{f_{yt}}$", hasil: formatNumber(kontrolNilai1, 2), satuan: 'mm²' },
+                // Kontrol 0.062 sqrt(fc) (b s)/fyt menggunakan nilai dari data
+                { parameter: "$0.062 \\sqrt{f'_c} \\dfrac{b \\cdot s}{f_{yt}}$", hasil: formatNumber(kontrolBegel1, 2), satuan: 'mm²' },
                 { parameter: "$0.062 \\sqrt{f'_c} \\dfrac{b \\cdot s}{f_{yt}} \\le (A_v + A_t)$", isComparison: true, statusHtml: `<span class="${amanBegel1 ? 'status-aman' : 'status-tidak-aman'}">${amanBegel1 ? 'AMAN' : 'TIDAK AMAN'}</span>` },
-                { parameter: "$0.35 \\dfrac{b \\cdot s}{f_{yt}}$", hasil: formatNumber(kontrolNilai2, 2), satuan: 'mm²' },
+                // Kontrol 0.35 (b s)/fyt menggunakan nilai dari data
+                { parameter: "$0.35 \\dfrac{b \\cdot s}{f_{yt}}$", hasil: formatNumber(kontrolBegel2, 2), satuan: 'mm²' },
                 { parameter: "$0.35 \\dfrac{b \\cdot s}{f_{yt}} \\le (A_v + A_t)$", isComparison: true, statusHtml: `<span class="${amanBegel2 ? 'status-aman' : 'status-tidak-aman'}">${amanBegel2 ? 'AMAN' : 'TIDAK AMAN'}</span>` },
                 { parameter: "$A_t / s$", hasil: formatNumber(At_per_S, 3), satuan: 'mm²/mm' },
+                // Tambahan perhitungan 0.175 b/fyt sebelum kontrol
+                { parameter: "$0.175 \\dfrac{b}{f_{yt}}$", hasil: formatNumber(kontrolTorsiVal, 3), satuan: 'mm²/mm' },
                 { parameter: "$0.175 \\dfrac{b}{f_{yt}} \\le A_t/s$", isComparison: true, statusHtml: `<span class="${amanTorsi1 ? 'status-aman' : 'status-tidak-aman'}">${amanTorsi1 ? 'AMAN' : 'TIDAK AMAN'}</span>` },
                 { parameter: "$n = \\lceil A_1 / (0.25 \\times \\pi \\times D^2) \\rceil$", hasil: n, satuan: 'batang' },
                 { parameter: "$A_{1,terpasang} = n \\times 0.25 \\times \\pi \\times D^2$", hasil: formatNumber(A1_terpasang, 2), satuan: 'mm²' },
@@ -537,64 +495,30 @@
         const statusBalok = cekStatusBalok();
         
         const dimensi = getData('inputData.dimensi', {});
-        const material = getData('inputData.material', {});
-        const tulanganInfo = getTulanganInfo();
         
+        let masalah = [];
         const kontrolLentur = getData('kontrol.kontrolLentur', {});
         const kontrolGeser = getData('kontrol.kontrolGeser', {});
         const kontrolTorsi = getData('kontrol.kontrolTorsi', {});
         
-        let masalah = [];
-        
         if (kontrolLentur) {
             const lenturProblems = [];
             let lenturCount = 0;
-            
             if (kontrolLentur.kiri_negatif) {
-                if (!kontrolLentur.kiri_negatif.K_aman) {
-                    lenturProblems.push("Kontrol K tidak aman pada tumpuan kiri momen negatif");
-                    lenturCount++;
-                }
-                if (!kontrolLentur.kiri_negatif.rho_aman) {
-                    lenturProblems.push("Rasio tulangan tidak memenuhi pada tumpuan kiri momen negatif");
-                    lenturCount++;
-                }
-                if (!kontrolLentur.kiri_negatif.Md_aman) {
-                    lenturProblems.push("Kapasitas momen tidak cukup pada tumpuan kiri momen negatif");
-                    lenturCount++;
-                }
+                if (!kontrolLentur.kiri_negatif.K_aman) lenturProblems.push("Kontrol K tidak aman pada tumpuan kiri momen negatif"), lenturCount++;
+                if (!kontrolLentur.kiri_negatif.rho_aman) lenturProblems.push("Rasio tulangan tidak memenuhi pada tumpuan kiri momen negatif"), lenturCount++;
+                if (!kontrolLentur.kiri_negatif.Md_aman) lenturProblems.push("Kapasitas momen tidak cukup pada tumpuan kiri momen negatif"), lenturCount++;
             }
-            
             if (kontrolLentur.kanan_negatif) {
-                if (!kontrolLentur.kanan_negatif.K_aman) {
-                    lenturProblems.push("Kontrol K tidak aman pada tumpuan kanan momen negatif");
-                    lenturCount++;
-                }
-                if (!kontrolLentur.kanan_negatif.rho_aman) {
-                    lenturProblems.push("Rasio tulangan tidak memenuhi pada tumpuan kanan momen negatif");
-                    lenturCount++;
-                }
-                if (!kontrolLentur.kanan_negatif.Md_aman) {
-                    lenturProblems.push("Kapasitas momen tidak cukup pada tumpuan kanan momen negatif");
-                    lenturCount++;
-                }
+                if (!kontrolLentur.kanan_negatif.K_aman) lenturProblems.push("Kontrol K tidak aman pada tumpuan kanan momen negatif"), lenturCount++;
+                if (!kontrolLentur.kanan_negatif.rho_aman) lenturProblems.push("Rasio tulangan tidak memenuhi pada tumpuan kanan momen negatif"), lenturCount++;
+                if (!kontrolLentur.kanan_negatif.Md_aman) lenturProblems.push("Kapasitas momen tidak cukup pada tumpuan kanan momen negatif"), lenturCount++;
             }
-            
             if (kontrolLentur.tengah_positif) {
-                if (!kontrolLentur.tengah_positif.K_aman) {
-                    lenturProblems.push("Kontrol K tidak aman pada lapangan momen positif");
-                    lenturCount++;
-                }
-                if (!kontrolLentur.tengah_positif.rho_aman) {
-                    lenturProblems.push("Rasio tulangan tidak memenuhi pada lapangan momen positif");
-                    lenturCount++;
-                }
-                if (!kontrolLentur.tengah_positif.Md_aman) {
-                    lenturProblems.push("Kapasitas momen tidak cukup pada lapangan momen positif");
-                    lenturCount++;
-                }
+                if (!kontrolLentur.tengah_positif.K_aman) lenturProblems.push("Kontrol K tidak aman pada lapangan momen positif"), lenturCount++;
+                if (!kontrolLentur.tengah_positif.rho_aman) lenturProblems.push("Rasio tulangan tidak memenuhi pada lapangan momen positif"), lenturCount++;
+                if (!kontrolLentur.tengah_positif.Md_aman) lenturProblems.push("Kapasitas momen tidak cukup pada lapangan momen positif"), lenturCount++;
             }
-            
             if (lenturProblems.length > 0) {
                 masalah.push(`<strong>Masalah pada tulangan lentur (${lenturCount} masalah):</strong>`);
                 masalah.push(...lenturProblems.map(p => `<span class="problem-item">• ${p}</span>`));
@@ -604,38 +528,18 @@
         if (kontrolGeser) {
             const geserProblems = [];
             let geserCount = 0;
-            
             if (kontrolGeser.kiri) {
-                if (!kontrolGeser.kiri.Vs_aman) {
-                    geserProblems.push("Kapasitas geser tidak mencukupi pada tumpuan kiri");
-                    geserCount++;
-                }
-                if (!kontrolGeser.kiri.Av_aman) {
-                    geserProblems.push("Luas tulangan geser tidak memadai pada tumpuan kiri");
-                    geserCount++;
-                }
+                if (!kontrolGeser.kiri.Vs_aman) geserProblems.push("Kapasitas geser tidak mencukupi pada tumpuan kiri"), geserCount++;
+                if (!kontrolGeser.kiri.Av_aman) geserProblems.push("Luas tulangan geser tidak memadai pada tumpuan kiri"), geserCount++;
             }
             if (kontrolGeser.tengah) {
-                if (!kontrolGeser.tengah.Vs_aman) {
-                    geserProblems.push("Kapasitas geser tidak mencukupi pada lapangan");
-                    geserCount++;
-                }
-                if (!kontrolGeser.tengah.Av_aman) {
-                    geserProblems.push("Luas tulangan geser tidak memadai pada lapangan");
-                    geserCount++;
-                }
+                if (!kontrolGeser.tengah.Vs_aman) geserProblems.push("Kapasitas geser tidak mencukupi pada lapangan"), geserCount++;
+                if (!kontrolGeser.tengah.Av_aman) geserProblems.push("Luas tulangan geser tidak memadai pada lapangan"), geserCount++;
             }
             if (kontrolGeser.kanan) {
-                if (!kontrolGeser.kanan.Vs_aman) {
-                    geserProblems.push("Kapasitas geser tidak mencukupi pada tumpuan kanan");
-                    geserCount++;
-                }
-                if (!kontrolGeser.kanan.Av_aman) {
-                    geserProblems.push("Luas tulangan geser tidak memadai pada tumpuan kanan");
-                    geserCount++;
-                }
+                if (!kontrolGeser.kanan.Vs_aman) geserProblems.push("Kapasitas geser tidak mencukupi pada tumpuan kanan"), geserCount++;
+                if (!kontrolGeser.kanan.Av_aman) geserProblems.push("Luas tulangan geser tidak memadai pada tumpuan kanan"), geserCount++;
             }
-            
             if (geserProblems.length > 0) {
                 masalah.push(`<strong>Masalah pada tulangan geser (${geserCount} masalah):</strong>`);
                 masalah.push(...geserProblems.map(p => `<span class="problem-item">• ${p}</span>`));
@@ -645,20 +549,9 @@
         if (kontrolTorsi) {
             const torsiProblems = [];
             let torsiCount = 0;
-            
-            if (kontrolTorsi.kiri && !kontrolTorsi.kiri.perluDanAman) {
-                torsiProblems.push("Tulangan torsi tidak memadai pada tumpuan kiri");
-                torsiCount++;
-            }
-            if (kontrolTorsi.tengah && !kontrolTorsi.tengah.perluDanAman) {
-                torsiProblems.push("Tulangan torsi tidak memadai pada lapangan");
-                torsiCount++;
-            }
-            if (kontrolTorsi.kanan && !kontrolTorsi.kanan.perluDanAman) {
-                torsiProblems.push("Tulangan torsi tidak memadai pada tumpuan kanan");
-                torsiCount++;
-            }
-            
+            if (kontrolTorsi.kiri && !kontrolTorsi.kiri.perluDanAman) torsiProblems.push("Tulangan torsi tidak memadai pada tumpuan kiri"), torsiCount++;
+            if (kontrolTorsi.tengah && !kontrolTorsi.tengah.perluDanAman) torsiProblems.push("Tulangan torsi tidak memadai pada lapangan"), torsiCount++;
+            if (kontrolTorsi.kanan && !kontrolTorsi.kanan.perluDanAman) torsiProblems.push("Tulangan torsi tidak memadai pada tumpuan kanan"), torsiCount++;
             if (torsiProblems.length > 0) {
                 masalah.push(`<strong>Masalah pada tulangan torsi (${torsiCount} masalah):</strong>`);
                 masalah.push(...torsiProblems.map(p => `<span class="problem-item">• ${p}</span>`));
@@ -677,7 +570,7 @@
         if (statusBalok === 'aman') {
             conclusionHTML += `
                 <p><strong>Status:</strong> <span class="status-aman">SEMUA KONTROL AMAN</span></p>
-                <p>Struktur balok dengan dimensi ${dimensi.b || 'N/A'} × ${dimensi.h || 'N/A'} mm memenuhi semua persyaratan SNI 2847:2019 untuk:</p>
+                <p>Struktur balok dengan dimensi ${dimensi.b || 'N/A'} × ${dimensi.h || 'N/A'} mm memenuhi semua persyaratan SNI 2847:2019.</p>
                 <ul>
                     <li>Kuat lentur (momen positif dan negatif)</li>
                     <li>Kuat geser</li>
@@ -700,13 +593,8 @@
                 <strong>Catatan:</strong> Hasil perhitungan ini berdasarkan SNI 2847:2019 (Persyaratan Beton Struktural untuk Bangunan Gedung). 
                 Pastikan semua aspek konstruksi sesuai dengan spesifikasi teknis dan dilakukan pengawasan yang memadai.
             </p>
-        `;
-        
-        conclusionHTML += `
-                </div>
-            </div>
-        `;
-        
+        </div>
+    </div>`;
         return conclusionHTML;
     }
     
@@ -722,7 +610,6 @@
         
         if (mode === 'evaluasi') {
             const inputTulangan = getData('inputData.tulangan', {});
-            
             if (inputTulangan.support && Object.keys(inputTulangan.support).length > 0) {
                 tulanganRows.push({ parameter: "<strong>Data Tulangan Tumpuan</strong>", hasil: "", satuan: "" });
                 tulanganRows.push({ parameter: "&nbsp;&nbsp;n (jumlah tulangan tarik)", hasil: inputTulangan.support.n || 'N/A', satuan: "batang" });
@@ -730,7 +617,6 @@
                 tulanganRows.push({ parameter: "&nbsp;&nbsp;nt (jumlah tulangan torsi)", hasil: inputTulangan.support.nt || 'N/A', satuan: "batang" });
                 tulanganRows.push({ parameter: "&nbsp;&nbsp;s (jarak sengkang)", hasil: inputTulangan.support.s || 'N/A', satuan: "mm" });
             }
-            
             if (inputTulangan.field && Object.keys(inputTulangan.field).length > 0) {
                 tulanganRows.push({ parameter: "<strong>Data Tulangan Lapangan</strong>", hasil: "", satuan: "" });
                 tulanganRows.push({ parameter: "&nbsp;&nbsp;n (jumlah tulangan tarik)", hasil: inputTulangan.field.n || 'N/A', satuan: "batang" });
@@ -745,7 +631,6 @@
     
     function generateContentBlocks() {
         const blocks = [];
-        
         const statusBalokDinamis = cekStatusBalok();
         
         blocks.push(`
@@ -814,118 +699,52 @@
             </div>
         `);
         
-        const headerB = `
-            <div class="header-content-group">
-                <h2>B. PERHITUNGAN TULANGAN LENTUR NEGATIF</h2>
-                <p class="note">Tulangan negatif dipasang pada daerah tarik di atas (saat momen negatif)</p>
-            </div>
-        `;
-        
+        const headerB = `<div class="header-content-group"><h2>B. PERHITUNGAN TULANGAN LENTUR NEGATIF</h2><p class="note">Tulangan negatif dipasang pada daerah tarik di atas (saat momen negatif)</p></div>`;
         const fc = parseFloat(getData('inputData.material.fc', 20));
         const fy = parseFloat(getData('inputData.material.fy', 300));
         const b_val = parseFloat(getData('inputData.dimensi.b', 250));
         const d_eff_negatif = getData('data.d', 315);
         
-        let contentB1 = '';
         if (getData('data.tulanganKirinegatif') && getData('data.tulanganKirinegatif') !== 'N/A') {
             const data = getData('data.tulanganKirinegatif');
             const status = getData('kontrol.kontrolLentur.kiri_negatif');
-            
-            contentB1 = `
-                <div class="section-group">
-                    <h3>1. Tumpuan Kiri ($M_u^- = ${formatNumber(data.Mu, 3)} \\text{ kNm}$)</h3>
-                    ${createLenturTableFull(data, status, d_eff_negatif, fc, fy, b_val, "Tumpuan Kiri", data.Mu)}
-                </div>
-            `;
-        }
-        
-        if (contentB1) {
-            blocks.push(headerB + contentB1);
-        } else {
-            blocks.push(headerB);
-        }
+            blocks.push(headerB + `<div class="section-group"><h3>1. Tumpuan Kiri ($M_u^- = ${formatNumber(data.Mu, 3)} \\text{ kNm}$)</h3>${createLenturTableFull(data, status, d_eff_negatif, fc, fy, b_val, "Tumpuan Kiri", data.Mu)}</div>`);
+        } else { blocks.push(headerB); }
         
         if (getData('data.tulanganTengahnegatif') && getData('data.tulanganTengahnegatif') !== 'N/A') {
             const data = getData('data.tulanganTengahnegatif');
             const status = getData('kontrol.kontrolLentur.tengah_negatif');
-            
-            blocks.push(`
-                <div class="section-group">
-                    <h3>2. Lapangan ($M_u^- = ${formatNumber(data.Mu, 3)} \\text{ kNm}$)</h3>
-                    ${createLenturTableFull(data, status, d_eff_negatif, fc, fy, b_val, "Lapangan", data.Mu)}
-                </div>
-            `);
+            blocks.push(`<div class="section-group"><h3>2. Lapangan ($M_u^- = ${formatNumber(data.Mu, 3)} \\text{ kNm}$)</h3>${createLenturTableFull(data, status, d_eff_negatif, fc, fy, b_val, "Lapangan", data.Mu)}</div>`);
         }
         
         if (getData('data.tulanganKanannegatif') && getData('data.tulanganKanannegatif') !== 'N/A') {
             const data = getData('data.tulanganKanannegatif');
             const status = getData('kontrol.kontrolLentur.kanan_negatif');
-            
-            blocks.push(`
-                <div class="section-group">
-                    <h3>3. Tumpuan Kanan ($M_u^- = ${formatNumber(data.Mu, 3)} \\text{ kNm}$)</h3>
-                    ${createLenturTableFull(data, status, d_eff_negatif, fc, fy, b_val, "Tumpuan Kanan", data.Mu)}
-                </div>
-            `);
+            blocks.push(`<div class="section-group"><h3>3. Tumpuan Kanan ($M_u^- = ${formatNumber(data.Mu, 3)} \\text{ kNm}$)</h3>${createLenturTableFull(data, status, d_eff_negatif, fc, fy, b_val, "Tumpuan Kanan", data.Mu)}</div>`);
         }
         
-        const headerC = `
-            <div class="header-content-group">
-                <h2>C. PERHITUNGAN TULANGAN LENTUR POSITIF</h2>
-                <p class="note">Tulangan positif dipasang pada daerah tarik di bawah (saat momen positif)</p>
-            </div>
-        `;
-        
+        const headerC = `<div class="header-content-group"><h2>C. PERHITUNGAN TULANGAN LENTUR POSITIF</h2><p class="note">Tulangan positif dipasang pada daerah tarik di bawah (saat momen positif)</p></div>`;
         const d_eff_positif = getData('data.d_', 340);
         
-        let contentC1 = '';
         if (getData('data.tulanganKiripositif') && getData('data.tulanganKiripositif') !== 'N/A') {
             const data = getData('data.tulanganKiripositif');
             const status = getData('kontrol.kontrolLentur.kiri_positif');
-            
-            contentC1 = `
-                <div class="section-group">
-                    <h3>1. Tumpuan Kiri ($M_u^+ = ${formatNumber(data.Mu, 3)} \\text{ kNm}$)</h3>
-                    ${createLenturTableFull(data, status, d_eff_positif, fc, fy, b_val, "Tumpuan Kiri", data.Mu)}
-                </div>
-            `;
-        }
-        
-        if (contentC1) {
-            blocks.push(headerC + contentC1);
-        } else {
-            blocks.push(headerC);
-        }
+            blocks.push(headerC + `<div class="section-group"><h3>1. Tumpuan Kiri ($M_u^+ = ${formatNumber(data.Mu, 3)} \\text{ kNm}$)</h3>${createLenturTableFull(data, status, d_eff_positif, fc, fy, b_val, "Tumpuan Kiri", data.Mu)}</div>`);
+        } else { blocks.push(headerC); }
         
         if (getData('data.tulanganTengahpositif') && getData('data.tulanganTengahpositif') !== 'N/A') {
             const data = getData('data.tulanganTengahpositif');
             const status = getData('kontrol.kontrolLentur.tengah_positif');
-            
-            blocks.push(`
-                <div class="section-group">
-                    <h3>2. Lapangan ($M_u^+ = ${formatNumber(data.Mu, 3)} \\text{ kNm}$)</h3>
-                    ${createLenturTableFull(data, status, d_eff_positif, fc, fy, b_val, "Lapangan", data.Mu)}
-                </div>
-            `);
+            blocks.push(`<div class="section-group"><h3>2. Lapangan ($M_u^+ = ${formatNumber(data.Mu, 3)} \\text{ kNm}$)</h3>${createLenturTableFull(data, status, d_eff_positif, fc, fy, b_val, "Lapangan", data.Mu)}</div>`);
         }
         
         if (getData('data.tulanganKananpositif') && getData('data.tulanganKananpositif') !== 'N/A') {
             const data = getData('data.tulanganKananpositif');
             const status = getData('kontrol.kontrolLentur.kanan_positif');
-            
-            blocks.push(`
-                <div class="section-group">
-                    <h3>3. Tumpuan Kanan ($M_u^+ = ${formatNumber(data.Mu, 3)} \\text{ kNm}$)</h3>
-                    ${createLenturTableFull(data, status, d_eff_positif, fc, fy, b_val, "Tumpuan Kanan", data.Mu)}
-                </div>
-            `);
+            blocks.push(`<div class="section-group"><h3>3. Tumpuan Kanan ($M_u^+ = ${formatNumber(data.Mu, 3)} \\text{ kNm}$)</h3>${createLenturTableFull(data, status, d_eff_positif, fc, fy, b_val, "Tumpuan Kanan", data.Mu)}</div>`);
         }
         
-        let bagianDContent = `
-            <div class="header-content-group keep-together">
-                <h2>D. PERHITUNGAN TULANGAN GESER DAN TORSI</h2>
-        `;
-        
+        let bagianDContent = `<div class="header-content-group keep-together"><h2>D. PERHITUNGAN TULANGAN GESER DAN TORSI</h2>`;
         const fyt = parseFloat(getData('inputData.material.fyt', 300));
         const dmin = getData('data.dmin', 315);
         const h_val = parseFloat(getData('inputData.dimensi.h', 400));
@@ -937,91 +756,43 @@
         if (getData('data.begelkiri') && getData('data.begelkiri') !== 'N/A') {
             const data = getData('data.begelkiri');
             const status = getData('kontrol.kontrolGeser.kiri');
-            
-            bagianDContent += `
-                <div class="section-group">
-                    <h3>1. Tulangan Geser - Tumpuan Kiri ($V_u = ${formatNumber(data.Vu)} \\text{ kN}$)</h3>
-                    ${createGeserTableDetail(data, "Tumpuan Kiri", status, fc, fyt, b_val, dmin, nKaki, diameterSengkang)}
-                </div>
-            `;
+            bagianDContent += `<div class="section-group"><h3>1. Tulangan Geser - Tumpuan Kiri ($V_u = ${formatNumber(data.Vu)} \\text{ kN}$)</h3>${createGeserTableDetail(data, "Tumpuan Kiri", status, fc, fyt, b_val, dmin, nKaki, diameterSengkang)}</div>`;
         }
-        
         bagianDContent += `</div>`;
         blocks.push(bagianDContent);
         
         if (getData('data.begeltengah') && getData('data.begeltengah') !== 'N/A') {
             const data = getData('data.begeltengah');
             const status = getData('kontrol.kontrolGeser.tengah');
-            
-            blocks.push(`
-                <div class="section-group">
-                    <h3>2. Tulangan Geser - Lapangan ($V_u = ${formatNumber(data.Vu)} \\text{ kN}$)</h3>
-                    ${createGeserTableDetail(data, "Lapangan", status, fc, fyt, b_val, dmin, nKaki, diameterSengkang)}
-                </div>
-            `);
+            blocks.push(`<div class="section-group"><h3>2. Tulangan Geser - Lapangan ($V_u = ${formatNumber(data.Vu)} \\text{ kN}$)</h3>${createGeserTableDetail(data, "Lapangan", status, fc, fyt, b_val, dmin, nKaki, diameterSengkang)}</div>`);
         }
         
         if (getData('data.begelkanan') && getData('data.begelkanan') !== 'N/A') {
             const data = getData('data.begelkanan');
             const status = getData('kontrol.kontrolGeser.kanan');
-            
-            blocks.push(`
-                <div class="section-group">
-                    <h3>3. Tulangan Geser - Tumpuan Kanan ($V_u = ${formatNumber(data.Vu)} \\text{ kN}$)</h3>
-                    ${createGeserTableDetail(data, "Tumpuan Kanan", status, fc, fyt, b_val, dmin, nKaki, diameterSengkang)}
-                </div>
-            `);
+            blocks.push(`<div class="section-group"><h3>3. Tulangan Geser - Tumpuan Kanan ($V_u = ${formatNumber(data.Vu)} \\text{ kN}$)</h3>${createGeserTableDetail(data, "Tumpuan Kanan", status, fc, fyt, b_val, dmin, nKaki, diameterSengkang)}</div>`);
         }
         
         if (getData('data.torsikiri') && getData('data.torsikiri') !== 'N/A') {
             const data = getData('data.torsikiri');
             const status = getData('kontrol.kontrolTorsi.kiri');
-            
-            blocks.push(`
-                <div class="section-group">
-                    <h3>4. Tulangan Torsi - Tumpuan Kiri ($T_u = ${formatNumber(data.Tu, 3)} \\text{ kNm}$)</h3>
-                    ${createTorsiTableDetail(data, "Tumpuan Kiri", status, fc, fy, fyt, b_val, h_val, nKaki, diameterSengkang, diameterTulangan)}
-                </div>
-            `);
+            blocks.push(`<div class="section-group"><h3>4. Tulangan Torsi - Tumpuan Kiri ($T_u = ${formatNumber(data.Tu, 3)} \\text{ kNm}$)</h3>${createTorsiTableDetail(data, "Tumpuan Kiri", status, fc, fy, fyt, b_val, h_val, nKaki, diameterSengkang, diameterTulangan)}</div>`);
         }
         
         if (getData('data.torsitengah') && getData('data.torsitengah') !== 'N/A') {
             const data = getData('data.torsitengah');
             const status = getData('kontrol.kontrolTorsi.tengah');
-            
-            blocks.push(`
-                <div class="section-group">
-                    <h3>5. Tulangan Torsi - Lapangan ($T_u = ${formatNumber(data.Tu, 3)} \\text{ kNm}$)</h3>
-                    ${createTorsiTableDetail(data, "Lapangan", status, fc, fy, fyt, b_val, h_val, nKaki, diameterSengkang, diameterTulangan)}
-                </div>
-            `);
+            blocks.push(`<div class="section-group"><h3>5. Tulangan Torsi - Lapangan ($T_u = ${formatNumber(data.Tu, 3)} \\text{ kNm}$)</h3>${createTorsiTableDetail(data, "Lapangan", status, fc, fy, fyt, b_val, h_val, nKaki, diameterSengkang, diameterTulangan)}</div>`);
         }
         
         if (getData('data.torsikanan') && getData('data.torsikanan') !== 'N/A') {
             const data = getData('data.torsikanan');
             const status = getData('kontrol.kontrolTorsi.kanan');
-            
-            blocks.push(`
-                <div class="section-group">
-                    <h3>6. Tulangan Torsi - Tumpuan Kanan ($T_u = ${formatNumber(data.Tu, 3)} \\text{ kNm}$)</h3>
-                    ${createTorsiTableDetail(data, "Tumpuan Kanan", status, fc, fy, fyt, b_val, h_val, nKaki, diameterSengkang, diameterTulangan)}
-                </div>
-            `);
+            blocks.push(`<div class="section-group"><h3>6. Tulangan Torsi - Tumpuan Kanan ($T_u = ${formatNumber(data.Tu, 3)} \\text{ kNm}$)</h3>${createTorsiTableDetail(data, "Tumpuan Kanan", status, fc, fy, fyt, b_val, h_val, nKaki, diameterSengkang, diameterTulangan)}</div>`);
         }
         
-        const headerE = `
-            <div class="header-content-group">
-                <h2>E. REKAPITULASI HASIL DESAIN</h2>
-            </div>
-        `;
-        
-        const contentE1 = `
-            <div class="section-group">
-                <h3>1. Tulangan Terpasang</h3>
-                ${createRekapitulasiTable()}
-            </div>
-        `;
-        
+        const headerE = `<div class="header-content-group"><h2>E. REKAPITULASI HASIL DESAIN</h2></div>`;
+        const contentE1 = `<div class="section-group"><h3>1. Tulangan Terpasang</h3>${createRekapitulasiTable()}</div>`;
         blocks.push(headerE + contentE1);
         
         const kontrolRows = [
@@ -1032,21 +803,9 @@
             { parameter: "$A_{v,terpasang} \\ge A_{v,u}$", statusHtml: `<span class="${getData('kontrol.kontrolGeser.kiri.Av_aman', false) ? 'status-aman' : 'status-tidak-aman'}">${getData('kontrol.kontrolGeser.kiri.Av_aman', false) ? 'AMAN' : 'TIDAK AMAN'}</span>` },
             { parameter: "Kontrol torsi (kebutuhan & kapasitas)", statusHtml: `<span class="${getData('kontrol.kontrolTorsi.kiri.perluDanAman', false) ? 'status-aman' : 'status-tidak-aman'}">${getData('kontrol.kontrolTorsi.kiri.perluDanAman', false) ? 'AMAN' : 'TIDAK AMAN'}</span>` }
         ];
-        
-        blocks.push(`
-            <div class="section-group">
-                <h3>2. Ringkasan Kontrol Keamanan</h3>
-                ${createTwoColumnTable(kontrolRows)}
-            </div>
-        `);
-        
+        blocks.push(`<div class="section-group"><h3>2. Ringkasan Kontrol Keamanan</h3>${createTwoColumnTable(kontrolRows)}</div>`);
         blocks.push(generateDynamicConclusion());
-        
-        blocks.push(`
-            <p class="note" style="margin-top: 10px;">
-                <strong>Referensi:</strong> SNI 2847:2019 (Persyaratan Beton Struktural untuk Bangunan Gedung)
-            </p>
-        `);
+        blocks.push(`<p class="note" style="margin-top: 10px;"><strong>Referensi:</strong> SNI 2847:2019 (Persyaratan Beton Struktural untuk Bangunan Gedung)</p>`);
         
         return blocks;
     }
