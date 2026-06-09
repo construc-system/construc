@@ -11,6 +11,10 @@ function floor5(x) {
     return Math.floor(x / 5) * 5;
 }
 
+function floor10(x) {
+    return Math.floor(x / 10) * 10;
+}
+
 // =====================================================
 // ===== FUNGSI UTAMA =====
 function calculateBalok(data, options = {}) {
@@ -552,7 +556,7 @@ function hitungBegel(Vu, fc, fyt, b, dmin, phi, lambda, n_val, fr2, mode = "desa
         const s2 = (Vu > phiVc && Vs > 0.5 * Vs_maks) ? dmin / 4 : dmin / 2;
         const s3 = (Vu > phiVc && Vs > 0.5 * Vs_maks) ? 300 : 600;
 
-        sTerkecil = floor5(Math.min(s1, s2, s3));
+        sTerkecil = floor10(Math.min(s1, s2, s3));
         
         // Untuk mode desain, jika sTerkecil < 100, gunakan s = 100
         if (mode === "desain" && sTerkecil < 100) {
