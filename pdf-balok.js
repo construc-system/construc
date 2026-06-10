@@ -1,8 +1,50 @@
+// pdf-balok.js dengan Smart Decimal yang sudah diperbaiki
 (function() {
     let resultData;
 
     function setData(data) {
         resultData = data;
+    }
+
+    // ==============================================
+    // FUNGSI FORMAT NUMBER DENGAN SMART DECIMAL (FINAL)
+    // ==============================================
+    function formatNumber(num) {
+        if (num === null || num === undefined || num === 'N/A' || isNaN(num)) return 'N/A';
+        
+        let value = parseFloat(num);
+        
+        // Koreksi ghost value: jika selisih dengan bilangan bulat < 1e-10, anggap bilangan bulat
+        const roundedInt = Math.round(value);
+        if (Math.abs(value - roundedInt) < 1e-10) {
+            return roundedInt.toString();
+        }
+        
+        // Tentukan maksimal desimal berdasarkan digit di depan koma
+        const absVal = Math.abs(value);
+        const intPart = Math.floor(absVal);
+        const digitCount = intPart.toString().length;
+        let maxDecimals;
+        if (digitCount === 1) {
+            maxDecimals = 3;
+        } else if (digitCount === 2) {
+            maxDecimals = 2;
+        } else {
+            maxDecimals = 1;
+        }
+        
+        // Cari jumlah desimal minimal yang masih merepresentasikan nilai dengan tepat
+        let bestDecimals = maxDecimals;
+        for (let k = maxDecimals; k >= 1; k--) {
+            const rounded = value.toFixed(k);
+            if (Math.abs(parseFloat(rounded) - value) < 1e-10) {
+                bestDecimals = k;
+                break;
+            }
+        }
+        
+        // Tampilkan dengan jumlah desimal terbaik (tanpa menghilangkan trailing zeros)
+        return value.toFixed(bestDecimals);
     }
 
     // ==============================================
@@ -60,15 +102,6 @@
         }
     }
     
-    function formatNumber(num, decimals = 2) {
-        if (num === null || num === undefined || num === 'N/A' || isNaN(num)) return 'N/A';
-        const numFloat = parseFloat(num);
-        if (decimals === 0) {
-            return Math.round(numFloat).toString();
-        }
-        return numFloat.toFixed(decimals);
-    }
-
     function formatTimestampFull(timestamp) {
         if (!timestamp) return 'N/A';
         const date = new Date(timestamp);
@@ -87,59 +120,33 @@
         let html = '<table class="three-col-table">';
         
         if (isDataTable) {
-            html += '<tr>';
+            html += '<thead><tr>';
             html += '<th class="col-param">Parameter</th>';
             html += '<th class="col-value" style="text-align: center">Data</th>';
             html += '<th class="col-unit" style="text-align: center">Satuan</th>';
-            html += '</tr>';
+            html += '</tr></thead>';
         } else {
-            html += '<tr>';
+            html += '<thead><tr>';
             html += '<th class="col-param">Parameter Perhitungan</th>';
             html += '<th class="col-value" style="text-align: center">Hasil</th>';
             html += '<th class="col-unit" style="text-align: center">Satuan</th>';
-            html += '</tr>';
+            html += '</tr></thead>';
         }
         
         rows.forEach(row => {
-            const isHeader = row.parameter.includes('<strong>') && !row.hasil;
+            const isHeader = row.parameter && row.parameter.includes('<strong>') && !row.hasil;
             const rowClass = isHeader ? 'header-row' : '';
             
             if (row.isFullRow) {
-                html += `
-                    <tr class="${rowClass}">
-                        <td class="col-full-width" colspan="3" style="text-align: center;">
-                            ${row.parameter}
-                        </td>
-                    </tr>
-                `;
+                html += `<tr class="${rowClass}"><td class="col-full-width" colspan="3" style="text-align: center;">${row.parameter}</td></tr>`;
             } else if (row.isStatus && withStatus) {
-                html += `
-                    <tr class="${rowClass}">
-                        <td class="col-param">${row.parameter}</td>
-                        <td class="col-status-merged" colspan="2" style="text-align: center">
-                            ${row.statusHtml}
-                        </td>
-                    </tr>
-                `;
+                html += `<tr class="${rowClass}"><td class="col-param">${row.parameter}</td><td class="col-status-merged" colspan="2" style="text-align: center">${row.statusHtml}</td></tr>`;
             } else if (row.isComparison && withStatus) {
-                html += `
-                    <tr class="${rowClass}">
-                        <td class="col-param rumus-kondisi">${row.parameter}</td>
-                        <td class="col-status-merged" colspan="2" style="text-align: center">
-                            ${row.statusHtml}
-                        </td>
-                    </tr>
-                `;
+                html += `<tr class="${rowClass}"><td class="col-param rumus-kondisi">${row.parameter}</td><td class="col-status-merged" colspan="2" style="text-align: center">${row.statusHtml}</td></tr>`;
             } else {
                 const hasilTampilan = row.hasilHtml || row.hasil || '';
                 const satuanTampilan = row.satuan || '';
-                html += `
-                    <tr class="${rowClass}">
-                        <td class="col-param">${row.parameter}</td>
-                        <td class="col-value" style="text-align: center">${hasilTampilan}</td>
-                        <td class="col-unit" style="text-align: center">${satuanTampilan}</td>
-                    </tr>
-                `;
+                html += `<tr class="${rowClass}"><td class="col-param">${row.parameter}</td><td class="col-value" style="text-align: center">${hasilTampilan}</td><td class="col-unit" style="text-align: center">${satuanTampilan}</td></tr>`;
             }
         });
         
@@ -149,27 +156,13 @@
 
     function createTwoColumnTable(rows) {
         let html = '<table class="two-col-table">';
-        html += '<tr>';
-        html += '<th class="col-param-2">Parameter</th>';
-        html += '<th class="col-status-2" style="text-align: center">Status</th>';
-        html += '</tr>';
+        html += '<thead><tr><th class="col-param-2">Parameter</th><th class="col-status-2" style="text-align: center">Status</th></tr></thead>';
         
         rows.forEach(row => {
             if (row.isFullRow) {
-                html += `
-                    <tr>
-                        <td class="col-full-width" colspan="2" style="text-align: center;">
-                            ${row.parameter}
-                        </td>
-                    </tr>
-                `;
+                html += `<tr><td class="col-full-width" colspan="2" style="text-align: center;">${row.parameter}</td></tr>`;
             } else {
-                html += `
-                    <tr>
-                        <td class="col-param-2">${row.parameter}</td>
-                        <td class="col-status-2" style="text-align: center">${row.statusHtml}</td>
-                    </tr>
-                `;
+                html += `<tr><td class="col-param-2">${row.parameter}</td><td class="col-status-2" style="text-align: center">${row.statusHtml}</td></tr>`;
             }
         });
         
@@ -179,27 +172,23 @@
     
     function createBebanTable() {
         const bebanData = getData('inputData.beban', {});
-        
         const rows = [
             { parameter: "<strong>Tumpuan Kiri</strong>", hasil: "", satuan: "" },
-            { parameter: "$M_u^+$ (Momen positif)", hasil: formatNumber(bebanData.left?.mu_pos || 'N/A'), satuan: "kNm" },
-            { parameter: "$M_u^-$ (Momen negatif)", hasil: formatNumber(bebanData.left?.mu_neg || 'N/A'), satuan: "kNm" },
-            { parameter: "$V_u$ (Gaya geser)", hasil: formatNumber(bebanData.left?.vu || 'N/A'), satuan: "kN" },
-            { parameter: "$T_u$ (Momen torsi)", hasil: formatNumber(bebanData.left?.tu || 'N/A'), satuan: "kNm" },
-            
+            { parameter: "$M_u^+$ (Momen positif)", hasil: formatNumber(bebanData.left?.mu_pos), satuan: "kNm" },
+            { parameter: "$M_u^-$ (Momen negatif)", hasil: formatNumber(bebanData.left?.mu_neg), satuan: "kNm" },
+            { parameter: "$V_u$ (Gaya geser)", hasil: formatNumber(bebanData.left?.vu), satuan: "kN" },
+            { parameter: "$T_u$ (Momen torsi)", hasil: formatNumber(bebanData.left?.tu), satuan: "kNm" },
             { parameter: "<strong>Lapangan</strong>", hasil: "", satuan: "" },
-            { parameter: "$M_u^+$ (Momen positif)", hasil: formatNumber(bebanData.center?.mu_pos || 'N/A'), satuan: "kNm" },
-            { parameter: "$M_u^-$ (Momen negatif)", hasil: formatNumber(bebanData.center?.mu_neg || 'N/A'), satuan: "kNm" },
-            { parameter: "$V_u$ (Gaya geser)", hasil: formatNumber(bebanData.center?.vu || 'N/A'), satuan: "kN" },
-            { parameter: "$T_u$ (Momen torsi)", hasil: formatNumber(bebanData.center?.tu || 'N/A'), satuan: "kNm" },
-            
+            { parameter: "$M_u^+$ (Momen positif)", hasil: formatNumber(bebanData.center?.mu_pos), satuan: "kNm" },
+            { parameter: "$M_u^-$ (Momen negatif)", hasil: formatNumber(bebanData.center?.mu_neg), satuan: "kNm" },
+            { parameter: "$V_u$ (Gaya geser)", hasil: formatNumber(bebanData.center?.vu), satuan: "kN" },
+            { parameter: "$T_u$ (Momen torsi)", hasil: formatNumber(bebanData.center?.tu), satuan: "kNm" },
             { parameter: "<strong>Tumpuan Kanan</strong>", hasil: "", satuan: "" },
-            { parameter: "$M_u^+$ (Momen positif)", hasil: formatNumber(bebanData.right?.mu_pos || 'N/A'), satuan: "kNm" },
-            { parameter: "$M_u^-$ (Momen negatif)", hasil: formatNumber(bebanData.right?.mu_neg || 'N/A'), satuan: "kNm" },
-            { parameter: "$V_u$ (Gaya geser)", hasil: formatNumber(bebanData.right?.vu || 'N/A'), satuan: "kN" },
-            { parameter: "$T_u$ (Momen torsi)", hasil: formatNumber(bebanData.right?.tu || 'N/A'), satuan: "kNm" }
+            { parameter: "$M_u^+$ (Momen positif)", hasil: formatNumber(bebanData.right?.mu_pos), satuan: "kNm" },
+            { parameter: "$M_u^-$ (Momen negatif)", hasil: formatNumber(bebanData.right?.mu_neg), satuan: "kNm" },
+            { parameter: "$V_u$ (Gaya geser)", hasil: formatNumber(bebanData.right?.vu), satuan: "kN" },
+            { parameter: "$T_u$ (Momen torsi)", hasil: formatNumber(bebanData.right?.tu), satuan: "kNm" }
         ];
-        
         return createThreeColumnTable(rows, false, true);
     }
     
@@ -227,9 +216,9 @@
             { parameter: "$A_{s,perlu} = \\max(A_{s1}, A_{s2}, A_{s3})$", hasil: formatNumber(data?.As), satuan: 'mm²' },
             { parameter: "$\\displaystyle n = \\frac{A_{s,perlu}}{A_{D19}}$", hasil: jumlahTulangan, satuan: 'batang' },
             { parameter: "$A_{s,terpasang} = n \\times (0.25 \\times \\pi \\times D^2)$", hasil: formatNumber(data?.AsTerpakai), satuan: 'mm²' },
-            { parameter: "$\\displaystyle \\rho = \\frac{A_{s,terpasang}}{b \\times d} \\times 100\\%$", hasil: formatNumber(data?.rho, 4), satuan: '%' },
-            { parameter: "$\\displaystyle \\rho_{min} = \\max\\left(\\frac{\\sqrt{f'_c}}{4f_y}, \\frac{1.4}{f_y}\\right) \\times 100\\%$", hasil: formatNumber(data?.pmin, 4), satuan: '%' },
-            { parameter: "$\\displaystyle \\rho_{max} = 0.75 \\times \\frac{0.85 f'_c \\beta_1}{f_y} \\times \\frac{600}{600+f_y} \\times 100\\%$", hasil: formatNumber(data?.pmax, 4), satuan: '%' },
+            { parameter: "$\\displaystyle \\rho = \\frac{A_{s,terpasang}}{b \\times d} \\times 100\\%$", hasil: formatNumber(data?.rho), satuan: '%' },
+            { parameter: "$\\displaystyle \\rho_{min} = \\max\\left(\\frac{\\sqrt{f'_c}}{4f_y}, \\frac{1.4}{f_y}\\right) \\times 100\\%$", hasil: formatNumber(data?.pmin), satuan: '%' },
+            { parameter: "$\\displaystyle \\rho_{max} = 0.75 \\times \\frac{0.85 f'_c \\beta_1}{f_y} \\times \\frac{600}{600+f_y} \\times 100\\%$", hasil: formatNumber(data?.pmax), satuan: '%' },
             { parameter: "$\\rho_{min} \\le \\rho \\le \\rho_{max}$", isStatus: true, statusHtml: `<span class="${status?.rho_aman ? 'status-aman' : 'status-tidak-aman'}">${status?.rho_aman ? 'AMAN' : 'TIDAK AMAN'}</span>` },
             { parameter: "$\\displaystyle a = \\frac{A_{s,terpasang} \\times f_y}{0.85 \\times f'_c \\times b}$", hasil: a2, satuan: 'mm' },
             { parameter: "$\\displaystyle M_n = A_{s,terpasang} \\times f_y \\times (d - a/2)$", hasil: formatNumber(data?.Mn), satuan: 'kNm' },
@@ -237,12 +226,11 @@
             { parameter: "$M_d \\ge M_u$", isStatus: true, statusHtml: `<span class="${status?.Md_aman ? 'status-aman' : 'status-tidak-aman'}">${status?.Md_aman ? 'AMAN' : 'TIDAK AMAN'}</span>` },
             { parameter: `<strong>Digunakan Tulangan ${jumlahTulangan}D${diameterTulangan}</strong>`, isFullRow: true, hasil: "", satuan: "" }
         ];
-        
         return createThreeColumnTable(rows, true);
     }
     
     // ==============================================
-    // FUNGSI GESER DENGAN s1, s2, s3 DAN RUMUSNYA
+    // FUNGSI GESER (smart decimal diterapkan)
     // ==============================================
     function createGeserTableDetail(data, lokasi, status, fc, fyt, b, dmin, nKaki = 2, diameterSengkang = 8) {
         const Vu = parseFloat(data?.Vu) || 0;
@@ -254,77 +242,59 @@
         const phiVc_half = phiVc / 2;
         
         const luasSengkang = nKaki * 0.25 * Math.PI * diameterSengkang ** 2;
-        
         let s1 = 600;
-        if (Av_u_calc > 0 && luasSengkang > 0) {
-            s1 = (luasSengkang * 1000) / Av_u_calc;
-        }
+        if (Av_u_calc > 0 && luasSengkang > 0) s1 = (luasSengkang * 1000) / Av_u_calc;
         
         const kondisiKuatGeser = (Vu > phiVc && Vs > 0.5 * Vs_maks);
         let rumus_s2 = kondisiKuatGeser ? "$\\displaystyle s_2 = \\frac{d}{4}$" : "$\\displaystyle s_2 = \\frac{d}{2}$";
         let rumus_s3 = kondisiKuatGeser ? "$s_3 = 300$" : "$s_3 = 600$";
         let s2 = kondisiKuatGeser ? dmin / 4 : dmin / 2;
         let s3 = kondisiKuatGeser ? 300 : 600;
-        
         let sTerkecil = Math.min(s1, s2, s3);
-        if (data?.sTerkecil && parseFloat(data.sTerkecil) > 0) {
-            sTerkecil = parseFloat(data.sTerkecil);
-        }
+        if (data?.sTerkecil && parseFloat(data.sTerkecil) > 0) sTerkecil = parseFloat(data.sTerkecil);
         
-        let kondisi = "";
-        let keterangan = "";
         let rows = [];
-        
         if (Vu < phiVc_half) {
-            kondisi = "$V_u < \\phi V_c / 2$";
-            keterangan = "Tidak perlu begel atau digunakan begel minimum";
-            
             rows = [
                 { parameter: "$V_u$", hasil: formatNumber(Vu), satuan: 'kN' },
                 { parameter: "$\\phi V_c$", hasil: formatNumber(phiVc), satuan: 'kN' },
                 { parameter: "$\\phi V_c / 2$", hasil: formatNumber(phiVc_half), satuan: 'kN' },
-                { parameter: kondisi, isStatus: true, statusHtml: `<span class="kondisi-text">${keterangan}</span>` },
-                { parameter: "$\\displaystyle s_1 = \\frac{n \\cdot 0.25 \\pi \\phi^2 \\cdot 1000}{A_{v,u}}$", hasil: formatNumber(s1, 0), satuan: 'mm' },
-                { parameter: rumus_s2, hasil: formatNumber(s2, 0), satuan: 'mm' },
-                { parameter: rumus_s3, hasil: formatNumber(s3, 0), satuan: 'mm' },
-                { parameter: "$s = \\min(s_1, s_2, s_3)$", hasil: formatNumber(sTerkecil, 0), satuan: 'mm' },
-                { parameter: "$A_{v,terpasang}$", hasil: formatNumber(Av_terpakai, 2), satuan: 'mm²/m' },
+                { parameter: "$V_u < \\phi V_c / 2$", isStatus: true, statusHtml: `<span class="kondisi-text">Tidak perlu begel atau digunakan begel minimum</span>` },
+                { parameter: "$\\displaystyle s_1 = \\frac{n \\cdot 0.25 \\pi \\phi^2 \\cdot 1000}{A_{v,u}}$", hasil: formatNumber(s1), satuan: 'mm' },
+                { parameter: rumus_s2, hasil: formatNumber(s2), satuan: 'mm' },
+                { parameter: rumus_s3, hasil: formatNumber(s3), satuan: 'mm' },
+                { parameter: "$s = \\min(s_1, s_2, s_3)$", hasil: formatNumber(sTerkecil), satuan: 'mm' },
+                { parameter: "$A_{v,terpasang}$", hasil: formatNumber(Av_terpakai), satuan: 'mm²/m' },
                 { parameter: "$A_{v,u} \\le A_{v,terpasang}$", isStatus: true, statusHtml: `<span class="${Av_terpakai >= 0 ? 'status-aman' : 'status-tidak-aman'}">${Av_terpakai >= 0 ? 'AMAN' : 'TIDAK AMAN'}</span>` },
-                { parameter: `<strong>Digunakan Tulangan Geser ɸ${diameterSengkang}-${formatNumber(sTerkecil, 0)}</strong>`, isFullRow: true, hasil: "", satuan: "" }
+                { parameter: `<strong>Digunakan Tulangan Geser ɸ${diameterSengkang}-${formatNumber(sTerkecil)}</strong>`, isFullRow: true }
             ];
         } else if (Vu < phiVc) {
-            kondisi = "$\\phi V_c / 2 < V_u < \\phi V_c$";
-            keterangan = "Digunakan luas begel perlu minimum";
             const Av1 = parseFloat(data?.Av1) || 0;
             const Av2 = parseFloat(data?.Av2) || 0;
-            
             rows = [
                 { parameter: "$V_u$", hasil: formatNumber(Vu), satuan: 'kN' },
                 { parameter: "$\\phi V_c$", hasil: formatNumber(phiVc), satuan: 'kN' },
-                { parameter: kondisi, isStatus: true, statusHtml: `<span class="kondisi-text">${keterangan}</span>` },
+                { parameter: "$\\phi V_c / 2 < V_u < \\phi V_c$", isStatus: true, statusHtml: `<span class="kondisi-text">Digunakan luas begel perlu minimum</span>` },
                 { parameter: "$\\displaystyle A_{v1} = 0.062 \\sqrt{f'_c} \\frac{b \\cdot s}{f_{yt}}$", hasil: formatNumber(Av1), satuan: 'mm²/m' },
                 { parameter: "$\\displaystyle A_{v2} = 0.35 \\frac{b \\cdot s}{f_{yt}}$", hasil: formatNumber(Av2), satuan: 'mm²/m' },
                 { parameter: "$A_{v,u} = \\max(A_{v1}, A_{v2})$", hasil: formatNumber(Av_u_calc), satuan: 'mm²/m' },
-                { parameter: "$\\displaystyle s_1 = \\frac{n \\cdot 0.25 \\pi \\phi^2 \\cdot 1000}{A_{v,u}}$", hasil: formatNumber(s1, 0), satuan: 'mm' },
-                { parameter: rumus_s2, hasil: formatNumber(s2, 0), satuan: 'mm' },
-                { parameter: rumus_s3, hasil: formatNumber(s3, 0), satuan: 'mm' },
-                { parameter: "$s = \\min(s_1, s_2, s_3)$", hasil: formatNumber(sTerkecil, 0), satuan: 'mm' },
-                { parameter: "$A_{v,terpasang}$", hasil: formatNumber(Av_terpakai, 2), satuan: 'mm²/m' },
+                { parameter: "$\\displaystyle s_1 = \\frac{n \\cdot 0.25 \\pi \\phi^2 \\cdot 1000}{A_{v,u}}$", hasil: formatNumber(s1), satuan: 'mm' },
+                { parameter: rumus_s2, hasil: formatNumber(s2), satuan: 'mm' },
+                { parameter: rumus_s3, hasil: formatNumber(s3), satuan: 'mm' },
+                { parameter: "$s = \\min(s_1, s_2, s_3)$", hasil: formatNumber(sTerkecil), satuan: 'mm' },
+                { parameter: "$A_{v,terpasang}$", hasil: formatNumber(Av_terpakai), satuan: 'mm²/m' },
                 { parameter: "$A_{v,u} \\le A_{v,terpasang}$", isStatus: true, statusHtml: `<span class="${Av_u_calc <= Av_terpakai ? 'status-aman' : 'status-tidak-aman'}">${Av_u_calc <= Av_terpakai ? 'AMAN' : 'TIDAK AMAN'}</span>` },
-                { parameter: `<strong>Digunakan Tulangan Geser ɸ${diameterSengkang}-${formatNumber(sTerkecil, 0)}</strong>`, isFullRow: true, hasil: "", satuan: "" }
+                { parameter: `<strong>Digunakan Tulangan Geser ɸ${diameterSengkang}-${formatNumber(sTerkecil)}</strong>`, isFullRow: true }
             ];
         } else {
-            kondisi = "$V_u > \\phi V_c$";
-            keterangan = "Perlu perhitungan tulangan geser";
             const Av1 = parseFloat(data?.Av1) || 0;
             const Av2 = parseFloat(data?.Av2) || 0;
             const Av3 = parseFloat(data?.Av3) || 0;
-            const Vs_aman = parseFloat(data?.Vs) <= parseFloat(data?.Vs_maks);
-            
+            const Vs_aman = Vs <= Vs_maks;
             rows = [
                 { parameter: "$V_u$", hasil: formatNumber(Vu), satuan: 'kN' },
                 { parameter: "$\\phi V_c$", hasil: formatNumber(phiVc), satuan: 'kN' },
-                { parameter: kondisi, isStatus: true, statusHtml: `<span class="kondisi-text">${keterangan}</span>` },
+                { parameter: "$V_u > \\phi V_c$", isStatus: true, statusHtml: `<span class="kondisi-text">Perlu perhitungan tulangan geser</span>` },
                 { parameter: "$V_s = \\dfrac{V_u - \\phi V_c}{\\phi}$", hasil: formatNumber(Vs), satuan: 'kN' },
                 { parameter: "$V_{s,max}$", hasil: formatNumber(Vs_maks), satuan: 'kN' },
                 { parameter: "$V_s \\le V_{s,max}$", isStatus: true, statusHtml: `<span class="${Vs_aman ? 'status-aman' : 'status-tidak-aman'}">${Vs_aman ? 'AMAN' : 'TIDAK AMAN'}</span>` },
@@ -332,31 +302,28 @@
                 { parameter: "$\\displaystyle A_{v2} = 0.35 \\frac{b \\cdot s}{f_{yt}}$", hasil: formatNumber(Av2), satuan: 'mm²/m' },
                 { parameter: "$\\displaystyle A_{v3} = \\frac{V_s \\cdot s}{f_{yt} \\cdot d}$", hasil: formatNumber(Av3), satuan: 'mm²/m' },
                 { parameter: "$A_{v,u} = \\max(A_{v1}, A_{v2}, A_{v3})$", hasil: formatNumber(Av_u_calc), satuan: 'mm²/m' },
-                { parameter: "$\\displaystyle s_1 = \\frac{n \\cdot 0.25 \\pi \\phi^2 \\cdot 1000}{A_{v,u}}$", hasil: formatNumber(s1, 0), satuan: 'mm' },
-                { parameter: rumus_s2, hasil: formatNumber(s2, 0), satuan: 'mm' },
-                { parameter: rumus_s3, hasil: formatNumber(s3, 0), satuan: 'mm' },
-                { parameter: "$s = \\min(s_1, s_2, s_3)$", hasil: formatNumber(sTerkecil, 0), satuan: 'mm' },
-                { parameter: "$A_{v,terpasang}$", hasil: formatNumber(Av_terpakai, 2), satuan: 'mm²/m' },
+                { parameter: "$\\displaystyle s_1 = \\frac{n \\cdot 0.25 \\pi \\phi^2 \\cdot 1000}{A_{v,u}}$", hasil: formatNumber(s1), satuan: 'mm' },
+                { parameter: rumus_s2, hasil: formatNumber(s2), satuan: 'mm' },
+                { parameter: rumus_s3, hasil: formatNumber(s3), satuan: 'mm' },
+                { parameter: "$s = \\min(s_1, s_2, s_3)$", hasil: formatNumber(sTerkecil), satuan: 'mm' },
+                { parameter: "$A_{v,terpasang}$", hasil: formatNumber(Av_terpakai), satuan: 'mm²/m' },
                 { parameter: "$A_{v,u} \\le A_{v,terpasang}$", isStatus: true, statusHtml: `<span class="${Av_u_calc <= Av_terpakai ? 'status-aman' : 'status-tidak-aman'}">${Av_u_calc <= Av_terpakai ? 'AMAN' : 'TIDAK AMAN'}</span>` },
-                { parameter: `<strong>Digunakan Tulangan Geser ɸ${diameterSengkang}-${formatNumber(sTerkecil, 0)}</strong>`, isFullRow: true, hasil: "", satuan: "" }
+                { parameter: `<strong>Digunakan Tulangan Geser ɸ${diameterSengkang}-${formatNumber(sTerkecil)}</strong>`, isFullRow: true }
             ];
         }
-        
         return createThreeColumnTable(rows, true);
     }
     
     // ==============================================
-    // FUNGSI TORSI DENGAN SUMBER DATA DARI TORSIX
+    // FUNGSI TORSI (smart decimal)
     // ==============================================
     function createTorsiTableDetail(data, lokasi, status, fc, fy, fyt, b, h, nKaki = 2, diameterSengkang = 8, diameterTulangan = 19) {
-        // Ambil nilai langsung dari data torsi (torsikiri, torsitengah, torsikanan)
         const Tu = parseFloat(data?.Tu) || 0;
         const Tn = parseFloat(data?.Tn) || 0;
         const Tu_min = parseFloat(data?.Tu_min) || 0;
         const perluTorsi = data?.perluTorsi || false;
         const n = data?.n || 0;
         const At_per_S = parseFloat(data?.At_per_S) || 0;
-        
         const A1_formula1 = parseFloat(data?.A11 || 0);
         const A1_formula2 = parseFloat(data?.A12 || 0);
         const A1 = parseFloat(data?.A1) || 0;
@@ -372,55 +339,48 @@
         const ph = parseFloat(data?.ph) || 0;
         const A0 = parseFloat(data?.A0) || 0;
         const At = parseFloat(data?.At) || 0;
-        
-        // Gunakan nilai kontrolBegel1, kontrolBegel2, kontrolTorsi dari data torsi
         const kontrolBegel1 = parseFloat(data?.kontrolBegel1) || 0;
         const kontrolBegel2 = parseFloat(data?.kontrolBegel2) || 0;
         const kontrolTorsiVal = parseFloat(data?.kontrolTorsi) || 0;
         
         let rows = [];
-        
         if (perluTorsi) {
             rows = [
-                { parameter: "$T_n = T_u / \\phi$", hasil: formatNumber(Tn, 3), satuan: 'kNm' },
-                { parameter: "$A_{cp} = b \\times h$", hasil: formatNumber(Acp, 0), satuan: 'mm²' },
-                { parameter: "$P_{cp} = 2 \\times (b + h)$", hasil: formatNumber(Pcp, 0), satuan: 'mm' },
-                { parameter: "$T_{u,min} = \\phi \\times 0.083 \\times \\sqrt{f'_c} \\times (A_{cp}^2 / P_{cp})$", hasil: formatNumber(Tu_min, 3), satuan: 'kNm' },
+                { parameter: "$T_n = T_u / \\phi$", hasil: formatNumber(Tn), satuan: 'kNm' },
+                { parameter: "$A_{cp} = b \\times h$", hasil: formatNumber(Acp), satuan: 'mm²' },
+                { parameter: "$P_{cp} = 2 \\times (b + h)$", hasil: formatNumber(Pcp), satuan: 'mm' },
+                { parameter: "$T_{u,min} = \\phi \\times 0.083 \\times \\sqrt{f'_c} \\times (A_{cp}^2 / P_{cp})$", hasil: formatNumber(Tu_min), satuan: 'kNm' },
                 { parameter: "$T_u > T_{u,min}$", isStatus: true, statusHtml: `<span class="kondisi-text">Perlu tulangan torsi</span>` },
-                { parameter: "$A_{0h} = (b - 2 \\times (\\phi + S_b)) \\times (h - 2 \\times (\\phi + S_b))$", hasil: formatNumber(A0h, 0), satuan: 'mm²' },
-                { parameter: "$p_h = 2 \\times (b + h - 4\\phi - 4S_b)$", hasil: formatNumber(ph, 0), satuan: 'mm' },
-                { parameter: "$A_0 = 0.85 \\times A_{0h}$", hasil: formatNumber(A0, 0), satuan: 'mm²' },
-                { parameter: "$A_t = \\dfrac{T_n \\times s}{2 \\times A_0 \\times f_{yt} \\times \\cot\\theta}$", hasil: formatNumber(At, 2), satuan: 'mm²' },
-                { parameter: "$A_{1,formula1} = \\dfrac{A_t}{s} \\times p_h \\times \\dfrac{f_{yt}}{f_y} \\times \\cot^2\\theta$", hasil: formatNumber(A1_formula1, 2), satuan: 'mm²' },
-                { parameter: "$A_{1,formula2} = 0.42 \\dfrac{\\sqrt{f'_c} \\times A_{cp}}{f_y} - \\dfrac{A_t}{s} \\times p_h \\times \\dfrac{f_{yt}}{f_y}$", hasil: formatNumber(A1_formula2, 2), satuan: 'mm²' },
-                { parameter: "$A_1 = \\max(A_{1,formula1}, A_{1,formula2})$", hasil: formatNumber(A1, 2), satuan: 'mm²' },
-                { parameter: "$(A_v + A_t)$", hasil: formatNumber(Avt, 2), satuan: 'mm²' },
-                // Kontrol 0.062 sqrt(fc) (b s)/fyt menggunakan nilai dari data
-                { parameter: "$0.062 \\sqrt{f'_c} \\dfrac{b \\cdot s}{f_{yt}}$", hasil: formatNumber(kontrolBegel1, 2), satuan: 'mm²' },
+                { parameter: "$A_{0h} = (b - 2 \\times (\\phi + S_b)) \\times (h - 2 \\times (\\phi + S_b))$", hasil: formatNumber(A0h), satuan: 'mm²' },
+                { parameter: "$p_h = 2 \\times (b + h - 4\\phi - 4S_b)$", hasil: formatNumber(ph), satuan: 'mm' },
+                { parameter: "$A_0 = 0.85 \\times A_{0h}$", hasil: formatNumber(A0), satuan: 'mm²' },
+                { parameter: "$A_t = \\dfrac{T_n \\times s}{2 \\times A_0 \\times f_{yt} \\times \\cot\\theta}$", hasil: formatNumber(At), satuan: 'mm²' },
+                { parameter: "$A_{1,formula1} = \\dfrac{A_t}{s} \\times p_h \\times \\dfrac{f_{yt}}{f_y} \\times \\cot^2\\theta$", hasil: formatNumber(A1_formula1), satuan: 'mm²' },
+                { parameter: "$A_{1,formula2} = 0.42 \\dfrac{\\sqrt{f'_c} \\times A_{cp}}{f_y} - \\dfrac{A_t}{s} \\times p_h \\times \\dfrac{f_{yt}}{f_y}$", hasil: formatNumber(A1_formula2), satuan: 'mm²' },
+                { parameter: "$A_1 = \\max(A_{1,formula1}, A_{1,formula2})$", hasil: formatNumber(A1), satuan: 'mm²' },
+                { parameter: "$(A_v + A_t)$", hasil: formatNumber(Avt), satuan: 'mm²' },
+                { parameter: "$0.062 \\sqrt{f'_c} \\dfrac{b \\cdot s}{f_{yt}}$", hasil: formatNumber(kontrolBegel1), satuan: 'mm²' },
                 { parameter: "$0.062 \\sqrt{f'_c} \\dfrac{b \\cdot s}{f_{yt}} \\le (A_v + A_t)$", isComparison: true, statusHtml: `<span class="${amanBegel1 ? 'status-aman' : 'status-tidak-aman'}">${amanBegel1 ? 'AMAN' : 'TIDAK AMAN'}</span>` },
-                // Kontrol 0.35 (b s)/fyt menggunakan nilai dari data
-                { parameter: "$0.35 \\dfrac{b \\cdot s}{f_{yt}}$", hasil: formatNumber(kontrolBegel2, 2), satuan: 'mm²' },
+                { parameter: "$0.35 \\dfrac{b \\cdot s}{f_{yt}}$", hasil: formatNumber(kontrolBegel2), satuan: 'mm²' },
                 { parameter: "$0.35 \\dfrac{b \\cdot s}{f_{yt}} \\le (A_v + A_t)$", isComparison: true, statusHtml: `<span class="${amanBegel2 ? 'status-aman' : 'status-tidak-aman'}">${amanBegel2 ? 'AMAN' : 'TIDAK AMAN'}</span>` },
-                { parameter: "$A_t / s$", hasil: formatNumber(At_per_S, 3), satuan: 'mm²/mm' },
-                // Tambahan perhitungan 0.175 b/fyt sebelum kontrol
-                { parameter: "$0.175 \\dfrac{b}{f_{yt}}$", hasil: formatNumber(kontrolTorsiVal, 3), satuan: 'mm²/mm' },
+                { parameter: "$A_t / s$", hasil: formatNumber(At_per_S), satuan: 'mm²/mm' },
+                { parameter: "$0.175 \\dfrac{b}{f_{yt}}$", hasil: formatNumber(kontrolTorsiVal), satuan: 'mm²/mm' },
                 { parameter: "$0.175 \\dfrac{b}{f_{yt}} \\le A_t/s$", isComparison: true, statusHtml: `<span class="${amanTorsi1 ? 'status-aman' : 'status-tidak-aman'}">${amanTorsi1 ? 'AMAN' : 'TIDAK AMAN'}</span>` },
                 { parameter: "$n = \\lceil A_1 / (0.25 \\times \\pi \\times D^2) \\rceil$", hasil: n, satuan: 'batang' },
-                { parameter: "$A_{1,terpasang} = n \\times 0.25 \\times \\pi \\times D^2$", hasil: formatNumber(A1_terpasang, 2), satuan: 'mm²' },
+                { parameter: "$A_{1,terpasang} = n \\times 0.25 \\times \\pi \\times D^2$", hasil: formatNumber(A1_terpasang), satuan: 'mm²' },
                 { parameter: "$A_1 \\le A_{1,terpasang}$", isComparison: true, statusHtml: `<span class="${amanTorsi2 ? 'status-aman' : 'status-tidak-aman'}">${amanTorsi2 ? 'AMAN' : 'TIDAK AMAN'}</span>` },
-                { parameter: `<strong>Digunakan Tulangan Torsi ${n}D${diameterTulangan}</strong>`, isFullRow: true, hasil: "", satuan: "" }
+                { parameter: `<strong>Digunakan Tulangan Torsi ${n}D${diameterTulangan}</strong>`, isFullRow: true }
             ];
         } else {
             rows = [
-                { parameter: "$T_n = T_u / \\phi$", hasil: formatNumber(Tn, 3), satuan: 'kNm' },
-                { parameter: "$A_{cp} = b \\times h$", hasil: formatNumber(Acp, 0), satuan: 'mm²' },
-                { parameter: "$P_{cp} = 2 \\times (b + h)$", hasil: formatNumber(Pcp, 0), satuan: 'mm' },
-                { parameter: "$T_{u,min} = \\phi \\times 0.083 \\times \\sqrt{f'_c} \\times (A_{cp}^2 / P_{cp})$", hasil: formatNumber(Tu_min, 3), satuan: 'kNm' },
+                { parameter: "$T_n = T_u / \\phi$", hasil: formatNumber(Tn), satuan: 'kNm' },
+                { parameter: "$A_{cp} = b \\times h$", hasil: formatNumber(Acp), satuan: 'mm²' },
+                { parameter: "$P_{cp} = 2 \\times (b + h)$", hasil: formatNumber(Pcp), satuan: 'mm' },
+                { parameter: "$T_{u,min} = \\phi \\times 0.083 \\times \\sqrt{f'_c} \\times (A_{cp}^2 / P_{cp})$", hasil: formatNumber(Tu_min), satuan: 'kNm' },
                 { parameter: "$T_u \\le T_{u,min}$", isStatus: true, statusHtml: `<span class="kondisi-text">Tidak perlu tulangan torsi</span>` },
-                { parameter: `<strong>Tidak diperlukan tulangan torsi khusus</strong>`, isFullRow: true, hasil: "", satuan: "" }
+                { parameter: `<strong>Tidak diperlukan tulangan torsi khusus</strong>`, isFullRow: true }
             ];
         }
-        
         return createThreeColumnTable(rows, true);
     }
     
@@ -428,74 +388,25 @@
         const rekap = getData('rekap', {});
         const tumpuan = rekap?.tumpuan || {};
         const lapangan = rekap?.lapangan || {};
-        
-        let html = '<table class="rekap-table">';
-        html += '<thead>';
-        html += '<tr>';
-        html += '<th class="rekap-col-tulangan" rowspan="2">Tulangan</th>';
-        html += '<th class="rekap-col-tumpuan" colspan="2">Tumpuan</th>';
-        html += '<th class="rekap-col-lapangan" colspan="2">Lapangan</th>';
-        html += '</tr>';
-        html += '<tr>';
-        html += '<th class="rekap-col-tumpuan">Atas</th>';
-        html += '<th class="rekap-col-tumpuan">Bawah</th>';
-        html += '<th class="rekap-col-lapangan">Atas</th>';
-        html += '<th class="rekap-col-lapangan">Bawah</th>';
-        html += '</tr>';
-        html += '</thead>';
-        html += '<tbody>';
-        
-        html += '<tr>';
-        html += '<td class="rekap-col-tulangan text-bold vertical-middle">Tulangan Lentur</td>';
-        html += '<td class="rekap-col-tumpuan text-center">' + (tumpuan.tulangan_negatif || 'N/A') + '</td>';
-        html += '<td class="rekap-col-tumpuan text-center">' + (tumpuan.tulangan_positif || 'N/A') + '</td>';
-        html += '<td class="rekap-col-lapangan text-center">' + (lapangan.tulangan_negatif || 'N/A') + '</td>';
-        html += '<td class="rekap-col-lapangan text-center">' + (lapangan.tulangan_positif || 'N/A') + '</td>';
-        html += '</tr>';
-        
-        html += '<tr>';
-        html += '<td class="rekap-col-tulangan text-bold vertical-middle">Tulangan Geser</td>';
-        html += '<td class="rekap-col-tumpuan text-center" colspan="2">' + (tumpuan.begel || 'N/A') + '</td>';
-        html += '<td class="rekap-col-lapangan text-center" colspan="2">' + (lapangan.begel || 'N/A') + '</td>';
-        html += '</tr>';
-        
-        html += '<tr>';
-        html += '<td class="rekap-col-tulangan text-bold vertical-middle">Tulangan Torsi</td>';
-        html += '<td class="rekap-col-tumpuan text-center" colspan="2">' + (tumpuan.torsi || 'N/A') + '</td>';
-        html += '<td class="rekap-col-lapangan text-center" colspan="2">' + (lapangan.torsi || 'N/A') + '</td>';
-        html += '</tr>';
-        
-        html += '</tbody>';
-        html += '</table>';
+        let html = '<table class="rekap-table"><thead><tr><th class="rekap-col-tulangan" rowspan="2">Tulangan</th><th class="rekap-col-tumpuan" colspan="2">Tumpuan</th><th class="rekap-col-lapangan" colspan="2">Lapangan</th></tr><tr><th class="rekap-col-tumpuan">Atas</th><th class="rekap-col-tumpuan">Bawah</th><th class="rekap-col-lapangan">Atas</th><th class="rekap-col-lapangan">Bawah</th></tr></thead><tbody>';
+        html += `<tr><td class="rekap-col-tulangan text-bold vertical-middle">Tulangan Lentur</td><td class="rekap-col-tumpuan text-center">${tumpuan.tulangan_negatif || 'N/A'}</td><td class="rekap-col-tumpuan text-center">${tumpuan.tulangan_positif || 'N/A'}</td><td class="rekap-col-lapangan text-center">${lapangan.tulangan_negatif || 'N/A'}</td><td class="rekap-col-lapangan text-center">${lapangan.tulangan_positif || 'N/A'}</td></tr>`;
+        html += `<tr><td class="rekap-col-tulangan text-bold vertical-middle">Tulangan Geser</td><td class="rekap-col-tumpuan text-center" colspan="2">${tumpuan.begel || 'N/A'}</td><td class="rekap-col-lapangan text-center" colspan="2">${lapangan.begel || 'N/A'}</td></tr>`;
+        html += `<tr><td class="rekap-col-tulangan text-bold vertical-middle">Tulangan Torsi</td><td class="rekap-col-tumpuan text-center" colspan="2">${tumpuan.torsi || 'N/A'}</td><td class="rekap-col-lapangan text-center" colspan="2">${lapangan.torsi || 'N/A'}</td></tr>`;
+        html += '</tbody></tr>';
         return html;
     }
 
     function getTulanganInfo() {
-        let D = 'N/A';
-        let phi = 'N/A';
-        
-        if (getData('inputData.tulangan.d', 'N/A') !== 'N/A') {
-            D = getData('inputData.tulangan.d');
-        }
-        if (getData('inputData.tulangan.phi', 'N/A') !== 'N/A') {
-            phi = getData('inputData.tulangan.phi');
-        }
-        
-        if (getData('optimasi.kombinasi_terpilih.D', 'N/A') !== 'N/A') {
-            D = getData('optimasi.kombinasi_terpilih.D');
-        }
-        if (getData('optimasi.kombinasi_terpilih.phi', 'N/A') !== 'N/A') {
-            phi = getData('optimasi.kombinasi_terpilih.phi');
-        }
-        
+        let D = getData('inputData.tulangan.d', 'N/A');
+        let phi = getData('inputData.tulangan.phi', 'N/A');
+        if (D === 'N/A') D = getData('optimasi.kombinasi_terpilih.D', 'N/A');
+        if (phi === 'N/A') phi = getData('optimasi.kombinasi_terpilih.phi', 'N/A');
         return { D, phi };
     }
     
     function generateDynamicConclusion() {
         const statusBalok = cekStatusBalok();
-        
         const dimensi = getData('inputData.dimensi', {});
-        
         let masalah = [];
         const kontrolLentur = getData('kontrol.kontrolLentur', {});
         const kontrolGeser = getData('kontrol.kontrolGeser', {});
@@ -503,150 +414,82 @@
         
         if (kontrolLentur) {
             const lenturProblems = [];
-            let lenturCount = 0;
+            let cnt = 0;
             if (kontrolLentur.kiri_negatif) {
-                if (!kontrolLentur.kiri_negatif.K_aman) lenturProblems.push("Kontrol K tidak aman pada tumpuan kiri momen negatif"), lenturCount++;
-                if (!kontrolLentur.kiri_negatif.rho_aman) lenturProblems.push("Rasio tulangan tidak memenuhi pada tumpuan kiri momen negatif"), lenturCount++;
-                if (!kontrolLentur.kiri_negatif.Md_aman) lenturProblems.push("Kapasitas momen tidak cukup pada tumpuan kiri momen negatif"), lenturCount++;
+                if (!kontrolLentur.kiri_negatif.K_aman) lenturProblems.push("Kontrol K tidak aman pada tumpuan kiri momen negatif"), cnt++;
+                if (!kontrolLentur.kiri_negatif.rho_aman) lenturProblems.push("Rasio tulangan tidak memenuhi pada tumpuan kiri momen negatif"), cnt++;
+                if (!kontrolLentur.kiri_negatif.Md_aman) lenturProblems.push("Kapasitas momen tidak cukup pada tumpuan kiri momen negatif"), cnt++;
             }
             if (kontrolLentur.kanan_negatif) {
-                if (!kontrolLentur.kanan_negatif.K_aman) lenturProblems.push("Kontrol K tidak aman pada tumpuan kanan momen negatif"), lenturCount++;
-                if (!kontrolLentur.kanan_negatif.rho_aman) lenturProblems.push("Rasio tulangan tidak memenuhi pada tumpuan kanan momen negatif"), lenturCount++;
-                if (!kontrolLentur.kanan_negatif.Md_aman) lenturProblems.push("Kapasitas momen tidak cukup pada tumpuan kanan momen negatif"), lenturCount++;
+                if (!kontrolLentur.kanan_negatif.K_aman) lenturProblems.push("Kontrol K tidak aman pada tumpuan kanan momen negatif"), cnt++;
+                if (!kontrolLentur.kanan_negatif.rho_aman) lenturProblems.push("Rasio tulangan tidak memenuhi pada tumpuan kanan momen negatif"), cnt++;
+                if (!kontrolLentur.kanan_negatif.Md_aman) lenturProblems.push("Kapasitas momen tidak cukup pada tumpuan kanan momen negatif"), cnt++;
             }
             if (kontrolLentur.tengah_positif) {
-                if (!kontrolLentur.tengah_positif.K_aman) lenturProblems.push("Kontrol K tidak aman pada lapangan momen positif"), lenturCount++;
-                if (!kontrolLentur.tengah_positif.rho_aman) lenturProblems.push("Rasio tulangan tidak memenuhi pada lapangan momen positif"), lenturCount++;
-                if (!kontrolLentur.tengah_positif.Md_aman) lenturProblems.push("Kapasitas momen tidak cukup pada lapangan momen positif"), lenturCount++;
+                if (!kontrolLentur.tengah_positif.K_aman) lenturProblems.push("Kontrol K tidak aman pada lapangan momen positif"), cnt++;
+                if (!kontrolLentur.tengah_positif.rho_aman) lenturProblems.push("Rasio tulangan tidak memenuhi pada lapangan momen positif"), cnt++;
+                if (!kontrolLentur.tengah_positif.Md_aman) lenturProblems.push("Kapasitas momen tidak cukup pada lapangan momen positif"), cnt++;
             }
-            if (lenturProblems.length > 0) {
-                masalah.push(`<strong>Masalah pada tulangan lentur (${lenturCount} masalah):</strong>`);
-                masalah.push(...lenturProblems.map(p => `<span class="problem-item">• ${p}</span>`));
-            }
+            if (lenturProblems.length) masalah.push(`<strong>Masalah pada tulangan lentur (${cnt} masalah):</strong>` + lenturProblems.map(p => `<span class="problem-item">• ${p}</span>`).join(''));
         }
-        
         if (kontrolGeser) {
             const geserProblems = [];
-            let geserCount = 0;
-            if (kontrolGeser.kiri) {
-                if (!kontrolGeser.kiri.Vs_aman) geserProblems.push("Kapasitas geser tidak mencukupi pada tumpuan kiri"), geserCount++;
-                if (!kontrolGeser.kiri.Av_aman) geserProblems.push("Luas tulangan geser tidak memadai pada tumpuan kiri"), geserCount++;
-            }
-            if (kontrolGeser.tengah) {
-                if (!kontrolGeser.tengah.Vs_aman) geserProblems.push("Kapasitas geser tidak mencukupi pada lapangan"), geserCount++;
-                if (!kontrolGeser.tengah.Av_aman) geserProblems.push("Luas tulangan geser tidak memadai pada lapangan"), geserCount++;
-            }
-            if (kontrolGeser.kanan) {
-                if (!kontrolGeser.kanan.Vs_aman) geserProblems.push("Kapasitas geser tidak mencukupi pada tumpuan kanan"), geserCount++;
-                if (!kontrolGeser.kanan.Av_aman) geserProblems.push("Luas tulangan geser tidak memadai pada tumpuan kanan"), geserCount++;
-            }
-            if (geserProblems.length > 0) {
-                masalah.push(`<strong>Masalah pada tulangan geser (${geserCount} masalah):</strong>`);
-                masalah.push(...geserProblems.map(p => `<span class="problem-item">• ${p}</span>`));
-            }
+            let cnt = 0;
+            if (kontrolGeser.kiri && (!kontrolGeser.kiri.Vs_aman || !kontrolGeser.kiri.Av_aman)) geserProblems.push("Tumpuan kiri"), cnt++;
+            if (kontrolGeser.tengah && (!kontrolGeser.tengah.Vs_aman || !kontrolGeser.tengah.Av_aman)) geserProblems.push("Lapangan"), cnt++;
+            if (kontrolGeser.kanan && (!kontrolGeser.kanan.Vs_aman || !kontrolGeser.kanan.Av_aman)) geserProblems.push("Tumpuan kanan"), cnt++;
+            if (geserProblems.length) masalah.push(`<strong>Masalah pada tulangan geser (${cnt} masalah):</strong> ${geserProblems.map(p => `<span class="problem-item">• ${p}</span>`).join('')}`);
         }
-        
         if (kontrolTorsi) {
             const torsiProblems = [];
-            let torsiCount = 0;
-            if (kontrolTorsi.kiri && !kontrolTorsi.kiri.perluDanAman) torsiProblems.push("Tulangan torsi tidak memadai pada tumpuan kiri"), torsiCount++;
-            if (kontrolTorsi.tengah && !kontrolTorsi.tengah.perluDanAman) torsiProblems.push("Tulangan torsi tidak memadai pada lapangan"), torsiCount++;
-            if (kontrolTorsi.kanan && !kontrolTorsi.kanan.perluDanAman) torsiProblems.push("Tulangan torsi tidak memadai pada tumpuan kanan"), torsiCount++;
-            if (torsiProblems.length > 0) {
-                masalah.push(`<strong>Masalah pada tulangan torsi (${torsiCount} masalah):</strong>`);
-                masalah.push(...torsiProblems.map(p => `<span class="problem-item">• ${p}</span>`));
-            }
+            let cnt = 0;
+            if (kontrolTorsi.kiri && !kontrolTorsi.kiri.perluDanAman) torsiProblems.push("Tumpuan kiri"), cnt++;
+            if (kontrolTorsi.tengah && !kontrolTorsi.tengah.perluDanAman) torsiProblems.push("Lapangan"), cnt++;
+            if (kontrolTorsi.kanan && !kontrolTorsi.kanan.perluDanAman) torsiProblems.push("Tumpuan kanan"), cnt++;
+            if (torsiProblems.length) masalah.push(`<strong>Masalah pada tulangan torsi (${cnt} masalah):</strong> ${torsiProblems.map(p => `<span class="problem-item">• ${p}</span>`).join('')}`);
         }
         
-        let conclusionHTML = `
-            <div class="section-group">
-                <h3>3. Kesimpulan</h3>
-                <div class="conclusion-box">
-                    <h4 style="text-align: center; ${statusBalok === 'aman' ? 'color: #155724;' : 'color: #721c24;'} margin-bottom: 8px;">
-                        <strong>STRUKTUR BALOK BETON BERTULANG ${statusBalok === 'aman' ? 'AMAN' : 'TIDAK AMAN'}</strong>
-                    </h4>
-        `;
-        
+        let conclusionHTML = `<div class="section-group"><h3>3. Kesimpulan</h3><div class="conclusion-box"><h4 style="text-align: center; ${statusBalok === 'aman' ? 'color: #155724;' : 'color: #721c24;'} margin-bottom: 8px;"><strong>STRUKTUR BALOK BETON BERTULANG ${statusBalok === 'aman' ? 'AMAN' : 'TIDAK AMAN'}</strong></h4>`;
         if (statusBalok === 'aman') {
-            conclusionHTML += `
-                <p><strong>Status:</strong> <span class="status-aman">SEMUA KONTROL AMAN</span></p>
-                <p>Struktur balok dengan dimensi ${dimensi.b || 'N/A'} × ${dimensi.h || 'N/A'} mm memenuhi semua persyaratan SNI 2847:2019.</p>
-                <ul>
-                    <li>Kuat lentur (momen positif dan negatif)</li>
-                    <li>Kuat geser</li>
-                    <li>Kuat torsi (jika diperlukan)</li>
-                    <li>Persyaratan detail tulangan</li>
-                </ul>
-            `;
+            conclusionHTML += `<p><strong>Status:</strong> <span class="status-aman">SEMUA KONTROL AMAN</span></p><p>Struktur balok dengan dimensi ${dimensi.b || 'N/A'} × ${dimensi.h || 'N/A'} mm memenuhi semua persyaratan SNI 2847:2019 untuk:</p><ul><li>Kuat lentur (momen positif dan negatif)</li><li>Kuat geser</li><li>Kuat torsi (jika diperlukan)</li><li>Persyaratan detail tulangan</li></ul>`;
         } else {
-            conclusionHTML += `
-                <p><strong>Status:</strong> <span class="status-tidak-aman">TIDAK AMAN - PERLU PERBAIKAN DESAIN</span></p>
-                <p>Ditemukan masalah pada beberapa aspek desain:</p>
-                <div style="margin: 8px 0 12px 0; padding: 8px; background-color: #f8f9fa; border-radius: 4px;">
-                    ${masalah.length > 0 ? masalah.join('') : '<p class="problem-item">• Terdapat masalah pada satu atau lebih kontrol keamanan</p>'}
-                </div>
-            `;
+            conclusionHTML += `<p><strong>Status:</strong> <span class="status-tidak-aman">TIDAK AMAN - PERLU PERBAIKAN DESAIN</span></p><p>Ditemukan masalah pada beberapa aspek desain:</p><div style="margin: 8px 0 12px 0; padding: 8px; background-color: #f8f9fa; border-radius: 4px;">${masalah.length ? masalah.join('') : '<p class="problem-item">• Terdapat masalah pada satu atau lebih kontrol keamanan</p>'}</div>`;
         }
-        
-        conclusionHTML += `
-            <p style="margin-top: 8px; font-size: 10pt; color: #666;">
-                <strong>Catatan:</strong> Hasil perhitungan ini berdasarkan SNI 2847:2019 (Persyaratan Beton Struktural untuk Bangunan Gedung). 
-                Pastikan semua aspek konstruksi sesuai dengan spesifikasi teknis dan dilakukan pengawasan yang memadai.
-            </p>
-        </div>
-    </div>`;
+        conclusionHTML += `<p style="margin-top: 8px; font-size: 10pt; color: #666;"><strong>Catatan:</strong> Hasil perhitungan ini berdasarkan SNI 2847:2019 (Persyaratan Beton Struktural untuk Bangunan Gedung). Pastikan semua aspek konstruksi sesuai dengan spesifikasi teknis dan dilakukan pengawasan yang memadai.</p></div></div>`;
         return conclusionHTML;
     }
     
     function createTulanganTable() {
-        let tulanganRows = [];
         const tulanganInfo = getTulanganInfo();
         const mode = getData('mode', 'N/A');
-        
-        tulanganRows.push(
+        let rows = [
             { parameter: "D (Diameter tulangan utama)", hasil: tulanganInfo.D, satuan: "mm" },
             { parameter: "ɸ (Diameter tulangan bagi)", hasil: tulanganInfo.phi, satuan: "mm" }
-        );
-        
+        ];
         if (mode === 'evaluasi') {
             const inputTulangan = getData('inputData.tulangan', {});
-            if (inputTulangan.support && Object.keys(inputTulangan.support).length > 0) {
-                tulanganRows.push({ parameter: "<strong>Data Tulangan Tumpuan</strong>", hasil: "", satuan: "" });
-                tulanganRows.push({ parameter: "&nbsp;&nbsp;n (jumlah tulangan tarik)", hasil: inputTulangan.support.n || 'N/A', satuan: "batang" });
-                tulanganRows.push({ parameter: "&nbsp;&nbsp;n' (jumlah tulangan tekan)", hasil: inputTulangan.support.np || 'N/A', satuan: "batang" });
-                tulanganRows.push({ parameter: "&nbsp;&nbsp;nt (jumlah tulangan torsi)", hasil: inputTulangan.support.nt || 'N/A', satuan: "batang" });
-                tulanganRows.push({ parameter: "&nbsp;&nbsp;s (jarak sengkang)", hasil: inputTulangan.support.s || 'N/A', satuan: "mm" });
+            if (inputTulangan.support && Object.keys(inputTulangan.support).length) {
+                rows.push({ parameter: "<strong>Data Tulangan Tumpuan</strong>", hasil: "", satuan: "" });
+                rows.push({ parameter: "&nbsp;&nbsp;n (jumlah tulangan tarik)", hasil: inputTulangan.support.n || 'N/A', satuan: "batang" });
+                rows.push({ parameter: "&nbsp;&nbsp;n' (jumlah tulangan tekan)", hasil: inputTulangan.support.np || 'N/A', satuan: "batang" });
+                rows.push({ parameter: "&nbsp;&nbsp;nt (jumlah tulangan torsi)", hasil: inputTulangan.support.nt || 'N/A', satuan: "batang" });
+                rows.push({ parameter: "&nbsp;&nbsp;s (jarak sengkang)", hasil: inputTulangan.support.s || 'N/A', satuan: "mm" });
             }
-            if (inputTulangan.field && Object.keys(inputTulangan.field).length > 0) {
-                tulanganRows.push({ parameter: "<strong>Data Tulangan Lapangan</strong>", hasil: "", satuan: "" });
-                tulanganRows.push({ parameter: "&nbsp;&nbsp;n (jumlah tulangan tarik)", hasil: inputTulangan.field.n || 'N/A', satuan: "batang" });
-                tulanganRows.push({ parameter: "&nbsp;&nbsp;n' (jumlah tulangan tekan)", hasil: inputTulangan.field.np || 'N/A', satuan: "batang" });
-                tulanganRows.push({ parameter: "&nbsp;&nbsp;nt (jumlah tulangan torsi)", hasil: inputTulangan.field.nt || 'N/A', satuan: "batang" });
-                tulanganRows.push({ parameter: "&nbsp;&nbsp;s (jarak sengkang)", hasil: inputTulangan.field.s || 'N/A', satuan: "mm" });
+            if (inputTulangan.field && Object.keys(inputTulangan.field).length) {
+                rows.push({ parameter: "<strong>Data Tulangan Lapangan</strong>", hasil: "", satuan: "" });
+                rows.push({ parameter: "&nbsp;&nbsp;n (jumlah tulangan tarik)", hasil: inputTulangan.field.n || 'N/A', satuan: "batang" });
+                rows.push({ parameter: "&nbsp;&nbsp;n' (jumlah tulangan tekan)", hasil: inputTulangan.field.np || 'N/A', satuan: "batang" });
+                rows.push({ parameter: "&nbsp;&nbsp;nt (jumlah tulangan torsi)", hasil: inputTulangan.field.nt || 'N/A', satuan: "batang" });
+                rows.push({ parameter: "&nbsp;&nbsp;s (jarak sengkang)", hasil: inputTulangan.field.s || 'N/A', satuan: "mm" });
             }
         }
-        
-        return createThreeColumnTable(tulanganRows, false, true);
+        return createThreeColumnTable(rows, false, true);
     }
     
     function generateContentBlocks() {
         const blocks = [];
         const statusBalokDinamis = cekStatusBalok();
-        
-        blocks.push(`
-            <h1>LAPORAN PERHITUNGAN BALOK BETON BERTULANG</h1>
-            <div class="header-info">
-                <div>
-                    <span><strong>Mode:</strong> ${getData('mode', 'N/A').toUpperCase()}</span>
-                    <span><strong>Modul:</strong> ${getData('module', 'N/A').toUpperCase()}</span>
-                </div>
-                <div>
-                    <span><strong>Tanggal:</strong> ${formatTimestampFull(getData('timestamp'))}</span>
-                    <span><strong>Status:</strong> <span class="${statusBalokDinamis === 'aman' ? 'status-aman' : 'status-tidak-aman'}">${statusBalokDinamis.toUpperCase()}</span></span>
-                </div>
-            </div>
-            <h2>A. DATA INPUT DAN PARAMETER</h2>
-        `);
+        blocks.push(`<h1>LAPORAN PERHITUNGAN BALOK BETON BERTULANG</h1><div class="header-info"><div><span><strong>Mode:</strong> ${getData('mode', 'N/A').toUpperCase()}</span><span><strong>Modul:</strong> ${getData('module', 'N/A').toUpperCase()}</span></div><div><span><strong>Tanggal:</strong> ${formatTimestampFull(getData('timestamp'))}</span><span><strong>Status:</strong> <span class="${statusBalokDinamis === 'aman' ? 'status-aman' : 'status-tidak-aman'}">${statusBalokDinamis.toUpperCase()}</span></span></div></div><h2>A. DATA INPUT DAN PARAMETER</h2>`);
         
         const materialDimensiRows = [
             { parameter: "$f'_c$ (Kuat tekan beton)", hasil: getData('inputData.material.fc'), satuan: 'MPa' },
@@ -656,27 +499,9 @@
             { parameter: "$b$ (Lebar balok)", hasil: getData('inputData.dimensi.b'), satuan: 'mm' },
             { parameter: "$s_b$ (Selimut beton)", hasil: getData('inputData.dimensi.sb'), satuan: 'mm' }
         ];
-        
-        blocks.push(`
-            <div class="section-group">
-                <h3>1. Data Material dan Dimensi</h3>
-                ${createThreeColumnTable(materialDimensiRows, false, true)}
-            </div>
-        `);
-        
-        blocks.push(`
-            <div class="section-group">
-                <h3>2. Data Beban</h3>
-                ${createBebanTable()}
-            </div>
-        `);
-        
-        blocks.push(`
-            <div class="section-group">
-                <h3>3. Data Tulangan</h3>
-                ${createTulanganTable()}
-            </div>
-        `);
+        blocks.push(`<div class="section-group"><h3>1. Data Material dan Dimensi</h3>${createThreeColumnTable(materialDimensiRows, false, true)}</div>`);
+        blocks.push(`<div class="section-group"><h3>2. Data Beban</h3>${createBebanTable()}</div>`);
+        blocks.push(`<div class="section-group"><h3>3. Data Tulangan</h3>${createTulanganTable()}</div>`);
         
         const parameterRows = [
             { parameter: "$\\displaystyle m = \\left\\lfloor \\frac{b - 2d_{s1}}{D + s_b} \\right\\rfloor + 1$", hasil: getData('data.m'), satuan: '-' },
@@ -689,15 +514,9 @@
             { parameter: "$\\displaystyle d = h - d_s$", hasil: getData('data.d'), satuan: 'mm' },
             { parameter: "$\\displaystyle d' = h - d_s'$", hasil: getData('data.d_'), satuan: 'mm' },
             { parameter: "$\\displaystyle \\beta_1 = \\begin{cases} 0.85 & f'_c \\leq 28 \\text{ MPa} \\\\ 0.85 - 0.05\\dfrac{f'_c - 28}{7} & 28 < f'_c < 55 \\text{ MPa} \\\\ 0.65 & f'_c \\geq 55 \\text{ MPa} \\end{cases}$", hasil: getData('data.beta1'), satuan: '-' },
-            { parameter: "$\\displaystyle K_{\\text{maks}} = \\dfrac{382.5 \\beta_1 f'_c (600 + f_y - 225 \\beta_1)}{(600 + f_y)^2}$", hasil: getData('data.Kmaks'), satuan: 'MPa' }
+            { parameter: "$\\displaystyle K_{\\text{maks}} = \\dfrac{382.5 \\beta_1 f'_c (600 + f_y - 225 \\beta_1)}{(600 + f_y)^2}$", hasil: formatNumber(getData('data.Kmaks')), satuan: 'MPa' }
         ];
-        
-        blocks.push(`
-            <div class="section-group">
-                <h3>4. Perhitungan Parameter</h3>
-                ${createThreeColumnTable(parameterRows)}
-            </div>
-        `);
+        blocks.push(`<div class="section-group"><h3>4. Perhitungan Parameter</h3>${createThreeColumnTable(parameterRows)}</div>`);
         
         const headerB = `<div class="header-content-group"><h2>B. PERHITUNGAN TULANGAN LENTUR NEGATIF</h2><p class="note">Tulangan negatif dipasang pada daerah tarik di atas (saat momen negatif)</p></div>`;
         const fc = parseFloat(getData('inputData.material.fc', 20));
@@ -708,40 +527,36 @@
         if (getData('data.tulanganKirinegatif') && getData('data.tulanganKirinegatif') !== 'N/A') {
             const data = getData('data.tulanganKirinegatif');
             const status = getData('kontrol.kontrolLentur.kiri_negatif');
-            blocks.push(headerB + `<div class="section-group"><h3>1. Tumpuan Kiri ($M_u^- = ${formatNumber(data.Mu, 3)} \\text{ kNm}$)</h3>${createLenturTableFull(data, status, d_eff_negatif, fc, fy, b_val, "Tumpuan Kiri", data.Mu)}</div>`);
-        } else { blocks.push(headerB); }
+            blocks.push(headerB + `<div class="section-group"><h3>1. Tumpuan Kiri ($M_u^- = ${formatNumber(data.Mu)} \\text{ kNm}$)</h3>${createLenturTableFull(data, status, d_eff_negatif, fc, fy, b_val, "Tumpuan Kiri", data.Mu)}</div>`);
+        } else blocks.push(headerB);
         
         if (getData('data.tulanganTengahnegatif') && getData('data.tulanganTengahnegatif') !== 'N/A') {
             const data = getData('data.tulanganTengahnegatif');
             const status = getData('kontrol.kontrolLentur.tengah_negatif');
-            blocks.push(`<div class="section-group"><h3>2. Lapangan ($M_u^- = ${formatNumber(data.Mu, 3)} \\text{ kNm}$)</h3>${createLenturTableFull(data, status, d_eff_negatif, fc, fy, b_val, "Lapangan", data.Mu)}</div>`);
+            blocks.push(`<div class="section-group"><h3>2. Lapangan ($M_u^- = ${formatNumber(data.Mu)} \\text{ kNm}$)</h3>${createLenturTableFull(data, status, d_eff_negatif, fc, fy, b_val, "Lapangan", data.Mu)}</div>`);
         }
-        
         if (getData('data.tulanganKanannegatif') && getData('data.tulanganKanannegatif') !== 'N/A') {
             const data = getData('data.tulanganKanannegatif');
             const status = getData('kontrol.kontrolLentur.kanan_negatif');
-            blocks.push(`<div class="section-group"><h3>3. Tumpuan Kanan ($M_u^- = ${formatNumber(data.Mu, 3)} \\text{ kNm}$)</h3>${createLenturTableFull(data, status, d_eff_negatif, fc, fy, b_val, "Tumpuan Kanan", data.Mu)}</div>`);
+            blocks.push(`<div class="section-group"><h3>3. Tumpuan Kanan ($M_u^- = ${formatNumber(data.Mu)} \\text{ kNm}$)</h3>${createLenturTableFull(data, status, d_eff_negatif, fc, fy, b_val, "Tumpuan Kanan", data.Mu)}</div>`);
         }
         
         const headerC = `<div class="header-content-group"><h2>C. PERHITUNGAN TULANGAN LENTUR POSITIF</h2><p class="note">Tulangan positif dipasang pada daerah tarik di bawah (saat momen positif)</p></div>`;
         const d_eff_positif = getData('data.d_', 340);
-        
         if (getData('data.tulanganKiripositif') && getData('data.tulanganKiripositif') !== 'N/A') {
             const data = getData('data.tulanganKiripositif');
             const status = getData('kontrol.kontrolLentur.kiri_positif');
-            blocks.push(headerC + `<div class="section-group"><h3>1. Tumpuan Kiri ($M_u^+ = ${formatNumber(data.Mu, 3)} \\text{ kNm}$)</h3>${createLenturTableFull(data, status, d_eff_positif, fc, fy, b_val, "Tumpuan Kiri", data.Mu)}</div>`);
-        } else { blocks.push(headerC); }
-        
+            blocks.push(headerC + `<div class="section-group"><h3>1. Tumpuan Kiri ($M_u^+ = ${formatNumber(data.Mu)} \\text{ kNm}$)</h3>${createLenturTableFull(data, status, d_eff_positif, fc, fy, b_val, "Tumpuan Kiri", data.Mu)}</div>`);
+        } else blocks.push(headerC);
         if (getData('data.tulanganTengahpositif') && getData('data.tulanganTengahpositif') !== 'N/A') {
             const data = getData('data.tulanganTengahpositif');
             const status = getData('kontrol.kontrolLentur.tengah_positif');
-            blocks.push(`<div class="section-group"><h3>2. Lapangan ($M_u^+ = ${formatNumber(data.Mu, 3)} \\text{ kNm}$)</h3>${createLenturTableFull(data, status, d_eff_positif, fc, fy, b_val, "Lapangan", data.Mu)}</div>`);
+            blocks.push(`<div class="section-group"><h3>2. Lapangan ($M_u^+ = ${formatNumber(data.Mu)} \\text{ kNm}$)</h3>${createLenturTableFull(data, status, d_eff_positif, fc, fy, b_val, "Lapangan", data.Mu)}</div>`);
         }
-        
         if (getData('data.tulanganKananpositif') && getData('data.tulanganKananpositif') !== 'N/A') {
             const data = getData('data.tulanganKananpositif');
             const status = getData('kontrol.kontrolLentur.kanan_positif');
-            blocks.push(`<div class="section-group"><h3>3. Tumpuan Kanan ($M_u^+ = ${formatNumber(data.Mu, 3)} \\text{ kNm}$)</h3>${createLenturTableFull(data, status, d_eff_positif, fc, fy, b_val, "Tumpuan Kanan", data.Mu)}</div>`);
+            blocks.push(`<div class="section-group"><h3>3. Tumpuan Kanan ($M_u^+ = ${formatNumber(data.Mu)} \\text{ kNm}$)</h3>${createLenturTableFull(data, status, d_eff_positif, fc, fy, b_val, "Tumpuan Kanan", data.Mu)}</div>`);
         }
         
         let bagianDContent = `<div class="header-content-group keep-together"><h2>D. PERHITUNGAN TULANGAN GESER DAN TORSI</h2>`;
@@ -760,40 +575,34 @@
         }
         bagianDContent += `</div>`;
         blocks.push(bagianDContent);
-        
         if (getData('data.begeltengah') && getData('data.begeltengah') !== 'N/A') {
             const data = getData('data.begeltengah');
             const status = getData('kontrol.kontrolGeser.tengah');
             blocks.push(`<div class="section-group"><h3>2. Tulangan Geser - Lapangan ($V_u = ${formatNumber(data.Vu)} \\text{ kN}$)</h3>${createGeserTableDetail(data, "Lapangan", status, fc, fyt, b_val, dmin, nKaki, diameterSengkang)}</div>`);
         }
-        
         if (getData('data.begelkanan') && getData('data.begelkanan') !== 'N/A') {
             const data = getData('data.begelkanan');
             const status = getData('kontrol.kontrolGeser.kanan');
             blocks.push(`<div class="section-group"><h3>3. Tulangan Geser - Tumpuan Kanan ($V_u = ${formatNumber(data.Vu)} \\text{ kN}$)</h3>${createGeserTableDetail(data, "Tumpuan Kanan", status, fc, fyt, b_val, dmin, nKaki, diameterSengkang)}</div>`);
         }
-        
         if (getData('data.torsikiri') && getData('data.torsikiri') !== 'N/A') {
             const data = getData('data.torsikiri');
             const status = getData('kontrol.kontrolTorsi.kiri');
-            blocks.push(`<div class="section-group"><h3>4. Tulangan Torsi - Tumpuan Kiri ($T_u = ${formatNumber(data.Tu, 3)} \\text{ kNm}$)</h3>${createTorsiTableDetail(data, "Tumpuan Kiri", status, fc, fy, fyt, b_val, h_val, nKaki, diameterSengkang, diameterTulangan)}</div>`);
+            blocks.push(`<div class="section-group"><h3>4. Tulangan Torsi - Tumpuan Kiri ($T_u = ${formatNumber(data.Tu)} \\text{ kNm}$)</h3>${createTorsiTableDetail(data, "Tumpuan Kiri", status, fc, fy, fyt, b_val, h_val, nKaki, diameterSengkang, diameterTulangan)}</div>`);
         }
-        
         if (getData('data.torsitengah') && getData('data.torsitengah') !== 'N/A') {
             const data = getData('data.torsitengah');
             const status = getData('kontrol.kontrolTorsi.tengah');
-            blocks.push(`<div class="section-group"><h3>5. Tulangan Torsi - Lapangan ($T_u = ${formatNumber(data.Tu, 3)} \\text{ kNm}$)</h3>${createTorsiTableDetail(data, "Lapangan", status, fc, fy, fyt, b_val, h_val, nKaki, diameterSengkang, diameterTulangan)}</div>`);
+            blocks.push(`<div class="section-group"><h3>5. Tulangan Torsi - Lapangan ($T_u = ${formatNumber(data.Tu)} \\text{ kNm}$)</h3>${createTorsiTableDetail(data, "Lapangan", status, fc, fy, fyt, b_val, h_val, nKaki, diameterSengkang, diameterTulangan)}</div>`);
         }
-        
         if (getData('data.torsikanan') && getData('data.torsikanan') !== 'N/A') {
             const data = getData('data.torsikanan');
             const status = getData('kontrol.kontrolTorsi.kanan');
-            blocks.push(`<div class="section-group"><h3>6. Tulangan Torsi - Tumpuan Kanan ($T_u = ${formatNumber(data.Tu, 3)} \\text{ kNm}$)</h3>${createTorsiTableDetail(data, "Tumpuan Kanan", status, fc, fy, fyt, b_val, h_val, nKaki, diameterSengkang, diameterTulangan)}</div>`);
+            blocks.push(`<div class="section-group"><h3>6. Tulangan Torsi - Tumpuan Kanan ($T_u = ${formatNumber(data.Tu)} \\text{ kNm}$)</h3>${createTorsiTableDetail(data, "Tumpuan Kanan", status, fc, fy, fyt, b_val, h_val, nKaki, diameterSengkang, diameterTulangan)}</div>`);
         }
         
         const headerE = `<div class="header-content-group"><h2>E. REKAPITULASI HASIL DESAIN</h2></div>`;
-        const contentE1 = `<div class="section-group"><h3>1. Tulangan Terpasang</h3>${createRekapitulasiTable()}</div>`;
-        blocks.push(headerE + contentE1);
+        blocks.push(headerE + `<div class="section-group"><h3>1. Tulangan Terpasang</h3>${createRekapitulasiTable()}</div>`);
         
         const kontrolRows = [
             { parameter: "$K \\le K_{maks}$", statusHtml: `<span class="${getData('kontrol.kontrolLentur.kiri_negatif.K_aman', false) ? 'status-aman' : 'status-tidak-aman'}">${getData('kontrol.kontrolLentur.kiri_negatif.K_aman', false) ? 'AMAN' : 'TIDAK AMAN'}</span>` },
@@ -806,7 +615,6 @@
         blocks.push(`<div class="section-group"><h3>2. Ringkasan Kontrol Keamanan</h3>${createTwoColumnTable(kontrolRows)}</div>`);
         blocks.push(generateDynamicConclusion());
         blocks.push(`<p class="note" style="margin-top: 10px;"><strong>Referensi:</strong> SNI 2847:2019 (Persyaratan Beton Struktural untuk Bangunan Gedung)</p>`);
-        
         return blocks;
     }
 
