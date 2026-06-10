@@ -1,3 +1,4 @@
+// pdf-fondasi.js dengan formatNumber smart decimal yang lebih baik
 (function() {
     let resultData;
 
@@ -15,16 +16,53 @@
         } catch (error) { return defaultValue; }
     }
 
-    function formatNumber(num, decimals = null) {
+    // ==============================================
+    // SMART DECIMAL (lebih pintar, menyesuaikan dengan nilai asli)
+    // ==============================================
+    function formatNumber(num, fixedDecimals = null) {
         if (num === null || num === undefined || num === 'N/A' || isNaN(num)) return 'N/A';
-        const numFloat = parseFloat(num);
-        if (decimals !== null) return numFloat.toFixed(decimals);
-        if (Number.isInteger(numFloat)) return numFloat.toString();
-        const parts = numFloat.toString().split('.');
-        const integerPart = Math.abs(parseInt(parts[0]));
-        let targetDecimals = integerPart <= 9 ? 3 : 2;
-        const formatted = numFloat.toFixed(targetDecimals);
-        return formatted.replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
+        let value = parseFloat(num);
+        
+        // Koreksi ghost value: jika selisih dengan bilangan bulat < 1e-10, anggap bulat
+        const roundedInt = Math.round(value);
+        if (Math.abs(value - roundedInt) < 1e-10) return roundedInt.toString();
+        
+        // Jika fixedDecimals ditentukan secara eksplisit, gunakan itu (tanpa menghilangkan trailing zeros)
+        if (fixedDecimals !== null && !isNaN(fixedDecimals)) {
+            return value.toFixed(fixedDecimals);
+        }
+        
+        // Tentukan maksimal desimal berdasarkan digit di depan koma
+        const absVal = Math.abs(value);
+        const intPart = Math.floor(absVal);
+        const digitCount = intPart.toString().length;
+        let maxDecimals;
+        if (digitCount === 1) maxDecimals = 3;
+        else if (digitCount === 2) maxDecimals = 2;
+        else maxDecimals = 1;
+        
+        // Cari jumlah desimal terkecil yang merepresentasikan nilai dengan tepat (toleransi lebih besar)
+        let bestDecimals = maxDecimals;
+        for (let k = maxDecimals; k >= 1; k--) {
+            const rounded = value.toFixed(k);
+            if (Math.abs(parseFloat(rounded) - value) < 1e-8) {
+                bestDecimals = k;
+                break;
+            }
+        }
+        
+        // Coba kurangi lagi jika memungkinkan (misal 0.40000000000000004 => 0.4)
+        for (let k = bestDecimals - 1; k >= 1; k--) {
+            const rounded = value.toFixed(k);
+            if (Math.abs(parseFloat(rounded) - value) < 1e-8) {
+                bestDecimals = k;
+            } else {
+                break;
+            }
+        }
+        
+        // Tampilkan dengan bestDecimals (tanpa menghilangkan trailing zeros yang bermakna)
+        return value.toFixed(bestDecimals);
     }
 
     function formatTimestampFull(timestamp) {
@@ -297,7 +335,6 @@
 
     function createTulanganPersegiPanjangArahPendek() {
         const t = getData('data.tulangan', {});
-        // Gunakan As (A_s,perlu) dari data yang sama
         const AsPerlu = t.persegi?.As || 0;
         const AsPusat = t.persegi?.Aspusat || 0;
         const AsTepi = AsPerlu - AsPusat;
@@ -368,7 +405,6 @@
     function createTulanganTerpasangTable() {
         const rekap = getData('rekap', {});
         const mode = getData('data.actualFondasiMode', 'bujur_sangkar');
-        // Helper untuk membuat sel dengan style center
         const centerTd = (content) => `<td style="text-align: center; font-weight: bold;">${content}</td>`;
         const centerTh = (content) => `<th style="text-align: center;">${content}</th>`;
         if (mode === 'persegi_panjang') {
