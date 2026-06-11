@@ -263,7 +263,6 @@
             { parameter: `$s_3 = 450$`, hasil: formatNumber(data?.s3), satuan: 'mm' },
             { parameter: `$s = \\min(s_1, s_2, s_3)$`, hasil: formatNumber(data?.sDigunakan, 0), satuan: 'mm' },
             { parameter: `$\\displaystyle A_{sb} = \\frac{0.25 \\pi D_b^2 \\times 1000}{s}$`, hasil: formatNumber(data?.AsbTerpasang), satuan: 'mm²/m' },
-            { parameter: `$\\displaystyle A_{v,u} = \\frac{\\pi D_b^2 \\times s}{4 \\times 1000}$`, hasil: formatNumber(data?.Av_u), satuan: 'mm²/mm' },
             { parameter: `$A_{sb} \\ge A_{sb,perlu}$`, isStatus: true, statusHtml: `<span class="${data?.AsbTerpasang >= data?.AsbDigunakan ? 'status-aman' : 'status-tidak-aman'}">${data?.AsbTerpasang >= data?.AsbDigunakan ? 'AMAN' : 'TIDAK AMAN'}</span>` }
         ];
         return createThreeColumnTable(rows, true);
