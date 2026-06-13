@@ -83,7 +83,6 @@ function calculateFondasi(data, options = {}) {
                 const result = window.optimizeDesainFondasi(data);
                 setDetailedLogging(previousLoggingState);
                 
-                // PERBAIKAN: Deteksi jika optimizer tidak menemukan solusi
                 if (result && result.status === "error") {
                     return {
                         status: 'error',
@@ -96,7 +95,6 @@ function calculateFondasi(data, options = {}) {
                     };
                 }
                 
-                // PERBAIKAN: Deteksi fallback dari optimizer
                 if (result && result.optimasi && result.optimasi.status === 'fallback') {
                     return {
                         status: 'error',
@@ -109,7 +107,6 @@ function calculateFondasi(data, options = {}) {
                     };
                 }
                 
-                // PERBAIKAN: Validasi kontrol hasil optimasi
                 if (result && result.kontrol) {
                     const semuaAman = isSemuaKontrolAman(result.kontrol);
                     if (!semuaAman) {
@@ -154,7 +151,6 @@ function calculateFondasi(data, options = {}) {
         } else {
             const result = hitungDesainFondasi(data, options);
             
-            // PERBAIKAN: Validasi kontrol untuk desain tanpa optimizer
             if (result && result.status === "sukses" && result.kontrol) {
                 const semuaAman = isSemuaKontrolAman(result.kontrol);
                 if (!semuaAman) {
@@ -180,11 +176,7 @@ function calculateFondasi(data, options = {}) {
             return result;
         }
     } else if (mode === "evaluasi") {
-        // PERUBAHAN: Untuk mode evaluasi, TIDAK melakukan validasi kontrol
-        // Langsung panggil fungsi evaluasi dan kembalikan hasil apapun
         const result = hitungEvaluasiFondasi(data, options);
-        
-        // PERUBAHAN: Untuk evaluasi, langsung kembalikan hasil tanpa validasi kontrol
         return result;
     }
 }
@@ -201,10 +193,10 @@ function isSemuaKontrolAman(kontrol) {
         kontrol.geser?.aman2,
         kontrol.tulangan?.aman,
         kontrol.kuatDukung?.aman,
-        kontrol.tulanganTambahan?.aman
+        kontrol.tulanganTambahan?.aman,
+        kontrol.luasTulangan?.aman     // REVISI: kontrol luas tulangan
     ];
     
-    // PERBAIKAN: Tambahkan validasi untuk evaluasi tulangan jika ada
     if (kontrol.evaluasiTulangan) {
         kriteria.push(kontrol.evaluasiTulangan.aman);
     }
@@ -216,7 +208,6 @@ function isSemuaKontrolAman(kontrol) {
 // ===== MODE OPERASI UNTUK KONSISTENSI =====
 
 function processDesainFondasi(hasil, kontrol, rekap, optimasi = {}) {
-    // PERBAIKAN: Validasi kontrol sebelum mengembalikan sukses
     if (!isSemuaKontrolAman(kontrol)) {
         return {
             status: "error",
@@ -238,9 +229,6 @@ function processDesainFondasi(hasil, kontrol, rekap, optimasi = {}) {
 }
 
 function processEvaluasiFondasi(hasil, kontrol, rekap) {
-    // PERUBAHAN: Untuk evaluasi, TIDAK validasi kontrol
-    // Selalu return sukses meskipun kontrol tidak aman
-    
     return {
         status: "sukses",
         mode: "evaluasi",
@@ -269,7 +257,7 @@ function hitungDesainFondasi(data, options = {}) {
             };
         }
 
-        const hasil = hitungFondasiInti(input);
+        const hasil = hitungFondasiInti(input, 'desain');
         
         if (!hasil) {
             return {
@@ -292,7 +280,6 @@ function hitungDesainFondasi(data, options = {}) {
             };
         }
         
-        // PERBAIKAN: Validasi nilai kritis
         if (hasil.parameter.sigma_min <= 0) {
             return {
                 status: 'error',
@@ -314,7 +301,6 @@ function hitungDesainFondasi(data, options = {}) {
         const kontrol = kontrolFondasi(hasil, input, "desain");
         const rekap = rekapHasilFondasi(hasil, input, "desain");
         
-        // PERBAIKAN: Kembalikan hasil dengan validasi kontrol
         return processDesainFondasi(hasil, kontrol, rekap, {
             status: 'no_optimizer',
             catatan: 'Perhitungan tanpa optimizer'
@@ -332,7 +318,7 @@ function hitungDesainFondasi(data, options = {}) {
 }
 
 // =====================================================
-// ===== FUNGSI HITUNG EVALUASI DENGAN ERROR HANDLING - REVISI =====
+// ===== FUNGSI HITUNG EVALUASI DENGAN ERROR HANDLING =====
 function hitungEvaluasiFondasi(data, options = {}) {
     try {
         const input = parseInputFondasi(data);
@@ -345,7 +331,7 @@ function hitungEvaluasiFondasi(data, options = {}) {
             };
         }
 
-        const hasil = hitungFondasiInti(input);
+        const hasil = hitungFondasiInti(input, 'evaluasi');
         
         if (!hasil) {
             return {
@@ -368,13 +354,9 @@ function hitungEvaluasiFondasi(data, options = {}) {
             };
         }
         
-        // PERUBAHAN: Untuk evaluasi, TIDAK validasi sigma_min dan dayaDukung
-        // Langsung hitung kontrol dan rekap
-        
         const kontrol = kontrolFondasi(hasil, input, "evaluasi");
         const rekap = rekapHasilFondasi(hasil, input, "evaluasi");
         
-        // PERUBAHAN: Selalu panggil processEvaluasiFondasi tanpa validasi
         return processEvaluasiFondasi(hasil, kontrol, rekap);
         
     } catch (error) {
@@ -497,8 +479,8 @@ function parseInputFondasi(data) {
 }
 
 // =====================================================
-// ===== PERHITUNGAN INTI FONDASI =====
-function hitungFondasiInti(input) {
+// ===== PERHITUNGAN INTI FONDASI (REVISI: menerima mode) =====
+function hitungFondasiInti(input, mode = "desain") {
     const {
         fondasiMode, lx, ly, bx, by, h, Pu, Mux, Muy, fc, fy, gammaC,
         df_auto, gamma_auto, phi, c, qc, terzaghi, mayerhoff, 
@@ -526,13 +508,9 @@ function hitungFondasiInti(input) {
 
         const parameter = hitungParameterFondasi(actualFondasiMode, ly, lx, by, bx, h, Pu, Mux, Muy, gammaC, gamma, df, fc, fy, D, sbeton, alpha_s);
         
-        // PERBAIKAN: Tidak melempar error untuk evaluasi, biarkan sigma_min negatif tetap diproses
-        // (Hanya untuk desain di luar fungsi ini yang akan menolak)
         parameter.sigma_status = parameter.sigma_min > 0 ? "AMAN" : "BAHAYA";
         
         const dayaDukung = hitungDayaDukungTanah(phi, lx, ly, df, gamma, c, qc, parameter.sigma_max, mayerhoff, terzaghi, qa, modeTanah);
-        
-        // PERBAIKAN: Tidak melempar error untuk evaluasi, biarkan daya dukung tidak aman tetap diproses
         
         let kontrolGeser;
         if (actualFondasiMode === "menerus") {
@@ -543,18 +521,18 @@ function hitungFondasiInti(input) {
         
         let tulangan;
         if (actualFondasiMode === "bujur_sangkar") {
-            tulangan = bujurSangkar(ly, parameter.x1, parameter.sigma_min, parameter.sigma_max, phi1, 1000, parameter.d, parameter.Kmax, fc, fy, D, h);
+            tulangan = bujurSangkar(ly, parameter.x1, parameter.sigma_min, parameter.sigma_max, phi1, 1000, parameter.d, parameter.Kmax, fc, fy, D, h, mode, s);
             tulangan.jenis = "bujur_sangkar";
         } else if (actualFondasiMode === "persegi_panjang") {
-            const tul_panjang = bujurSangkar(ly, parameter.x1, parameter.sigma_min, parameter.sigma_max, phi1, 1000, parameter.d, parameter.Kmax, fc, fy, D, h);
-            const tul_pendek = persegiPanjang(lx, ly, parameter.sigma_max, parameter.x2, phi1, 1000, parameter.d2, fc, fy, h, Db, parameter.Kmax);
+            const tul_panjang = bujurSangkar(ly, parameter.x1, parameter.sigma_min, parameter.sigma_max, phi1, 1000, parameter.d, parameter.Kmax, fc, fy, D, h, mode, s);
+            const tul_pendek = persegiPanjang(lx, ly, parameter.sigma_max, parameter.x2, phi1, 1000, parameter.d2, fc, fy, h, Db, parameter.Kmax, mode, sp, st);
             tulangan = {
                 bujur: tul_panjang,
                 persegi: tul_pendek,
                 jenis: "persegi_panjang"
             };
         } else if (actualFondasiMode === "menerus") {
-            tulangan = menerus(parameter.sigma_max, parameter.x2, phi1, 1000, parameter.d, fc, fy, D, h, Db, parameter.Kmax);
+            tulangan = menerus(parameter.sigma_max, parameter.x2, phi1, 1000, parameter.d, fc, fy, D, h, Db, parameter.Kmax, mode, s, sb);
             tulangan.jenis = "menerus";
         }
 
@@ -564,7 +542,7 @@ function hitungFondasiInti(input) {
         } else if (actualFondasiMode === "persegi_panjang") {
             kuatDukung = kuatDukungTunggal(lx, bx, by, fc, fy, Db, tulangan.persegi.s_pusat, lambda, h, Pu, sbeton, tulangan.persegi.As);
         } else if (actualFondasiMode === "menerus") {
-            kuatDukung = kuatDukungMenerus(lx, bx, fc, fy, Db, tulangan.s_utama, lambda, h, Pu, sbeton);
+            kuatDukung = kuatDukungMenerus(lx, bx, by, fc, fy, Db, tulangan.s_utama, lambda, h, Pu, sbeton);
         }
         
         return {
@@ -578,13 +556,12 @@ function hitungFondasiInti(input) {
         };
         
     } catch (error) {
-        // Untuk evaluasi, kita tetap melempar error karena ini error serius (bukan kontrol)
         throw error;
     }
 }
 
 // =====================================================
-// ===== FUNGSI KONTROL FONDASI =====
+// ===== FUNGSI KONTROL FONDASI (REVISI: tambah luasTulangan) =====
 function kontrolFondasi(hasil, input, mode = "desain") {
     const { dayaDukung, kontrolGeser, tulangan, kuatDukung, parameter } = hasil;
 
@@ -592,6 +569,9 @@ function kontrolFondasi(hasil, input, mode = "desain") {
     
     let kontrolKAman = true;
     let detailKontrolK = {};
+    
+    // REVISI: kontrol luas tulangan terpasang
+    let kontrolLuasTulangan = { aman: true, detail: {} };
     
     if (tulangan.jenis === "bujur_sangkar") {
         kontrolKAman = tulangan.Kontrol_K === "AMAN";
@@ -601,6 +581,16 @@ function kontrolFondasi(hasil, input, mode = "desain") {
             Kmax: parameter.Kmax,
             aman: kontrolKAman
         };
+        const As_perlu = tulangan.As;
+        const As_terpasang = tulangan.AsTerpasang;
+        const amanLuas = As_terpasang >= As_perlu;
+        kontrolLuasTulangan.aman = kontrolLuasTulangan.aman && amanLuas;
+        kontrolLuasTulangan.detail.bujur_sangkar = {
+            As_perlu: As_perlu,
+            As_terpasang: As_terpasang,
+            aman: amanLuas
+        };
+        
     } else if (tulangan.jenis === "persegi_panjang") {
         const kontrolKBujur = tulangan.bujur?.Kontrol_K === "AMAN";
         const kontrolKPersegi = tulangan.persegi?.Kontrol_K === "AMAN";
@@ -619,6 +609,29 @@ function kontrolFondasi(hasil, input, mode = "desain") {
                 aman: kontrolKPersegi
             }
         };
+        // Arah panjang
+        const As_perlu_panjang = tulangan.bujur.As;
+        const As_terpasang_panjang = tulangan.bujur.AsTerpasang;
+        const amanLuasPanjang = As_terpasang_panjang >= As_perlu_panjang;
+        kontrolLuasTulangan.aman = kontrolLuasTulangan.aman && amanLuasPanjang;
+        kontrolLuasTulangan.detail.arah_panjang = {
+            As_perlu: As_perlu_panjang,
+            As_terpasang: As_terpasang_panjang,
+            aman: amanLuasPanjang
+        };
+        // Arah pendek (pusat dan tepi)
+        const As_perlu_pendek = tulangan.persegi.As;
+        const As_terpasang_pusat = tulangan.persegi.AsTerpasangPusat;
+        const As_terpasang_tepi = tulangan.persegi.AsTerpasangTepi;
+        const amanLuasPusat = As_terpasang_pusat >= As_perlu_pendek;
+        const amanLuasTepi = As_terpasang_tepi >= As_perlu_pendek;
+        kontrolLuasTulangan.aman = kontrolLuasTulangan.aman && amanLuasPusat && amanLuasTepi;
+        kontrolLuasTulangan.detail.arah_pendek = {
+            As_perlu: As_perlu_pendek,
+            pusat: { As_terpasang: As_terpasang_pusat, aman: amanLuasPusat },
+            tepi: { As_terpasang: As_terpasang_tepi, aman: amanLuasTepi }
+        };
+        
     } else if (tulangan.jenis === "menerus") {
         kontrolKAman = tulangan.Kontrol_K === "AMAN";
         detailKontrolK = {
@@ -626,6 +639,24 @@ function kontrolFondasi(hasil, input, mode = "desain") {
             K: tulangan.K,
             Kmax: parameter.Kmax,
             aman: kontrolKAman
+        };
+        const As_perlu_utama = tulangan.As;
+        const As_terpasang_utama = tulangan.AsTerpasangUtama;
+        const amanLuasUtama = As_terpasang_utama >= As_perlu_utama;
+        kontrolLuasTulangan.aman = kontrolLuasTulangan.aman && amanLuasUtama;
+        kontrolLuasTulangan.detail.utama = {
+            As_perlu: As_perlu_utama,
+            As_terpasang: As_terpasang_utama,
+            aman: amanLuasUtama
+        };
+        const As_perlu_bagi = tulangan.Asb;
+        const As_terpasang_bagi = tulangan.AsTerpasangBagi;
+        const amanLuasBagi = As_terpasang_bagi >= As_perlu_bagi;
+        kontrolLuasTulangan.aman = kontrolLuasTulangan.aman && amanLuasBagi;
+        kontrolLuasTulangan.detail.bagi = {
+            As_perlu: As_perlu_bagi,
+            As_terpasang: As_terpasang_bagi,
+            aman: amanLuasBagi
         };
     }
 
@@ -789,7 +820,8 @@ function kontrolFondasi(hasil, input, mode = "desain") {
             detail: kuatDukung
         },
         tulanganTambahan: kontrolTulanganTambahan,
-        evaluasiTulangan: mode === "evaluasi" ? kontrolEvaluasiTulangan : null
+        evaluasiTulangan: mode === "evaluasi" ? kontrolEvaluasiTulangan : null,
+        luasTulangan: kontrolLuasTulangan
     };
 }
 
@@ -814,7 +846,8 @@ function rekapHasilFondasi(hasil, input, mode = "desain") {
         tekanan_tanah: `${dayaDukung.status} (${formatStatus(kontrol.dayaDukung.aman)})`,
         geser: `${kontrolGeser.amanGeser1}/${kontrolGeser.amanGeser2} (${formatStatus(kontrol.geser.aman1 && kontrol.geser.aman2)})`,
         kontrol_K: `${formatStatus(kontrol.tulangan.aman)}`,
-        kuat_dukung: `${kuatDukung.Kontrol_Pu}/${kuatDukung.Kontrol_Idh} (${formatStatus(kontrol.kuatDukung.aman)})`
+        kuat_dukung: `${kuatDukung.Kontrol_Pu}/${kuatDukung.Kontrol_Idh} (${formatStatus(kontrol.kuatDukung.aman)})`,
+        luas_tulangan: formatStatus(kontrol.luasTulangan.aman)
     };
 
     if (kontrol.tulanganTambahan) {
@@ -843,8 +876,8 @@ function rekapHasilFondasi(hasil, input, mode = "desain") {
 }
 
 // =====================================================
-// ===== SUB-FUNGSI PERHITUNGAN DETAIL =====
-// (Semua fungsi di bawah ini tetap sama seperti versi sebelumnya)
+// ===== SUB-FUNGSI PERHITUNGAN DETAIL (REVISI) =====
+// =====================================================
 
 function hitungParameterFondasi(fondasiMode, Ly, Lx, by, bx, h, Pu, Mux, Muy, Gc, Gamma, Df, fc, fy, D, sbeton, alpha_s) {
     try {
@@ -875,11 +908,8 @@ function hitungParameterFondasi(fondasiMode, Ly, Lx, by, bx, h, Pu, Mux, Muy, Gc
         const sigma_max = sigma_avg + sigma_mux + sigma_muy + q;
         const sigma_status = sigma_min > 0 ? "AMAN" : "BAHAYA";
         
-        let sigma_a = 0;
-        if (fondasiMode !== "menerus") {
-            sigma_a = sigma_min + (Ly - a) * (sigma_max - sigma_min) / Ly;
-        }
-        
+        const sigma_a = sigma_min + (Ly - a) * (sigma_max - sigma_min) / Ly;
+                
         const x1 = Ly / 2 - by / 1000 / 2;
         const x2 = Lx / 2 - bx / 1000 / 2;
         
@@ -1003,7 +1033,8 @@ function kontrolGeserFondasiMenerus(a, Lx, Ly, sigma_max, sigma_min, fc, lambda,
     }
 }
 
-function bujurSangkar(Ly, x1, sigma_min, sigma_max, phi1, b, d, Kmax, fc, fy, D, h) {
+// REVISI: bujurSangkar menerima mode dan s_input
+function bujurSangkar(Ly, x1, sigma_min, sigma_max, phi1, b, d, Kmax, fc, fy, D, h, mode, s_input) {
     try {
         const sigma = sigma_min + (Ly - x1) * (sigma_max - sigma_min) / Ly;
         const Mu = 0.5 * sigma * x1 * x1 + (1/3) * (sigma_max - sigma) * x1 * x1;
@@ -1014,17 +1045,33 @@ function bujurSangkar(Ly, x1, sigma_min, sigma_max, phi1, b, d, Kmax, fc, fy, D,
         const As2 = (Math.sqrt(fc) / (4 * fy)) * b * d;
         const As3 = 1.4 * b * d / fy;
         const As = Math.max(As1, As2, As3);
-        const s1 = 0.25 * Math.PI * D * D * 1000 / As;
-        const s2 = 3 * h * 1000;
-        const s = floori(Math.min(s1, s2, 450), 25);
         
-        return { sigma, Mu, K, Kontrol_K, a_val, As1, As2, As3, As, s1, s2, s };
+        let s, s1, s2, s3;
+        let AsTerpasang;
+
+        // s1, s2, s3 tetep dihitung normal sesuai rumus
+        s1 = 0.25 * Math.PI * D * D * 1000 / As;
+        s2 = 3 * h * 1000;
+        s3 = 450;
+        const sMin = Math.min(s1, s2, s3);
+
+        if (mode === "evaluasi" && s_input && s_input > 0) {
+            // Pas s=min(s1,s2,s3), nilainya diganti sama s input
+            s = s_input; 
+        } else {
+            s = floori(sMin, 25);
+            s = Math.max(s, 100);
+        }
+        AsTerpasang = (0.25 * Math.PI * D * D * 1000) / s;
+        
+        return { sigma, Mu, K, Kontrol_K, a_val, As1, As2, As3, As, s1, s2, s, AsTerpasang };
     } catch (error) {
         throw error;
     }
 }
 
-function persegiPanjang(Lx, Ly, sigma_max, x2, phi1, b, d2, fc, fy, h, Db, Kmax) {
+// REVISI: persegiPanjang menerima mode, sp_input, st_input
+function persegiPanjang(Lx, Ly, sigma_max, x2, phi1, b, d2, fc, fy, h, Db, Kmax, mode, sp_input, st_input) {
     try {
         const Mu = 0.5 * sigma_max * x2 * x2;
         const K = Mu * 1e6 / (phi1 * b * d2 * d2);
@@ -1035,25 +1082,50 @@ function persegiPanjang(Lx, Ly, sigma_max, x2, phi1, b, d2, fc, fy, h, Db, Kmax)
         const As23 = 1.4 * b * d2 / fy;
         const As = Math.max(As21, As22, As23);
         const Aspusat = (2 * Lx * As) / (Ly + Lx);
-        const s1_pusat = 0.25 * Math.PI * Db * Db * 1000 / Aspusat;
-        const s2_pusat = 3 * h * 1000;
-        const s_pusat = floori(Math.min(s1_pusat, s2_pusat, 450), 25);
-        const Astepi = As - Aspusat;
-        const s1_tepi = 0.25 * Math.PI * Db * Db * 1000 / Astepi;
-        const s2_tepi = 3 * h * 1000;
-        const s_tepi = floori(Math.min(s1_tepi, s2_tepi, 450), 25);
+        
+        let s_pusat, s1_pusat, s2_pusat, s3_pusat;
+        let s_tepi, s1_tepi, s2_tepi, s3_tepi;
+        let AsTerpasangPusat, AsTerpasangTepi;
+        
+        // Perhitungan teoretis pusat
+        s1_pusat = 0.25 * Math.PI * Db * Db * 1000 / Aspusat;
+        s2_pusat = 3 * h * 1000;
+        s3_pusat = 450;
+        const sMin_pusat = Math.min(s1_pusat, s2_pusat, s3_pusat);
+
+        // Perhitungan teoretis tepi
+        const Astepi = As; // Sesuai logika bawaan rumus persegi panjang
+        s1_tepi = 0.25 * Math.PI * Db * Db * 1000 / Astepi;
+        s2_tepi = 3 * h * 1000;
+        s3_tepi = 450;
+        const sMin_tepi = Math.min(s1_tepi, s2_tepi, s3_tepi);
+
+        // Intervensi nilai s berdasarkan mode
+        if (mode === "evaluasi" && sp_input && st_input && sp_input > 0 && st_input > 0) {
+            s_pusat = sp_input;
+            s_tepi = st_input;
+        } else {
+            s_pusat = floori(sMin_pusat, 25);
+            s_pusat = Math.max(s_pusat, 100);
+
+            s_tepi = floori(sMin_tepi, 25);
+            s_tepi = Math.max(s_tepi, 100);
+        }
+        AsTerpasangPusat = (0.25 * Math.PI * Db * Db * 1000) / s_pusat;
+        AsTerpasangTepi = (0.25 * Math.PI * Db * Db * 1000) / s_tepi;
         
         return { 
             Mu, K, Kontrol_K, a_val, As21, As22, As23, As, 
-            Aspusat, s1_pusat, s2_pusat, s_pusat, 
-            Astepi, s1_tepi, s2_tepi, s_tepi 
+            Aspusat, s1_pusat, s2_pusat, s3_pusat, s_pusat, AsTerpasangPusat,
+            Astepi: As - Aspusat, s1_tepi, s2_tepi, s3_tepi, s_tepi, AsTerpasangTepi
         };
     } catch (error) {
         throw error;
     }
 }
 
-function menerus(sigma_max, x2, phi1, b, d, fc, fy, D, h, Db, Kmax) {
+// REVISI: menerus menerima mode, s_utama_input, s_bagi_input
+function menerus(sigma_max, x2, phi1, b, d, fc, fy, D, h, Db, Kmax, mode, s_utama_input, s_bagi_input) {
     try {
         const Mu = 0.5 * sigma_max * x2 * x2;
         const K = Mu * 1e6 / (phi1 * b * d * d);
@@ -1063,21 +1135,65 @@ function menerus(sigma_max, x2, phi1, b, d, fc, fy, D, h, Db, Kmax) {
         const As2 = (Math.sqrt(fc) / (4 * fy)) * b * d;
         const As3 = 1.4 * b * d / fy;
         const As = Math.max(As1, As2, As3);
-        const s1 = 0.25 * Math.PI * D * D * 1000 / As;
-        const s2 = 3 * h * 1000;
-        const s_utama = floori(Math.min(s1, s2, 450), 25);
         
+        let s_utama, s1_utama, s2_utama, s3_utama;
+        let AsTerpasangUtama;
+
+        // 1. Hitung s1, s2, s3 utama terlebih dahulu agar selalu sesuai rumus perhitungan
+        s1_utama = (0.25 * Math.PI * D * D * 1000) / As;
+        s2_utama = 3 * h * 1000;
+        s3_utama = 450;
+
+        if (mode === "evaluasi" && s_utama_input && s_utama_input > 0) {
+            // Mode Evaluasi: s_utama langsung memakai nilai input
+            s_utama = s_utama_input;
+        } else {
+            // Mode Desain: s_utama dicari dari nilai minimum s1, s2, s3
+            const sMinUtama = Math.min(s1_utama, s2_utama, s3_utama);
+            s_utama = floori(sMinUtama, 25);
+            s_utama = Math.max(s_utama, 100);
+        }
+        // Hitung luasan tulangan terpasang utama berdasarkan s_utama yang terpilih
+        AsTerpasangUtama = (0.25 * Math.PI * D * D * 1000) / s_utama;
+
+        // --- Perhitungan Asb (Tulangan Susut/Bagi) ---
         const Asb1 = As / 5;
-        const Asb2 = (fy <= 350 ? 0.002 * b * h : (fy > 350 && fy < 420) ? (0.002 - (fy - 350) / 350000) * b * h : 0.0018 * b * h * (420 / fy)) * 1000;
+        let Asb2;
+        if (fy <= 350) {
+            Asb2 = 0.002 * b * h * 1000;
+        } else if (fy > 350 && fy < 420) {
+            Asb2 = (0.002 - (fy - 350) / 350000) * b * h * 1000;
+        } else {
+            Asb2 = 0.0018 * b * h * 1000 * (420 / fy);
+        }
         const Asb3 = 0.0014 * b * h * 1000;
         const Asb = Math.max(Asb1, Asb2, Asb3);
-        const s1_bagi = 0.25 * Math.PI * Db * Db * 1000 / Asb;
-        const s2_bagi = 5 * h * 1000;
-        const s_bagi = floori(Math.min(s1_bagi, s2_bagi, 450), 25);
-        
+
+        let s_bagi, s1_bagi, s2_bagi, s3_bagi;
+        let AsTerpasangBagi;
+
+        // 2. Hitung s1, s2, s3 bagi terlebih dahulu agar selalu sesuai rumus perhitungan
+        s1_bagi = (0.25 * Math.PI * Db * Db * 1000) / Asb;
+        s2_bagi = 5 * h * 1000;
+        s3_bagi = 450;
+
+        if (mode === "evaluasi" && s_bagi_input && s_bagi_input > 0) {
+            // Mode Evaluasi: s_bagi langsung memakai nilai input
+            s_bagi = s_bagi_input;
+        } else {
+            // Mode Desain: s_bagi dicari dari nilai minimum s1, s2, s3
+            const sMinBagi = Math.min(s1_bagi, s2_bagi, s3_bagi);
+            s_bagi = floori(sMinBagi, 25);
+            s_bagi = Math.max(s_bagi, 100);
+        }
+        // Hitung luasan tulangan terpasang bagi berdasarkan s_bagi yang terpilih
+        AsTerpasangBagi = (0.25 * Math.PI * Db * Db * 1000) / s_bagi;
+
         return { 
-            Mu, K, Kontrol_K, a_val, As1, As2, As3, As, s1, s2, s_utama, 
-            Asb1, Asb2, Asb3, Asb, s1_bagi, s2_bagi, s_bagi 
+            Mu, K, Kontrol_K, a_val, As1, As2, As3, As, 
+            s1_utama, s2_utama, s3_utama, s_utama, AsTerpasangUtama,
+            Asb1, Asb2, Asb3, Asb, 
+            s1_bagi, s2_bagi, s3_bagi, s_bagi, AsTerpasangBagi
         };
     } catch (error) {
         throw error;
@@ -1119,18 +1235,18 @@ function kuatDukungTunggal(Lx, bx, by, fc, fy, D, s, lambda, h, Pu, sbeton, As_p
     }
 }
 
-function kuatDukungMenerus(Lx, bx, fc, fy, Db, s_utama, lambda, h, Pu, sbeton) {
+function kuatDukungMenerus(Lx, bx, by, fc, fy, Db, s_utama, lambda, h, Pu, sbeton) {
     try {
-        const A1 = bx * 1000;
-        const Pu_cap = 0.65 * 0.85 * fc * A1;
+        const A1 = bx * by;
+        const Pu_cap = 0.65 * 0.85 * fc * A1/1000;
         const Kontrol_Pu = (Pu_cap >= Pu) ? "AMAN" : "BAHAYA";
         
         const It = (Lx * 1000) / 2 - bx / 2 - sbeton;
         
         const Cb = Math.min(75, s_utama);
         const C = Math.min((Cb + 0) / Db, 2.5);
-        const Idh1 = (fy / (1.1 * lambda * Math.sqrt(fc))) * (1 * 1 * 0.8 / C) * Db;
-        const Idh2 = 8 * Db;
+        const Idh1 = (fy / (1.1 * lambda * Math.sqrt(fc))) * (1 * 1 * (Db <= 19 ? 0.8 : 1) / C) * Db;        
+        const Idh2 = 0;
         const Idh = ceili(Math.max(Idh1, Idh2, 300), 5);
         
         const Kontrol_Idh = (It > Idh) ? "AMAN" : "BAHAYA";
@@ -1153,7 +1269,7 @@ function kuatDukungMenerus(Lx, bx, fc, fy, Db, s_utama, lambda, h, Pu, sbeton) {
 }
 
 // =====================================================
-// ===== FUNGSI AUTO-REDIRECT & SESSION STORAGE (LENGKAP) =====
+// ===== FUNGSI AUTO-REDIRECT & SESSION STORAGE =====
 // =====================================================
 
 function saveColorSettings() {
@@ -1251,6 +1367,7 @@ function saveResultAndRedirectFondasi(result, inputData) {
                             As2: tul.As2,
                             As3: tul.As3,
                             As: tul.As,
+                            AsTerpasang: tul.AsTerpasang,
                             s1: tul.s1,
                             s2: tul.s2,
                             s: tul.s
@@ -1268,6 +1385,7 @@ function saveResultAndRedirectFondasi(result, inputData) {
                                 As2: tul.bujur?.As2,
                                 As3: tul.bujur?.As3,
                                 As: tul.bujur?.As,
+                                AsTerpasang: tul.bujur?.AsTerpasang,
                                 s1: tul.bujur?.s1,
                                 s2: tul.bujur?.s2,
                                 s: tul.bujur?.s
@@ -1282,10 +1400,11 @@ function saveResultAndRedirectFondasi(result, inputData) {
                                 As23: tul.persegi?.As23,
                                 As: tul.persegi?.As,
                                 Aspusat: tul.persegi?.Aspusat,
+                                AsTerpasangPusat: tul.persegi?.AsTerpasangPusat,
+                                AsTerpasangTepi: tul.persegi?.AsTerpasangTepi,
                                 s1_pusat: tul.persegi?.s1_pusat,
                                 s2_pusat: tul.persegi?.s2_pusat,
                                 s_pusat: tul.persegi?.s_pusat,
-                                Astepi: tul.persegi?.Astepi,
                                 s1_tepi: tul.persegi?.s1_tepi,
                                 s2_tepi: tul.persegi?.s2_tepi,
                                 s_tepi: tul.persegi?.s_tepi
@@ -1302,13 +1421,15 @@ function saveResultAndRedirectFondasi(result, inputData) {
                             As2: tul.As2,
                             As3: tul.As3,
                             As: tul.As,
-                            s1: tul.s1,
-                            s2: tul.s2,
+                            AsTerpasangUtama: tul.AsTerpasangUtama,
+                            s1_utama: tul.s1_utama,
+                            s2_utama: tul.s2_utama,
                             s_utama: tul.s_utama,
                             Asb1: tul.Asb1,
                             Asb2: tul.Asb2,
                             Asb3: tul.Asb3,
                             Asb: tul.Asb,
+                            AsTerpasangBagi: tul.AsTerpasangBagi,
                             s1_bagi: tul.s1_bagi,
                             s2_bagi: tul.s2_bagi,
                             s_bagi: tul.s_bagi
@@ -1473,20 +1594,16 @@ function getAllFondasiVariables(result, inputData) {
 // =====================================================
 // ===== FUNGSI UNTUK KONSISTENSI =====
 
-// Fungsi untuk menangani redirect dengan mode evaluasi
 function handleFondasiRedirect(data) {
     try {
         const result = calculateFondasi(data);
         
-        // PERUBAHAN: Untuk mode evaluasi, selalu redirect meskipun kontrol tidak aman
         if (data.mode === "evaluasi" && result.status === "sukses") {
             saveResultAndRedirectFondasi(result, data);
         } 
-        // Untuk mode desain, hanya redirect jika sukses
         else if (data.mode === "desain" && result.status === "sukses") {
             saveResultAndRedirectFondasi(result, data);
         } else {
-            // Tampilkan pesan error hanya untuk desain atau error parsing
             if (typeof showAlert === 'function') {
                 showAlert(`Perhitungan fondasi gagal: ${result.message || 'Tidak ditemukan solusi'}`);
             } else {
@@ -1505,7 +1622,6 @@ function handleFondasiRedirect(data) {
     }
 }
 
-// Update fungsi calculateFondasiWithRedirect untuk menggunakan handler baru
 window.calculateFondasiWithRedirect = function(data) {
     return handleFondasiRedirect(data);
 };
@@ -1513,7 +1629,6 @@ window.calculateFondasiWithRedirect = function(data) {
 // =====================================================
 // ===== FUNGSI BANTU UNTUK REPORT =====
 
-// Fungsi untuk mengecek apakah hasil evaluasi aman (untuk display di report)
 function isEvaluasiAman(result) {
     if (!result || !result.kontrol) return false;
     
@@ -1524,7 +1639,8 @@ function isEvaluasiAman(result) {
         result.kontrol.geser?.aman2,
         result.kontrol.tulangan?.aman,
         result.kontrol.kuatDukung?.aman,
-        result.kontrol.tulanganTambahan?.aman
+        result.kontrol.tulanganTambahan?.aman,
+        result.kontrol.luasTulangan?.aman
     ];
     
     if (result.kontrol.evaluasiTulangan) {
@@ -1643,7 +1759,6 @@ window.saveColorSettings = saveColorSettings;
 window.saveResultAndRedirectFondasi = saveResultAndRedirectFondasi;
 window.getAllFondasiVariables = getAllFondasiVariables;
 
-// Fungsi helper untuk report
 window.isEvaluasiAman = isEvaluasiAman;
 
-console.log("✅ calc-fondasi.js loaded (complete with mode evaluasi always showing report)");
+console.log("✅ calc-fondasi.js (revisi: kontrol luas tulangan terpasang dan mode evaluasi pakai s input)");
