@@ -1096,8 +1096,8 @@ function persegiPanjang(Lx, Ly, sigma_max, x2, phi1, b, d2, fc, fy, h, Db, Kmax,
         const sMin_pusat = Math.min(s1_pusat, s2_pusat, s3_pusat);
 
         // Perhitungan teoretis tepi
-        const Astepi = As; // Sesuai logika bawaan rumus persegi panjang
-        s1_tepi = 0.25 * Math.PI * Db * Db * 1000 / Astepi;
+        const Astepi = As-Aspusat; // Sesuai logika bawaan rumus persegi panjang
+        s1_tepi = (0.25 * Math.PI * Db * Db * 1000) / Astepi;
         s2_tepi = 3 * h * 1000;
         s3_tepi = 450;
         const sMin_tepi = Math.min(s1_tepi, s2_tepi, s3_tepi);
