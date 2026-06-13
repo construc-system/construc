@@ -549,7 +549,7 @@
         const status = cekStatusFondasi();
         const mode = getData('data.actualFondasiMode', 'bujur_sangkar');
         const dim = getData('inputData.fondasi.dimensi', {});
-        let html = `<div class="section-group"><h3>Kesimpulan</h3><div class="conclusion-box">
+        let html = `<div class="section-group"><h3>3. Kesimpulan</h3><div class="conclusion-box">
                     <h4 style="text-align:center; ${status === 'aman' ? 'color:#155724' : 'color:#721c24'}"><strong>STRUKTUR FONDASI ${getFondasiModeName(mode)} ${status === 'aman' ? 'AMAN' : 'TIDAK AMAN'}</strong></h4>`;
         if (status === 'aman') {
             html += `<p><strong>Status:</strong> <span class="status-aman">SEMUA KONTROL AMAN</span></p>
@@ -562,14 +562,13 @@
                          <li>Kuat dukung aksial kolom (P<sub>u,cap</sub> ≥ P<sub>u</sub>)</li>
                          <li>Panjang penyaluran tulangan (l<sub>t</sub> > l<sub>dh</sub>)</li>
                          <li>Luas tulangan terpasang cukup (A<sub>s,terpasang</sub> ≥ A<sub>s,perlu</sub>)</li>
-                         <li>Jarak tulangan minimal (s ≥ 100 mm)</li>
                      </ul>`;
         } else {
             html += `<p><strong>Status:</strong> <span class="status-tidak-aman">TIDAK AMAN - PERLU PERBAIKAN DESAIN</span></p>
                      <p>Struktur fondasi ${getFondasiModeName(mode)} dengan dimensi ${formatNumber(dim.lx)} m × ${formatNumber(dim.ly)} m <strong>TIDAK MEMENUHI</strong> persyaratan SNI 2847:2019 dan SNI 8460:2017.</p>
                      <p>Periksa kembali parameter desain seperti dimensi fondasi, kedalaman, mutu beton, atau konfigurasi tulangan.</p>`;
         }
-        html += `<p style="margin-top:12px; font-size:10pt; color:#666;"><strong>Catatan:</strong> Hasil perhitungan ini berdasarkan SNI 2847:2019 (Persyaratan Beton Struktural untuk Bangunan Gedung) dan SNI 8460:2017 (Persyaratan Perancangan Geoteknik). Pastikan semua aspek konstruksi sesuai dengan spesifikasi teknis dan dilakukan pengawasan yang memadai. Untuk fondasi dengan momen besar, perhatikan juga kontrol stabilitas guling dan geser.</p>
+        html += `<p style="margin-top:12px; font-size:10pt; color:#666;"><strong>Catatan:</strong> Hasil perhitungan ini berdasarkan SNI 2847:2019 (Persyaratan Beton Struktural untuk Bangunan Gedung) dan SNI 8460:2017 (Persyaratan Perancangan Geoteknik). Pastikan semua aspek konstruksi sesuai dengan spesifikasi teknis dan dilakukan pengawasan yang memadai.</p>
                 </div></div>`;
         return html;
     }
