@@ -12,26 +12,32 @@
     // RENDER UTAMA
     // ========================
     function renderFondasiReport(result) {
-        try {
-            cleanupLegacyPenampang();
-            updateReportTitle(result);
-            renderInputDataFondasi(result.inputData || {});
+            try {
+                cleanupLegacyPenampang();
+                updateReportTitle(result);
+                renderInputDataFondasi(result.inputData || {});
+                
+                // Simpan reference data ke scope global window agar dapat diakses/dimodifikasi secara dinamis antar-fungsi
+                window.lastResultObject = result;
 
-            // 1. Rekap Tulangan + Status Keamanan (dalam satu container)
-            renderRekapDanStatusFondasi(result);
+                // 1. Rekap Tulangan + Status Keamanan Awal
+                renderRekapDanStatusFondasi(result);
 
-            // 2. Penampang Fondasi (ditempatkan setelah resultContainer)
-            const resultContainer = document.getElementById('resultContainer');
-            renderPenampangFondasi(result, resultContainer);
+                // 2. Penampang Fondasi
+                const resultContainer = document.getElementById('resultContainer');
+                renderPenampangFondasi(result, resultContainer);
 
-            // 3. Ringkasan Kontrol (step-step)
-            renderRingkasanFondasi(result);
+                // 3. Ringkasan Kontrol (Fungsi ini sekarang akan meng-update status `luasTulanganAman`)
+                renderRingkasanFondasi(result);
 
-            console.log("✅ Laporan fondasi berhasil di-render (urutan: rekap+status → penampang → kontrol)");
-        } catch (error) {
-            console.error('Error rendering fondasi report:', error);
-            showError(`Error merender laporan fondasi: ${error.message}`);
-        }
+                // 4. Render Ulang Status Keamanan untuk memastikan kesimpulan sinkron dengan data evaluasi As terbaru
+                renderRekapDanStatusFondasi(window.lastResultObject);
+
+                console.log("✅ Laporan fondasi berhasil di-render dengan validasi status luas tulangan ter-update!");
+            } catch (error) {
+                console.error('Error rendering fondasi report:', error);
+                showError(`Error merender laporan fondasi: ${error.message}`);
+            }
     }
 
     function cleanupLegacyPenampang() {
@@ -195,22 +201,28 @@
     }
 
     function getStatusKeamananFondasi(kontrol) {
-        if (!kontrol) return { aman: false, detail: 'Data kontrol tidak tersedia', saranPerbaikan: [], kontrolTidakAman: [] };
-        const kontrolTidakAman = [];
-        const saranPerbaikan = [];
-        if (kontrol.dayaDukung && !kontrol.dayaDukung.aman) { kontrolTidakAman.push('Tekanan tanah melebihi daya dukung'); saranPerbaikan.push('Perbesar dimensi fondasi atau ganti lokasi dengan tanah yang lebih baik'); }
-        if (kontrol.geser) {
-            if (!kontrol.geser.aman1) { kontrolTidakAman.push('Geser 1 arah tidak memenuhi'); saranPerbaikan.push('Perbesar tebal fondasi atau tingkatkan mutu beton'); }
-            if (!kontrol.geser.aman2) { kontrolTidakAman.push('Geser 2 arah tidak memenuhi'); saranPerbaikan.push('Perbesar tebal fondasi atau tingkatkan mutu beton'); }
-        }
-        if (kontrol.tulangan && !kontrol.tulangan.aman) { kontrolTidakAman.push('Tulangan tidak memenuhi persyaratan'); saranPerbaikan.push('Perbanyak jumlah tulangan atau gunakan diameter tulangan yang lebih besar'); }
-        if (kontrol.kuatDukung && !kontrol.kuatDukung.aman) { kontrolTidakAman.push('Kuat dukung fondasi tidak mencukupi'); saranPerbaikan.push('Perbesar dimensi fondasi atau tingkatkan mutu beton'); }
-        if (kontrol.tulanganTambahan && !kontrol.tulanganTambahan.aman) { kontrolTidakAman.push('Jarak tulangan terlalu besar (s >= 100mm)'); saranPerbaikan.push('Perkecil jarak tulangan menjadi <= 100mm'); }
-        if (kontrol.evaluasiTulangan && !kontrol.evaluasiTulangan.aman) { kontrolTidakAman.push('Tulangan terpasang lebih jarang dari yang dibutuhkan'); saranPerbaikan.push('Perkecil jarak tulangan sesuai hasil perhitungan'); }
-        const aman = kontrolTidakAman.length === 0;
-        return { aman, detail: aman ? 'Semua persyaratan keamanan struktur telah terpenuhi' : 'Beberapa persyaratan keamanan struktur belum terpenuhi', saranPerbaikan, kontrolTidakAman };
-    }
+            if (!kontrol) return { aman: false, detail: 'Data kontrol tidak tersedia', saranPerbaikan: [], kontrolTidakAman: [] };
+            const kontrolTidakAman = [];
+            const saranPerbaikan = [];
+            if (kontrol.dayaDukung && !kontrol.dayaDukung.aman) { kontrolTidakAman.push('Tekanan tanah melebihi daya dukung'); saranPerbaikan.push('Perbesar dimensi fondasi atau ganti lokasi dengan tanah yang lebih baik'); }
+            if (kontrol.geser) {
+                if (!kontrol.geser.aman1) { kontrolTidakAman.push('Geser 1 arah tidak memenuhi'); saranPerbaikan.push('Perbesar tebal fondasi atau tingkatkan mutu beton'); }
+                if (!kontrol.geser.aman2) { kontrolTidakAman.push('Geser 2 arah tidak memenuhi'); saranPerbaikan.push('Perbesar tebal fondasi atau tingkatkan mutu beton'); }
+            }
+            if (kontrol.tulangan && !kontrol.tulangan.aman) { kontrolTidakAman.push('Tulangan tidak memenuhi persyaratan kapasitas momen'); saranPerbaikan.push('Perbanyak jumlah tulangan atau gunakan diameter tulangan yang lebih besar'); }
+            if (kontrol.kuatDukung && !kontrol.kuatDukung.aman) { kontrolTidakAman.push('Kuat dukung fondasi tidak mencukupi'); saranPerbaikan.push('Perbesar dimensi fondasi atau tingkatkan mutu beton'); }
+            if (kontrol.tulanganTambahan && !kontrol.tulanganTambahan.aman) { kontrolTidakAman.push('Jarak tulangan terlalu besar (s >= 100mm)'); saranPerbaikan.push('Perkecil jarak tulangan menjadi <= 100mm'); }
+            if (kontrol.evaluasiTulangan && !kontrol.evaluasiTulangan.aman) { kontrolTidakAman.push('Tulangan terpasang lebih jarang dari yang dibutuhkan'); saranPerbaikan.push('Perkecil jarak tulangan sesuai hasil perhitungan'); }
+            
+            // Tambahan validasi otomatis jika status kontrol luas tulangan dari UI bernilai false
+            if (kontrol.luasTulanganAman === false) {
+                kontrolTidakAman.push('Luas tulangan terpasang (As terpasang) kurang dari luas tulangan yang diperlukan (As perlu)');
+                saranPerbaikan.push('Tambahkan jumlah tulangan atau perbesar diameter tulangan');
+            }
 
+            const aman = kontrolTidakAman.length === 0;
+            return { aman, detail: aman ? 'Semua persyaratan keamanan struktur telah terpenuhi' : 'Beberapa persyaratan keamanan struktur belum terpenuhi', saranPerbaikan, kontrolTidakAman };
+    }
     // ========================
     // RINGKASAN KONTROL (step-step)
     // ========================
@@ -253,49 +265,79 @@
         if (d.Vu2 !== undefined) html += renderStepFondasi(stepNumberGenerator.next().value, 'Kontrol Geser 2 Arah', `V<sub>u2</sub> = ${d.Vu2?.toFixed(2)} kN ≤ φV<sub>c2</sub> = ${d.phiVc2?.toFixed(2)} kN`, d.Vu2 <= d.phiVc2);
         return html;
     }
-    function renderKontrolTulanganFondasi(kontrolTulangan, dataTulangan, fondasiMode, parameter, optimasi) {
+function renderKontrolTulanganFondasi(kontrolTulangan, dataTulangan, fondasiMode, parameter, optimasi) {
         if (!kontrolTulangan?.detail) return '';
         const detail = kontrolTulangan.detail;
         const Kmax = parameter?.Kmax || 0;
         const jenis = detail.jenis || fondasiMode;
         let html = '';
+        
+        // Flag internal untuk mencatat status aman seluruh komponen luas tulangan
+        let semuaLuasAman = true;
+
         if (jenis === "bujur_sangkar") {
             if (detail.K !== undefined) html += renderStepFondasi(stepNumberGenerator.next().value, 'Faktor Momen Pikul Tulangan', `K = ${detail.K?.toFixed(6)} ≤ K<sub>max</sub> = ${Kmax?.toFixed(6)}`, detail.Kontrol_K === "AMAN");
-            const As_perlu = detail.As_perlu || Math.max(detail.As1, detail.As2, detail.As3);
-            const As_terpasang = optimasi?.as_rincian_per_meter?.asUtamaPerMeter;
-            if (As_terpasang !== undefined) html += renderStepFondasi(stepNumberGenerator.next().value, 'Kontrol Luas Tulangan', `A<sub>s terpasang</sub> = ${As_terpasang?.toFixed(0)} mm²/m ≥ A<sub>s perlu</sub> = ${As_perlu?.toFixed(0)} mm²/m`, As_terpasang >= As_perlu);
-            else html += renderStepFondasi(stepNumberGenerator.next().value, 'Kontrol Luas Tulangan', `A<sub>s perlu</sub> = ${As_perlu?.toFixed(0)} mm²/m`, null);
+            
+            const As_perlu = detail.As_perlu || Math.max(detail.As1 || 0, detail.As2 || 0, detail.As3 || 0);
+            const As_terpasang = optimasi?.as_rincian_per_meter?.asUtamaPerMeter || dataTulangan?.bujur?.As_terpasang || 0;
+            
+            const isAman = As_terpasang >= As_perlu;
+            if(!isAman) semuaLuasAman = false;
+
+            html += renderStepFondasi(stepNumberGenerator.next().value, 'Kontrol Luas Tulangan', `A<sub>s terpasang</sub> = ${As_terpasang.toFixed(0)} mm²/m ≥ A<sub>s perlu</sub> = ${As_perlu.toFixed(0)} mm²/m`, isAman);
         }
         else if (jenis === "persegi_panjang") {
             if (detail.bujur?.K !== undefined) html += renderStepFondasi(stepNumberGenerator.next().value, 'Faktor Momen Pikul Tulangan Panjang', `K = ${detail.bujur.K?.toFixed(6)} ≤ K<sub>max</sub> = ${Kmax?.toFixed(6)}`, detail.bujur.Kontrol_K === "AMAN");
-            const As_panjang = detail.bujur?.As_perlu || Math.max(detail.bujur?.As1, detail.bujur?.As2, detail.bujur?.As3);
-            const As_terpasang = optimasi?.as_rincian_per_meter?.asUtamaPerMeter;
-            if (As_terpasang !== undefined) html += renderStepFondasi(stepNumberGenerator.next().value, 'Kontrol Luas Tulangan Panjang', `A<sub>s terpasang</sub> = ${As_terpasang?.toFixed(0)} mm²/m ≥ A<sub>s perlu</sub> = ${As_panjang?.toFixed(0)} mm²/m`, As_terpasang >= As_panjang);
-            else html += renderStepFondasi(stepNumberGenerator.next().value, 'Kontrol Luas Tulangan Panjang', `A<sub>s perlu</sub> = ${As_panjang?.toFixed(0)} mm²/m`, null);
+            
+            // 1. Tulangan Panjang
+            const As_panjang = detail.bujur?.As_perlu || Math.max(detail.bujur?.As1 || 0, detail.bujur?.As2 || 0, detail.bujur?.As3 || 0);
+            const As_terpasang_panjang = optimasi?.as_rincian_per_meter?.asUtamaPerMeter || dataTulangan?.bujur?.As_terpasang || 0;
+            const isPanjangAman = As_terpasang_panjang >= As_panjang;
+            if(!isPanjangAman) semuaLuasAman = false;
+            html += renderStepFondasi(stepNumberGenerator.next().value, 'Kontrol Luas Tulangan Panjang', `A<sub>s terpasang</sub> = ${As_terpasang_panjang.toFixed(0)} mm²/m ≥ A<sub>s perlu</sub> = ${As_panjang.toFixed(0)} mm²/m`, isPanjangAman);
+
             if (detail.persegi?.K !== undefined) html += renderStepFondasi(stepNumberGenerator.next().value, 'Faktor Momen Pikul Tulangan Pendek', `K = ${detail.persegi.K?.toFixed(6)} ≤ K<sub>max</sub> = ${Kmax?.toFixed(6)}`, detail.persegi.Kontrol_K === "AMAN");
-            const As_pusat = detail.persegi?.Aspusat;
-            const As_terpasang_pusat = optimasi?.as_rincian_per_meter?.asPusatPerMeter;
-            if (As_terpasang_pusat !== undefined) html += renderStepFondasi(stepNumberGenerator.next().value, 'Kontrol Luas Tulangan Pendek Pusat', `A<sub>s terpasang</sub> = ${As_terpasang_pusat?.toFixed(0)} mm²/m ≥ A<sub>s perlu</sub> = ${As_pusat?.toFixed(0)} mm²/m`, As_terpasang_pusat >= As_pusat);
-            else html += renderStepFondasi(stepNumberGenerator.next().value, 'Kontrol Luas Tulangan Pendek Pusat', `A<sub>s perlu</sub> = ${As_pusat?.toFixed(0)} mm²/m`, null);
-            const As_tepi = detail.persegi?.Astepi;
-            const As_terpasang_tepi = optimasi?.as_rincian_per_meter?.asTepiPerMeter;
-            if (As_terpasang_tepi !== undefined) html += renderStepFondasi(stepNumberGenerator.next().value, 'Kontrol Luas Tulangan Pendek Tepi', `A<sub>s terpasang</sub> = ${As_terpasang_tepi?.toFixed(0)} mm²/m ≥ A<sub>s perlu</sub> = ${As_tepi?.toFixed(0)} mm²/m`, As_terpasang_tepi >= As_tepi);
-            else html += renderStepFondasi(stepNumberGenerator.next().value, 'Kontrol Luas Tulangan Pendek Tepi', `A<sub>s perlu</sub> = ${As_tepi?.toFixed(0)} mm²/m`, null);
+            
+            // 2. Tulangan Pendek Pusat
+            const As_pusat = detail.persegi?.Aspusat || 0;
+            const As_terpasang_pusat = optimasi?.as_rincian_per_meter?.asPusatPerMeter || dataTulangan?.persegi?.As_terpasang_pusat || 0;
+            const isPusatAman = As_terpasang_pusat >= As_pusat;
+            if(!isPusatAman) semuaLuasAman = false;
+            html += renderStepFondasi(stepNumberGenerator.next().value, 'Kontrol Luas Tulangan Pendek Pusat', `A<sub>s terpasang</sub> = ${As_terpasang_pusat.toFixed(0)} mm²/m ≥ A<sub>s perlu</sub> = ${As_pusat.toFixed(0)} mm²/m`, isPusatAman);
+
+            // 3. Tulangan Pendek Tepi
+            const As_tepi = detail.persegi?.Astepi || 0;
+            const As_terpasang_tepi = optimasi?.as_rincian_per_meter?.asTepiPerMeter || dataTulangan?.persegi?.As_terpasang_tepi || 0;
+            const isTepiAman = As_terpasang_tepi >= As_tepi;
+            if(!isTepiAman) semuaLuasAman = false;
+            html += renderStepFondasi(stepNumberGenerator.next().value, 'Kontrol Luas Tulangan Pendek Tepi', `A<sub>s terpasang</sub> = ${As_terpasang_tepi.toFixed(0)} mm²/m ≥ A<sub>s perlu</sub> = ${As_tepi.toFixed(0)} mm²/m`, isTepiAman);
         }
         else if (jenis === "menerus") {
             if (detail.K !== undefined) html += renderStepFondasi(stepNumberGenerator.next().value, 'Faktor Momen Pikul Tulangan', `K = ${detail.K?.toFixed(6)} ≤ K<sub>max</sub> = ${Kmax?.toFixed(6)}`, detail.Kontrol_K === "AMAN");
-            const As_utama = detail.As_perlu || Math.max(detail.As1, detail.As2, detail.As3);
-            const As_terpasang = optimasi?.as_rincian_per_meter?.asUtamaPerMeter;
-            if (As_terpasang !== undefined) html += renderStepFondasi(stepNumberGenerator.next().value, 'Kontrol Luas Tulangan Utama', `A<sub>s terpasang</sub> = ${As_terpasang?.toFixed(0)} mm²/m ≥ A<sub>s perlu</sub> = ${As_utama?.toFixed(0)} mm²/m`, As_terpasang >= As_utama);
-            else html += renderStepFondasi(stepNumberGenerator.next().value, 'Kontrol Luas Tulangan Utama', `A<sub>s perlu</sub> = ${As_utama?.toFixed(0)} mm²/m`, null);
-            const As_bagi = detail.Asb_perlu || Math.max(detail.Asb1, detail.Asb2, detail.Asb3);
-            const As_terpasang_bagi = optimasi?.as_rincian_per_meter?.asBagiPerMeter;
-            if (As_terpasang_bagi !== undefined) html += renderStepFondasi(stepNumberGenerator.next().value, 'Kontrol Luas Tulangan Bagi', `A<sub>s terpasang</sub> = ${As_terpasang_bagi?.toFixed(0)} mm²/m ≥ A<sub>s perlu</sub> = ${As_bagi?.toFixed(0)} mm²/m`, As_terpasang_bagi >= As_bagi);
-            else html += renderStepFondasi(stepNumberGenerator.next().value, 'Kontrol Luas Tulangan Bagi', `A<sub>s perlu</sub> = ${As_bagi?.toFixed(0)} mm²/m`, null);
+            
+            // 1. Tulangan Utama
+            const As_utama = detail.As_perlu || Math.max(detail.As1 || 0, detail.As2 || 0, detail.As3 || 0);
+            const As_terpasang_utama = optimasi?.as_rincian_per_meter?.asUtamaPerMeter || dataTulangan?.menerus?.As_terpasang || 0;
+            const isUtamaAman = As_terpasang_utama >= As_utama;
+            if(!isUtamaAman) semuaLuasAman = false;
+            html += renderStepFondasi(stepNumberGenerator.next().value, 'Kontrol Luas Tulangan Utama', `A<sub>s terpasang</sub> = ${As_terpasang_utama.toFixed(0)} mm²/m ≥ A<sub>s perlu</sub> = ${As_utama.toFixed(0)} mm²/m`, isUtamaAman);
+            
+            // 2. Tulangan Bagi
+            const As_bagi = detail.Asb_perlu || Math.max(detail.Asb1 || 0, detail.Asb2 || 0, detail.Asb3 || 0);
+            const As_terpasang_bagi = optimasi?.as_rincian_per_meter?.asBagiPerMeter || dataTulangan?.menerus?.As_terpasang_bagi || 0;
+            const isBagiAman = As_terpasang_bagi >= As_bagi;
+            if(!isBagiAman) semuaLuasAman = false;
+            html += renderStepFondasi(stepNumberGenerator.next().value, 'Kontrol Luas Tulangan Bagi', `A<sub>s terpasang</sub> = ${As_terpasang_bagi.toFixed(0)} mm²/m ≥ A<sub>s perlu</sub> = ${As_bagi.toFixed(0)} mm²/m`, isBagiAman);
         }
+
+        // Tembuskan status keamanan luas tulangan ini ke objek result global agar dibaca oleh fungsi utama pembentuk komponen Kesimpulan Utama.
+        if (window.lastResultObject) {
+            window.lastResultObject.kontrol.luasTulanganAman = semuaLuasAman;
+        }
+
         return html;
     }
-    function renderKontrolKuatDukungFondasi(kontrolKuatDukung, inputData) {
+        function renderKontrolKuatDukungFondasi(kontrolKuatDukung, inputData) {
         if (!kontrolKuatDukung?.detail) return '';
         let html = '';
         const detail = kontrolKuatDukung.detail;
