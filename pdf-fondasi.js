@@ -1,10 +1,3 @@
-// pdf-fondasi.js dengan formatNumber smart decimal yang lebih baik
-// REVISI:
-// - Header tabel center align
-// - Hapus page-break-inside: avoid untuk sub-bagian tulangan persegi panjang (poin 1 dan 2)
-// - Data tulangan: untuk bujur sangkar hanya tampilkan D dan s (Db tidak muncul)
-// - Kontrol luas tulangan dan spasi minimal tetap ada
-
 (function() {
     let resultData;
 
@@ -332,6 +325,7 @@
             { parameter: "$M_u = \\dfrac{1}{2} \\cdot \\sigma_x \\cdot x_1^{2} + \\dfrac{1}{3} \\cdot (\\sigma_{max} - \\sigma_x) \\cdot x_1^{2}$", hasil: formatNumber(bujur.Mu), satuan: "kNm/m" },
             { parameter: "$K = \\dfrac{M_u}{\\phi b d^{2}}$", hasil: formatNumber(bujur.K), satuan: "MPa" },
             { parameter: "$K \\le K_{max}$", isComparison: true, statusHtml: `<span class="${bujur.Kontrol_K === 'AMAN' ? 'status-aman' : 'status-tidak-aman'}">${bujur.Kontrol_K || 'N/A'}</span>` },
+            { parameter: "$a = d \\cdot \\left(1 - \\sqrt{1 - \\dfrac{2K}{0.85f'_c}}\\right)$", hasil: formatNumber(bujur.a_val), satuan: "mm" },
             { parameter: "$A_{s1} = \\dfrac{0.85 f'_c a b}{f_y}$", hasil: formatNumber(bujur.As1), satuan: "mm²/m" },
             { parameter: "$A_{s2} = \\dfrac{\\sqrt{f'_c}}{4f_y} b d$", hasil: formatNumber(bujur.As2), satuan: "mm²/m" },
             { parameter: "$A_{s3} = \\dfrac{1.4}{f_y} b d$", hasil: formatNumber(bujur.As3), satuan: "mm²/m" },
@@ -362,6 +356,7 @@
             { parameter: "$M_u = \\dfrac{1}{2} \\cdot \\sigma_{max} \\cdot x_2^{2}$", hasil: formatNumber(persegi.Mu), satuan: "kNm/m" },
             { parameter: "$K = \\dfrac{M_u}{\\phi b d^{2}}$", hasil: formatNumber(persegi.K), satuan: "MPa" },
             { parameter: "$K \\le K_{max}$", isComparison: true, statusHtml: `<span class="${persegi.Kontrol_K === 'AMAN' ? 'status-aman' : 'status-tidak-aman'}">${persegi.Kontrol_K || 'N/A'}</span>` },
+            { parameter: "$a = d \\cdot \\left(1 - \\sqrt{1 - \\dfrac{2K}{0.85f'_c}}\\right)$", hasil: formatNumber(persegi.a_val), satuan: "mm" },
             { parameter: "$A_{s1} = \\dfrac{0.85 f'_c a b}{f_y}$", hasil: formatNumber(persegi.As21), satuan: "mm²/m" },
             { parameter: "$A_{s2} = \\dfrac{\\sqrt{f'_c}}{4f_y} b d$", hasil: formatNumber(persegi.As22), satuan: "mm²/m" },
             { parameter: "$A_{s3} = \\dfrac{1.4}{f_y} b d$", hasil: formatNumber(persegi.As23), satuan: "mm²/m" },
@@ -436,6 +431,7 @@
         { parameter: "$M_u = 0.5 \\cdot \\sigma_{max} \\cdot x_2^{2}$", hasil: formatNumber(t.Mu), satuan: "kNm/m" },
         { parameter: "$K = \\dfrac{M_u}{\\phi b d^{2}}$", hasil: formatNumber(t.K), satuan: "MPa" },
         { parameter: "$K \\le K_{max}$", isComparison: true, statusHtml: `<span class="${t.Kontrol_K === 'AMAN' ? 'status-aman' : 'status-tidak-aman'}">${t.Kontrol_K || 'N/A'}</span>` },
+        { parameter: "$a = d \\cdot \\left(1 - \\sqrt{1 - \\dfrac{2K}{0.85f'_c}}\\right)$", hasil: formatNumber(t.a_val), satuan: "mm" },
         { parameter: "$A_{s1} = \\dfrac{0.85 f'_c a b}{f_y}$", hasil: formatNumber(t.As1), satuan: "mm²/m" },
         { parameter: "$A_{s2} = \\dfrac{\\sqrt{f'_c}}{4f_y} b d$", hasil: formatNumber(t.As2), satuan: "mm²/m" },
         { parameter: "$A_{s3} = \\dfrac{1.4}{f_y} b d$", hasil: formatNumber(t.As3), satuan: "mm²/m" },
