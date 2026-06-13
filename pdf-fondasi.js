@@ -356,8 +356,8 @@
         const As_terpasang_tepi = persegi.AsTerpasangTepi;
         const As_pusat = persegi.Aspusat;
         const As_tepi = persegi.Astepi;
-        const amanPusat = (As_terpasang_pusat >= As_perlu);
-        const amanTepi = (As_terpasang_tepi >= As_perlu);
+        const amanPusat = (As_terpasang_pusat >= As_pusat);
+        const amanTepi = (As_terpasang_tepi >= As_tepi);
         return createThreeColumnTable([
             { parameter: "$M_u = \\dfrac{1}{2} \\cdot \\sigma_{max} \\cdot x_2^{2}$", hasil: formatNumber(persegi.Mu), satuan: "kNm/m" },
             { parameter: "$K = \\dfrac{M_u}{\\phi b d^{2}}$", hasil: formatNumber(persegi.K), satuan: "MPa" },
@@ -368,7 +368,7 @@
             { parameter: "$A_{s,perlu} = \\max(A_{s1}, A_{s2}, A_{s3})$", hasil: formatNumber(persegi.As), satuan: "mm²/m" },
             // Tulangan pusat
             { parameter: "$A_{s,pusat} = \\dfrac{2L_x A_s}{L_y + L_x}$", hasil: formatNumber(persegi.Aspusat), satuan: "mm²/m" },
-            { parameter: "$s_{1,pusat} = \\dfrac{0.25\\pi D_b^{2} \\times 1000}{A_{s,pusat}}$", hasil: formatNumber(persegi.s1_pusat), satuan: "mm" },
+            { parameter: "$s_{1,pusat} = \\dfrac{0.25\\pi D_b^{2}}{A_{s,pusat}}$", hasil: formatNumber(persegi.s1_pusat), satuan: "mm" },
             { parameter: "$s_{2,pusat} = 3h$", hasil: formatNumber(persegi.s2_pusat), satuan: "mm" },
             { parameter: "$s_{3,pusat} = 450$", hasil: "450", satuan: "mm" },
             { parameter: "$s_{pusat} = \\min(s_{1,pusat}, s_{2,pusat}, s_{3,pusat})$", hasil: formatNumber(persegi.s_pusat), satuan: "mm" },
@@ -376,7 +376,7 @@
             { parameter: "$A_{s,pusat} \\le A_{s,terpasang}$", isComparison: true, statusHtml: `<span class="${amanPusat ? 'status-aman' : 'status-tidak-aman'}">${amanPusat ? 'AMAN' : 'TIDAK AMAN'}</span>` },
             // Tulangan tepi
             { parameter: "$A_{s,tepi} = A_{s,perlu} - A_{s,pusat}$", hasil: formatNumber(persegi.Astepi), satuan: "mm²/m" },
-            { parameter: "$s_{1,tepi} = \\dfrac{0.25\\pi D_b^{2} \\times 1000}{A_{s,tepi}}$", hasil: formatNumber(persegi.s1_tepi), satuan: "mm" },
+            { parameter: "$s_{1,tepi} = \\dfrac{0.25\\pi D_b^{2}}{A_{s,tepi}}$", hasil: formatNumber(persegi.s1_tepi), satuan: "mm" },
             { parameter: "$s_{2,tepi} = 3h$", hasil: formatNumber(persegi.s2_tepi), satuan: "mm" },
             { parameter: "$s_{3,tepi} = 450$", hasil: "450", satuan: "mm" },
             { parameter: "$s_{tepi} = \\min(s_{1,tepi}, s_{2,tepi}, s_{3,tepi})$", hasil: formatNumber(persegi.s_tepi), satuan: "mm" },
