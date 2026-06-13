@@ -354,6 +354,8 @@
         const As_perlu = persegi.As;
         const As_terpasang_pusat = persegi.AsTerpasangPusat;
         const As_terpasang_tepi = persegi.AsTerpasangTepi;
+        const As_pusat = persegi.Aspusat;
+        const As_tepi = persegi.Astepi;
         const amanPusat = (As_terpasang_pusat >= As_perlu);
         const amanTepi = (As_terpasang_tepi >= As_perlu);
         return createThreeColumnTable([
@@ -370,7 +372,7 @@
             { parameter: "$s_{2,pusat} = 3h$", hasil: formatNumber(persegi.s2_pusat), satuan: "mm" },
             { parameter: "$s_{3,pusat} = 450$", hasil: "450", satuan: "mm" },
             { parameter: "$s_{pusat} = \\min(s_{1,pusat}, s_{2,pusat}, s_{3,pusat})$", hasil: formatNumber(persegi.s_pusat), satuan: "mm" },
-            { parameter: "$A_{s,terpasang} = \\dfrac{0.25\\pi D_b^{2} \\times 1000}{s_{pusat}}$", hasil: formatNumber(As_terpasang_pusat), satuan: "mm²/m" },
+            { parameter: "$A_{s,terpasang} = \\dfrac{0.25\\pi D_b^{2}}{s_{pusat}}$", hasil: formatNumber(As_terpasang_pusat), satuan: "mm²/m" },
             { parameter: "$A_{s,perlu} \\le A_{s,terpasang}$", isComparison: true, statusHtml: `<span class="${amanPusat ? 'status-aman' : 'status-tidak-aman'}">${amanPusat ? 'AMAN' : 'TIDAK AMAN'}</span>` },
             // Tulangan tepi
             { parameter: "$A_{s,tepi} = A_{s,perlu} - A_{s,pusat}$", hasil: formatNumber(persegi.Astepi), satuan: "mm²/m" },
@@ -378,7 +380,7 @@
             { parameter: "$s_{2,tepi} = 3h$", hasil: formatNumber(persegi.s2_tepi), satuan: "mm" },
             { parameter: "$s_{3,tepi} = 450$", hasil: "450", satuan: "mm" },
             { parameter: "$s_{tepi} = \\min(s_{1,tepi}, s_{2,tepi}, s_{3,tepi})$", hasil: formatNumber(persegi.s_tepi), satuan: "mm" },
-            { parameter: "$A_{s,terpasang} = \\dfrac{0.25\\pi D_b^{2} \\times 1000}{s_{tepi}}$", hasil: formatNumber(As_terpasang_tepi), satuan: "mm²/m" },
+            { parameter: "$A_{s,terpasang} = \\dfrac{0.25\\pi D_b^{2}}{s_{tepi}}$", hasil: formatNumber(As_terpasang_tepi), satuan: "mm²/m" },
             { parameter: "$A_{s,perlu} \\le A_{s,terpasang}$", isComparison: true, statusHtml: `<span class="${amanTepi ? 'status-aman' : 'status-tidak-aman'}">${amanTepi ? 'AMAN' : 'TIDAK AMAN'}</span>` },
             { parameter: `<strong>Arah Pendek Pusat: ɸ${getData('inputData.tulangan.db', getData('optimasi.kombinasi_terpilih.Db', 'N/A'))}-${formatNumber(persegi.s_pusat)}</strong>`, isFullRow: true },
             { parameter: `<strong>Arah Pendek Tepi: ɸ${getData('inputData.tulangan.db', getData('optimasi.kombinasi_terpilih.Db', 'N/A'))}-${formatNumber(persegi.s_tepi)}</strong>`, isFullRow: true }
