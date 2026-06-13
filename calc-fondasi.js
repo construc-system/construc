@@ -623,6 +623,8 @@ function kontrolFondasi(hasil, input, mode = "desain") {
         const As_perlu_pendek = tulangan.persegi.As;
         const As_terpasang_pusat = tulangan.persegi.AsTerpasangPusat;
         const As_terpasang_tepi = tulangan.persegi.AsTerpasangTepi;
+        const Aspusat = tulangan.persegi.Aspusat;
+        const Astepi = tulangan.persegi.Astepi;        
         const amanLuasPusat = As_terpasang_pusat >= Aspusat;
         const amanLuasTepi = As_terpasang_tepi >= Astepi;
         kontrolLuasTulangan.aman = kontrolLuasTulangan.aman && amanLuasPusat && amanLuasTepi;
