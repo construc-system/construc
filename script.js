@@ -1029,3 +1029,16 @@ function goBackToIndex() {
     sessionStorage.setItem('fromReport', 'true');
     window.location.href = 'index.html';
 }
+// Di script.js atau di global
+window.showConfirmDialog = function(message, title, onConfirm, onCancel) {
+    // Buat modal custom atau gunakan confirm bawaan
+    if (typeof confirm === 'function') {
+        const result = confirm(`${title}\n\n${message}`);
+        if (result && typeof onConfirm === 'function') onConfirm();
+        else if (!result && typeof onCancel === 'function') onCancel();
+    } else {
+        // Fallback jika tidak ada confirm
+        console.warn('Confirm dialog not available, auto-proceed');
+        if (typeof onConfirm === 'function') onConfirm();
+    }
+};

@@ -1,4 +1,4 @@
-// Pastikan objek modules ada di scope global
+// modul-balok.js - Dengan validasi input lengkap dan tombol konfirmasi sesuai permintaan
 if (typeof window.modules === 'undefined') {
     window.modules = {};
 }
@@ -19,7 +19,160 @@ window.modules.balok = {
     ]
   },
   info: "Form Balok: desain untuk menentukan dimensi & tulangan, evaluasi untuk cek tulangan & kapasitas.",
-  
+
+  // ==================== VALIDASI INPUT ====================
+  validateBalokInput: function(data) {
+      const errors = [];
+      const warnings = [];
+
+      const parseNum = (val) => {
+          if (val === undefined || val === null || val === '') return null;
+          if (typeof val === 'string') val = val.replace(',', '.');
+          const num = parseFloat(val);
+          return isNaN(num) ? null : num;
+      };
+
+      const checkNumber = (val, fieldName) => {
+          const num = parseNum(val);
+          if (num === null) {
+              errors.push(`"${fieldName}" harus diisi dengan angka (gunakan titik untuk desimal).`);
+              return null;
+          }
+          return num;
+      };
+
+      // 1. Material
+      const fc = checkNumber(data.material.fc, "f'c");
+      if (fc !== null && fc <= 0) errors.push(`"f'c" harus lebih besar dari 0.`);
+      const fy = checkNumber(data.material.fy, "fy");
+      if (fy !== null && fy <= 0) errors.push(`"fy" harus lebih besar dari 0.`);
+      const fyt = checkNumber(data.material.fyt, "fyt");
+      if (fyt !== null && fyt <= 0) errors.push(`"fyt" harus lebih besar dari 0.`);
+
+      // 2. Dimensi
+      const h = checkNumber(data.dimensi.h, "h");
+      if (h !== null && h <= 0) errors.push(`"h" harus lebih besar dari 0.`);
+      const b = checkNumber(data.dimensi.b, "b");
+      if (b !== null && b <= 0) errors.push(`"b" harus lebih besar dari 0.`);
+      const sb = checkNumber(data.dimensi.sb, "Sb");
+      if (sb !== null && sb <= 0) errors.push(`"Sb" harus lebih besar dari 0.`);
+      if (b !== null && h !== null && b > h) {
+          errors.push(`Nilai b (${b}) tidak boleh lebih besar dari h (${h}).`);
+      }
+
+      // 3. Beban (allow zero)
+      const checkLoad = (val, fieldName) => {
+          const num = parseNum(val);
+          if (num === null) {
+              errors.push(`"${fieldName}" harus diisi dengan angka (gunakan titik untuk desimal).`);
+          } else if (num < 0) {
+              errors.push(`"${fieldName}" tidak boleh negatif.`);
+          }
+          return num;
+      };
+      const sections = ['left', 'center', 'right'];
+      const loadFields = ['mu_pos', 'mu_neg', 'vu', 'tu'];
+      sections.forEach(section => {
+          const sectionData = data.beban[section] || {};
+          loadFields.forEach(field => {
+              const fullName = `${section} ${field}`;
+              checkLoad(sectionData[field], fullName);
+          });
+      });
+
+      // 4. Tulangan (only evaluasi)
+      if (data.mode === 'evaluasi') {
+          const tulangan = data.tulangan || {};
+          const D = checkNumber(tulangan.d, "D");
+          if (D !== null && D <= 0) errors.push(`"D" harus lebih besar dari 0.`);
+          const phi = checkNumber(tulangan.phi, "ɸ");
+          if (phi !== null && phi <= 0) errors.push(`"ɸ" harus lebih besar dari 0.`);
+
+          const checkSection = (sectionName) => {
+              const sec = tulangan[sectionName] || {};
+              const n = checkNumber(sec.n, `${sectionName} n`);
+              if (n === null) {
+                  errors.push(`"${sectionName} n" harus diisi.`);
+              } else if (n < 2) {
+                  errors.push(`"${sectionName} n" minimal 2 (saat ini ${n}).`);
+              }
+              const np = checkNumber(sec.np, `${sectionName} n'`);
+              if (np === null) {
+                  errors.push(`"${sectionName} n'" harus diisi.`);
+              } else if (np < 2) {
+                  errors.push(`"${sectionName} n'" minimal 2 (saat ini ${np}).`);
+              }
+              const nt = parseNum(sec.nt);
+              if (nt !== null && nt < 0) {
+                  errors.push(`"${sectionName} nt" tidak boleh negatif.`);
+              }
+              const s = checkNumber(sec.s, `${sectionName} s`);
+              if (s !== null && s <= 0) {
+                  errors.push(`"${sectionName} s" harus lebih besar dari 0.`);
+              }
+          };
+          checkSection('support');
+          checkSection('field');
+      }
+
+      // ========== PERINGATAN (SARAN) ==========
+      // Material
+      if (fc !== null && (fc < 17 || fc > 60)) {
+          warnings.push(`f'c = ${fc} MPa, disarankan antara 17–60 MPa.`);
+      }
+      // Dimensi
+      if (b !== null && h !== null) {
+          if (b < 150) warnings.push(`b = ${b} mm, disarankan minimal 150 mm.`);
+          const ratio = h / b;
+          if (ratio < 1.5 || ratio > 3) {
+              warnings.push(`Rasio h/b = ${ratio.toFixed(2)}, disarankan antara 1.5–3.0.`);
+          }
+      }
+      // Beban
+      sections.forEach(section => {
+          const sectionData = data.beban[section] || {};
+          const mu_pos = parseNum(sectionData.mu_pos) || 0;
+          const mu_neg = parseNum(sectionData.mu_neg) || 0;
+          const vu = parseNum(sectionData.vu) || 0;
+          const tu = parseNum(sectionData.tu) || 0;
+          const maxMu = Math.max(mu_pos, mu_neg);
+          if (maxMu > 1000) {
+              warnings.push(`Momen pada ${section} (${maxMu} kNm) melebihi 1000 kNm, periksa kembali.`);
+          }
+          if (vu > 800) {
+              warnings.push(`Gaya geser pada ${section} (${vu} kN) melebihi 800 kN, periksa kembali.`);
+          }
+          if (tu > 100) {
+              warnings.push(`Torsi pada ${section} (${tu} kNm) melebihi 100 kNm, periksa kembali.`);
+          }
+      });
+      // Tulangan
+      if (data.mode === 'evaluasi') {
+          const D = parseNum(data.tulangan.d);
+          const phi = parseNum(data.tulangan.phi);
+          const commonD = [10, 13, 16, 19, 22, 25, 29, 32, 36];
+          const commonPhi = [6, 8, 10, 12, 14, 16, 19, 22, 25];
+          if (D !== null && !commonD.includes(D)) {
+              warnings.push(`Diameter tulangan utama D = ${D} mm tidak umum, disarankan: ${commonD.join(', ')}.`);
+          }
+          if (phi !== null && !commonPhi.includes(phi)) {
+              warnings.push(`Diameter sengkang ɸ = ${phi} mm tidak umum, disarankan: ${commonPhi.join(', ')}.`);
+          }
+          const checkS = (sectionName) => {
+              const sec = data.tulangan[sectionName] || {};
+              const s = parseNum(sec.s);
+              if (s !== null && s > 600) {
+                  warnings.push(`Jarak sengkang pada ${sectionName} (s = ${s} mm) melebihi 600 mm.`);
+              }
+          };
+          checkS('support');
+          checkS('field');
+      }
+
+      return { errors, warnings };
+  },
+
+  // ==================== RENDER ====================
   render: function(container, mode) {
     container.innerHTML = '';
     
@@ -49,7 +202,6 @@ window.modules.balok = {
     const fields = this.fields[mode];
     ensureState(currentModuleKey, mode);
     
-    // Dapatkan state saat ini untuk mengisi nilai
     const currentState = formState[currentModuleKey] && formState[currentModuleKey][mode] ? formState[currentModuleKey][mode] : {};
     
     fields.forEach(f => {
@@ -73,23 +225,19 @@ window.modules.balok = {
     });
     container.appendChild(grid);
 
-    // Hapus card yang mungkin sudah ada
     this.removeExistingCards();
 
-    // Tambahkan card Data Beban untuk mode desain
     if (mode === 'desain') {
       this.renderBebanCard(container);
       this.renderLanjutanCard(container);
     }
 
-    // Tambahkan card Data Beban, Data Tulangan, dan Data Lanjutan untuk mode evaluasi
     if (mode === 'evaluasi') {
       this.renderBebanCard(container);
       this.renderTulanganCard(container);
       this.renderLanjutanCard(container);
     }
 
-    // Setup calculate button handler
     this.setupCalculateButton();
   },
 
@@ -127,7 +275,6 @@ window.modules.balok = {
   },
 
   renderBebanSection: function(title, prefix) {
-    // Dapatkan state saat ini untuk mengisi nilai
     const currentState = formState[currentModuleKey] && formState[currentModuleKey][currentMode] ? formState[currentModuleKey][currentMode] : {};
     
     return `
@@ -168,7 +315,6 @@ window.modules.balok = {
     tulanganCard.className = 'card';
     tulanganCard.id = 'tulanganCard';
     
-    // Dapatkan state saat ini untuk mengisi nilai
     const currentState = formState[currentModuleKey] && formState[currentModuleKey][currentMode] ? formState[currentModuleKey][currentMode] : {};
     
     tulanganCard.innerHTML = `
@@ -207,7 +353,6 @@ window.modules.balok = {
     const bebanCard = document.getElementById('bebanCard');
     container.parentNode.insertBefore(tulanganCard, bebanCard.nextSibling);
     
-    // Setup tips button khusus untuk Data Tulangan
     this.setupTulanganTipsButton();
   },
 
@@ -231,7 +376,6 @@ window.modules.balok = {
   },
 
   renderTulanganSection: function(title, prefix) {
-    // Dapatkan state saat ini untuk mengisi nilai
     const currentState = formState[currentModuleKey] && formState[currentModuleKey][currentMode] ? formState[currentModuleKey][currentMode] : {};
     
     return `
@@ -272,7 +416,6 @@ window.modules.balok = {
     lanjutanCard.className = 'card';
     lanjutanCard.id = 'lanjutanCard';
     
-    // Dapatkan state saat ini untuk mengisi nilai
     const currentState = formState[currentModuleKey] && formState[currentModuleKey][currentMode] ? formState[currentModuleKey][currentMode] : {};
     
     lanjutanCard.innerHTML = `
@@ -308,10 +451,7 @@ window.modules.balok = {
     const referenceCard = document.getElementById('tulanganCard') || document.getElementById('bebanCard');
     container.parentNode.insertBefore(lanjutanCard, referenceCard.nextSibling);
     
-    // Setup collapse functionality
     this.setupCollapseFunctionality();
-    
-    // Setup tips button khusus untuk Data Lanjutan
     this.setupLanjutanTipsButton();
   },
 
@@ -353,10 +493,7 @@ window.modules.balok = {
   setupCalculateButton: function() {
     const calculateBtn = document.getElementById('calculateBtn');
     if (calculateBtn) {
-      // Hapus event listener lama jika ada
       calculateBtn.replaceWith(calculateBtn.cloneNode(true));
-      
-      // Tambahkan event listener baru
       document.getElementById('calculateBtn').addEventListener('click', () => {
         this.handleCalculate();
       });
@@ -364,135 +501,140 @@ window.modules.balok = {
   },
 
   handleCalculate: function() {
-    // Validasi field wajib
-    const missingFields = this.validateFields();
-    
-    if (missingFields.length > 0) {
-      const fieldList = missingFields.map(field => `• ${field}`).join('\n');
-      showAlert(`Field berikut belum terisi:\n\n${fieldList}\n\nSilakan lengkapi data terlebih dahulu.`);
-      return;
-    }
-
-    // Kumpulkan semua data
-    const calculationData = this.collectData();
-    
-    // Kirim data ke modul perhitungan
-    this.sendToCalculation(calculationData);
-  },
-
-  validateFields: function() {
-    const state = formState[currentModuleKey] && formState[currentModuleKey][currentMode] ? formState[currentModuleKey][currentMode] : {};
-    const missingFields = [];
-
-    // Validasi Data Material
-    const quickFc = document.getElementById('quickFc').value;
-    const quickFy = document.getElementById('quickFy').value;
-    const quickFyt = document.getElementById('quickFyt').value;
-
-    if (!quickFc || quickFc.toString().trim() === '') {
-      missingFields.push("f'c (Kuat Tekan Beton) - Data Material");
-    }
-    if (!quickFy || quickFy.toString().trim() === '') {
-      missingFields.push("fy (Kuat Leleh Baja) - Data Material");
-    }
-    if (!quickFyt || quickFyt.toString().trim() === '') {
-      missingFields.push("fyt (Kuat Leleh Baja Begel) - Data Material");
-    }
-
-    // Field wajib dari Data Dimensi
-    const dimensiFields = ['h', 'b', 'sb'];
-    dimensiFields.forEach(field => {
-      if (!state[field] || state[field].toString().trim() === '') {
-        missingFields.push(`${this.getFieldLabel(field)} (Data Dimensi)`);
-      }
-    });
-
-    // Field wajib dari Data Beban - semua section (left, center, right)
-    const bebanSections = ['left', 'center', 'right'];
-    const bebanFields = ['mu_pos', 'mu_neg', 'vu', 'tu']; // tu wajib meskipun tulangan torsi opsional
-    
-    bebanSections.forEach(section => {
-      bebanFields.forEach(field => {
-        const key = `${section}_${field}`;
-        if (!state[key] || state[key].toString().trim() === '') {
-          const sectionName = this.getSectionName(section);
-          missingFields.push(`${this.getBebanFieldLabel(field)} (${sectionName})`);
-        }
-      });
-    });
-
-    // Field wajib dari Data Tulangan (hanya untuk mode evaluasi)
-    if (currentMode === 'evaluasi') {
-      const tulanganFields = ['d', 'phi'];
-      tulanganFields.forEach(field => {
-        if (!state[field] || state[field].toString().trim() === '') {
-          missingFields.push(`${this.getFieldLabel(field)} (Data Tulangan)`);
-        }
-      });
-
-      // Field tulangan per section (kecuali nt yang opsional)
-      const tulanganSections = ['support', 'field'];
-      const tulanganSectionFields = ['n', 'np', 's']; // tanpa 'nt' karena opsional
+      const calculationData = this.collectData();
+      const validation = this.validateBalokInput(calculationData);
       
-      tulanganSections.forEach(section => {
-        tulanganSectionFields.forEach(field => {
-          const key = `${section}_${field}`;
-          if (!state[key] || state[key].toString().trim() === '') {
-            const sectionName = this.getTulanganSectionName(section);
-            missingFields.push(`${this.getTulanganFieldLabel(field)} (${sectionName})`);
+      if (validation.errors.length > 0) {
+          const msg = validation.errors.join('\n');
+          if (typeof showAlert === 'function') {
+              showAlert(`Terdapat kesalahan pada input:\n\n${msg}`, '⚠️ Validasi Input Gagal');
+          } else {
+              alert(`Terdapat kesalahan pada input:\n\n${msg}`);
           }
-        });
-      });
-    }
-
-    return missingFields;
+          return;
+      }
+      
+      if (validation.warnings.length > 0) {
+          const msg = validation.warnings.join('\n');
+          this.showConfirmAlert(
+              `Peringatan (saran):\n\n${msg}\n\nApakah Anda tetap ingin melanjutkan perhitungan?`,
+              '⚠️ Peringatan Input',
+              () => {
+                  this.sendToCalculation(calculationData);
+              },
+              () => {
+                  console.log('Perhitungan dibatalkan oleh pengguna.');
+              }
+          );
+      } else {
+          this.sendToCalculation(calculationData);
+      }
   },
 
-  getFieldLabel: function(key) {
-    const labels = {
-      'h': 'h (Tinggi Penampang)',
-      'b': 'b (Lebar Penampang)',
-      'sb': 'Sb (Selimut Beton)',
-      'd': 'D (Diameter Tulangan Utama)',
-      'phi': 'ɸ (Diameter Tulangan Begel)'
-    };
-    return labels[key] || key;
-  },
+  showConfirmAlert: function(message, title, onConfirm, onCancel) {
+      // Dapatkan warna tombol dari CSS variable
+      const rootStyles = getComputedStyle(document.documentElement);
+      const buttonColor = rootStyles.getPropertyValue('--color-buttons').trim() || '#282B53';
 
-  getBebanFieldLabel: function(field) {
-    const labels = {
-      'mu_pos': 'Mu⁺ (Momen Ultimit Positif)',
-      'mu_neg': 'Mu⁻ (Momen Ultimit Negatif)',
-      'vu': 'Vu (Gaya Geser Ultimit)',
-      'tu': 'Tu (Torsi Ultimit)'
-    };
-    return labels[field] || field;
-  },
+      if (typeof showAlert !== 'function') {
+          const proceed = confirm(message);
+          if (proceed) onConfirm(); else if (onCancel) onCancel();
+          return;
+      }
 
-  getTulanganFieldLabel: function(field) {
-    const labels = {
-      'n': 'n (Jumlah Tulangan Tarik)',
-      'np': "n' (Jumlah Tulangan Tekan)",
-      's': 's (Jarak Tulangan Begel)'
-    };
-    return labels[field] || field;
-  },
+      // Tampilkan alert utama
+      showAlert(message, title);
 
-  getSectionName: function(section) {
-    const names = {
-      'left': 'Tumpuan Kiri',
-      'center': 'Lapangan',
-      'right': 'Tumpuan Kanan'
-    };
-    return names[section] || section;
-  },
+      // Tunggu sampai alertContent tersedia, lalu tambahkan tombol
+      const checkInterval = setInterval(() => {
+          const alertContent = document.getElementById('alertContent');
+          const alertModal = document.getElementById('alertModal');
+          if (!alertContent || !alertModal || !alertModal.classList.contains('active')) {
+              // Jika modal sudah tidak aktif, hentikan interval
+              if (!alertModal || !alertModal.classList.contains('active')) {
+                  clearInterval(checkInterval);
+              }
+              return;
+          }
 
-  getTulanganSectionName: function(section) {
-    const names = {
-      'support': 'Tulangan Tumpuan',
-      'field': 'Tulangan Lapangan'
-    };
-    return names[section] || section;
+          // Cek apakah tombol sudah ada
+          if (alertContent.querySelector('.confirm-actions')) {
+              clearInterval(checkInterval);
+              return;
+          }
+
+          // Buat container tombol
+          const actionsDiv = document.createElement('div');
+          actionsDiv.className = 'confirm-actions';
+          actionsDiv.style.cssText = `
+              margin-top: 20px;
+              display: flex;
+              justify-content: flex-end;
+              gap: 12px;
+          `;
+
+          // Tombol Batal: latar putih, outline warna tombol, teks warna tombol, hover warna tombol
+          const btnBatal = document.createElement('button');
+          btnBatal.textContent = 'Batal';
+          btnBatal.className = 'btn';
+          btnBatal.style.cssText = `
+              background: white;
+              color: ${buttonColor};
+              border: 2px solid ${buttonColor};
+              padding: 8px 20px;
+              border-radius: 6px;
+              cursor: pointer;
+              font-weight: 600;
+              transition: all 0.2s ease;
+          `;
+          btnBatal.addEventListener('mouseenter', function() {
+              this.style.background = buttonColor;
+              this.style.color = 'white';
+          });
+          btnBatal.addEventListener('mouseleave', function() {
+              this.style.background = 'white';
+              this.style.color = buttonColor;
+          });
+          btnBatal.addEventListener('click', function() {
+              if (alertModal) alertModal.classList.remove('active');
+              if (typeof closeAlert === 'function') closeAlert();
+              clearInterval(checkInterval);
+              if (onCancel) onCancel();
+          });
+
+          // Tombol Lanjutkan: background warna tombol, teks putih
+          const btnLanjut = document.createElement('button');
+          btnLanjut.textContent = 'Lanjutkan';
+          btnLanjut.className = 'btn primary';
+          btnLanjut.style.cssText = `
+              background: ${buttonColor};
+              color: white;
+              border: 2px solid ${buttonColor};
+              padding: 8px 20px;
+              border-radius: 6px;
+              cursor: pointer;
+              font-weight: 600;
+              transition: all 0.2s ease;
+          `;
+          btnLanjut.addEventListener('mouseenter', function() {
+              this.style.opacity = '0.9';
+          });
+          btnLanjut.addEventListener('mouseleave', function() {
+              this.style.opacity = '1';
+          });
+          btnLanjut.addEventListener('click', function() {
+              if (alertModal) alertModal.classList.remove('active');
+              if (typeof closeAlert === 'function') closeAlert();
+              clearInterval(checkInterval);
+              onConfirm();
+          });
+
+          actionsDiv.appendChild(btnBatal);
+          actionsDiv.appendChild(btnLanjut);
+          alertContent.appendChild(actionsDiv);
+
+          clearInterval(checkInterval);
+      }, 100);
   },
 
   collectData: function() {
@@ -505,7 +647,6 @@ window.modules.balok = {
       fyt: document.getElementById('quickFyt').value
     };
 
-    // Data yang akan dikirim ke calc-balok.js
     const calculationData = {
       module: currentModuleKey,
       mode: currentMode,
@@ -541,7 +682,6 @@ window.modules.balok = {
       }
     };
 
-    // Tambahkan data tulangan hanya untuk mode evaluasi
     if (currentMode === 'evaluasi') {
       calculationData.tulangan = {
         d: state.d,
@@ -549,13 +689,13 @@ window.modules.balok = {
         support: {
           n: state.support_n,
           np: state.support_np,
-          nt: state.support_nt, // opsional
+          nt: state.support_nt,
           s: state.support_s
         },
         field: {
           n: state.field_n,
           np: state.field_np,
-          nt: state.field_nt, // opsional
+          nt: state.field_nt,
           s: state.field_s
         }
       };
@@ -565,17 +705,14 @@ window.modules.balok = {
   },
 
   sendToCalculation: function(data) {
-    // Gunakan fungsi baru yang langsung redirect
     if (typeof window.calculateBalokWithRedirect === 'function') {
       console.log("🚀 Mengirim data ke calculateBalokWithRedirect...", data);
       window.calculateBalokWithRedirect(data);
     } else if (typeof window.calculateBalok === 'function') {
-      // Fallback ke fungsi lama
       console.log("⚠️ Menggunakan calculateBalok lama...");
       const result = window.calculateBalok(data);
       
       if (result.status === "sukses") {
-        // Simpan manual dan redirect
         sessionStorage.setItem('calculationResult', JSON.stringify({
           module: data.module,
           mode: data.mode,
@@ -587,18 +724,24 @@ window.modules.balok = {
           inputData: data,
           timestamp: new Date().toISOString()
         }));
-        
-        // Redirect manual
         window.location.href = 'report.html';
       } else {
-        showAlert(`Perhitungan balok gagal: ${result.message || 'Terjadi kesalahan'}`);
+        if (typeof showAlert === 'function') {
+          showAlert(`Perhitungan balok gagal: ${result.message || 'Terjadi kesalahan'}`);
+        } else {
+          alert(`Perhitungan balok gagal: ${result.message || 'Terjadi kesalahan'}`);
+        }
       }
     } else {
       const dataStr = JSON.stringify(data, null, 2);
-      showAlert(
-        `Fungsi perhitungan tidak ditemukan.\n\nData yang akan dikirim:\n\n${dataStr}`,
-        "‼️ Fungsi Tidak Ditemukan"
-      );
+      if (typeof showAlert === 'function') {
+        showAlert(
+          `Fungsi perhitungan tidak ditemukan.\n\nData yang akan dikirim:\n\n${dataStr}`,
+          "‼️ Fungsi Tidak Ditemukan"
+        );
+      } else {
+        alert(`Fungsi perhitungan tidak ditemukan.\n\nData yang akan dikirim:\n\n${dataStr}`);
+      }
     }
   }
 };

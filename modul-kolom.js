@@ -1,3 +1,4 @@
+// modul-kolom.js - Dengan validasi input lengkap (mirip balok)
 // Pastikan objek modules ada di scope global
 if (typeof window.modules === 'undefined') {
     window.modules = {};
@@ -19,7 +20,130 @@ window.modules.kolom = {
     ]
   },
   info: "Kolom: masukkan beban dan dimensi; mode evaluasi berguna untuk pemeriksaan keamanan.",
-  
+
+  // ==================== VALIDASI INPUT KOLOM ====================
+  validateKolomInput: function(data) {
+      const errors = [];
+      const warnings = [];
+
+      const parseNum = (val) => {
+          if (val === undefined || val === null || val === '') return null;
+          if (typeof val === 'string') val = val.replace(',', '.');
+          const num = parseFloat(val);
+          return isNaN(num) ? null : num;
+      };
+
+      const checkNumber = (val, fieldName) => {
+          const num = parseNum(val);
+          if (num === null) {
+              errors.push(`"${fieldName}" harus diisi dengan angka (gunakan titik untuk desimal).`);
+              return null;
+          }
+          return num;
+      };
+
+      // 1. Material
+      const fc = checkNumber(data.material.fc, "f'c");
+      if (fc !== null && fc <= 0) errors.push(`"f'c" harus lebih besar dari 0.`);
+      const fy = checkNumber(data.material.fy, "fy");
+      if (fy !== null && fy <= 0) errors.push(`"fy" harus lebih besar dari 0.`);
+      const fyt = checkNumber(data.material.fyt, "fyt");
+      if (fyt !== null && fyt <= 0) errors.push(`"fyt" harus lebih besar dari 0.`);
+
+      // 2. Dimensi
+      const h = checkNumber(data.dimensi.h, "h");
+      if (h !== null && h <= 0) errors.push(`"h" harus lebih besar dari 0.`);
+      const b = checkNumber(data.dimensi.b, "b");
+      if (b !== null && b <= 0) errors.push(`"b" harus lebih besar dari 0.`);
+      const sb = checkNumber(data.dimensi.sb, "Sb");
+      if (sb !== null && sb <= 0) errors.push(`"Sb" harus lebih besar dari 0.`);
+
+      // 3. Beban (allow zero)
+      const checkLoad = (val, fieldName) => {
+          const num = parseNum(val);
+          if (num === null) {
+              errors.push(`"${fieldName}" harus diisi dengan angka (gunakan titik untuk desimal).`);
+          } else if (num < 0) {
+              errors.push(`"${fieldName}" tidak boleh negatif.`);
+          }
+          return num;
+      };
+      const loadFields = ['pu', 'vu', 'mux', 'muy'];
+      loadFields.forEach(field => {
+          const val = data.beban[field];
+          checkLoad(val, field);
+      });
+
+      // 4. Tulangan (only evaluasi)
+      if (data.mode === 'evaluasi') {
+          const tulangan = data.tulangan || {};
+          const D = checkNumber(tulangan.d, "D");
+          if (D !== null && D <= 0) errors.push(`"D" harus lebih besar dari 0.`);
+          const phi = checkNumber(tulangan.phi, "ɸ");
+          if (phi !== null && phi <= 0) errors.push(`"ɸ" harus lebih besar dari 0.`);
+          
+          const nx = checkNumber(tulangan.nx, "nx");
+          if (nx === null) {
+              errors.push(`"nx" harus diisi.`);
+          } else if (nx < 4) {
+              errors.push(`"nx" minimal 4 (saat ini ${nx}).`);
+          }
+          const ny = checkNumber(tulangan.ny, "ny");
+          if (ny === null) {
+              errors.push(`"ny" harus diisi.`);
+          } else if (ny < 4) {
+              errors.push(`"ny" minimal 4 (saat ini ${ny}).`);
+          }
+          const s = checkNumber(tulangan.s, "s");
+          if (s !== null && s <= 0) {
+              errors.push(`"s" harus lebih besar dari 0.`);
+          }
+      }
+
+      // ========== PERINGATAN (SARAN) ==========
+      // Material
+      if (fc !== null && (fc < 17 || fc > 60)) {
+          warnings.push(`f'c = ${fc} MPa, disarankan antara 17–60 MPa.`);
+      }
+      // Dimensi
+      if (b !== null && b < 150) {
+          warnings.push(`b = ${b} mm, disarankan minimal 150 mm.`);
+      }
+      if (h !== null && h < 150) {
+          warnings.push(`h = ${h} mm, disarankan minimal 150 mm.`);
+      }
+      // Beban
+      const Pu = parseNum(data.beban.pu) || 0;
+      if (Pu > 5000) warnings.push(`Pu = ${Pu} kN melebihi 5000 kN, periksa kembali.`);
+      const Mux = parseNum(data.beban.mux) || 0;
+      if (Mux > 600) warnings.push(`Mux = ${Mux} kNm melebihi 600 kNm, periksa kembali.`);
+      const Muy = parseNum(data.beban.muy) || 0;
+      if (Muy > 600) warnings.push(`Muy = ${Muy} kNm melebihi 600 kNm, periksa kembali.`);
+      const Vu = parseNum(data.beban.vu) || 0;
+      if (Vu > 300) warnings.push(`Vu = ${Vu} kN melebihi 300 kN, periksa kembali.`);
+
+      // Tulangan
+      if (data.mode === 'evaluasi') {
+          const D = parseNum(data.tulangan.d);
+          const phi = parseNum(data.tulangan.phi);
+          const commonD = [10, 13, 16, 19, 22, 25, 29, 32, 36];
+          const commonPhi = [6, 8, 10, 12, 14, 16, 19, 22, 25];
+          if (D !== null && !commonD.includes(D)) {
+              warnings.push(`Diameter tulangan utama D = ${D} mm tidak umum, disarankan: ${commonD.join(', ')}.`);
+          }
+          if (phi !== null && !commonPhi.includes(phi)) {
+              warnings.push(`Diameter sengkang ɸ = ${phi} mm tidak umum, disarankan: ${commonPhi.join(', ')}.`);
+          }
+          const s = parseNum(data.tulangan.s);
+          if (s !== null && s > 600) {
+              warnings.push(`Jarak sengkang s = ${s} mm melebihi 600 mm.`);
+          }
+      }
+
+      return { errors, warnings };
+  },
+
+  // ==================== RENDER ====================
   render: function(container, mode) {
     container.innerHTML = '';
     
@@ -49,7 +173,6 @@ window.modules.kolom = {
     const fields = this.fields[mode];
     ensureState(currentModuleKey, mode);
     
-    // Dapatkan state saat ini untuk mengisi nilai
     const currentState = formState[currentModuleKey] && formState[currentModuleKey][mode] ? formState[currentModuleKey][mode] : {};
     
     fields.forEach(f => {
@@ -73,21 +196,17 @@ window.modules.kolom = {
     });
     container.appendChild(grid);
 
-    // Hapus card yang mungkin sudah ada
     this.removeExistingCards();
 
-    // Tambahkan card Data Beban untuk kedua mode
+    // Beban card
     this.renderBebanCard(container);
-    
-    // Tambahkan card Data Lanjutan untuk kedua mode
+    // Lanjutan card
     this.renderLanjutanCard(container);
-
-    // Tambahkan card Data Tulangan hanya untuk mode evaluasi
+    // Tulangan card hanya untuk evaluasi
     if (mode === 'evaluasi') {
       this.renderTulanganCard(container);
     }
 
-    // Setup calculate button handler
     this.setupCalculateButton();
   },
 
@@ -104,7 +223,6 @@ window.modules.kolom = {
     bebanCard.className = 'card';
     bebanCard.id = 'bebanCard';
     
-    // Dapatkan state saat ini untuk mengisi nilai
     const currentState = formState[currentModuleKey] && formState[currentModuleKey][currentMode] ? formState[currentModuleKey][currentMode] : {};
     
     bebanCard.innerHTML = `
@@ -148,13 +266,11 @@ window.modules.kolom = {
     container.parentNode.insertBefore(bebanCard, container.nextSibling);
   },
 
-  // REVISI: renderTulanganCard — n diganti nx dan ny untuk biaxial
   renderTulanganCard: function(container) {
     const tulanganCard = document.createElement('div');
     tulanganCard.className = 'card';
     tulanganCard.id = 'tulanganCard';
     
-    // Dapatkan state saat ini untuk mengisi nilai
     const currentState = formState[currentModuleKey] && formState[currentModuleKey][currentMode] ? formState[currentModuleKey][currentMode] : {};
     
     tulanganCard.innerHTML = `
@@ -212,7 +328,6 @@ window.modules.kolom = {
     lanjutanCard.className = 'card';
     lanjutanCard.id = 'lanjutanCard';
     
-    // Dapatkan state saat ini untuk mengisi nilai
     const currentState = formState[currentModuleKey] && formState[currentModuleKey][currentMode] ? formState[currentModuleKey][currentMode] : {};
     
     lanjutanCard.innerHTML = `
@@ -248,10 +363,7 @@ window.modules.kolom = {
     const referenceCard = document.getElementById('tulanganCard') || document.getElementById('bebanCard');
     container.parentNode.insertBefore(lanjutanCard, referenceCard.nextSibling);
     
-    // Setup collapse functionality
     this.setupCollapseFunctionality();
-    
-    // Setup tips button khusus untuk Data Lanjutan
     this.setupLanjutanTipsButton();
   },
 
@@ -288,15 +400,12 @@ window.modules.kolom = {
     }
   },
 
-  // ========== FUNGSI VALIDASI DAN HITUNG UNTUK KOLOM ==========
+  // ========== FUNGSI VALIDASI DAN HITUNG ==========
 
   setupCalculateButton: function() {
     const calculateBtn = document.getElementById('calculateBtn');
     if (calculateBtn) {
-      // Hapus event listener lama jika ada
       calculateBtn.replaceWith(calculateBtn.cloneNode(true));
-      
-      // Tambahkan event listener baru
       document.getElementById('calculateBtn').addEventListener('click', () => {
         this.handleCalculate();
       });
@@ -304,100 +413,132 @@ window.modules.kolom = {
   },
 
   handleCalculate: function() {
-    // Validasi field wajib
-    const missingFields = this.validateFields();
-    
-    if (missingFields.length > 0) {
-      const fieldList = missingFields.map(field => `• ${field}`).join('\n');
-      showAlert(`Field berikut belum terisi:\n\n${fieldList}\n\nSilakan lengkapi data terlebih dahulu.`);
-      return;
-    }
-
-    // Kumpulkan semua data
-    const calculationData = this.collectData();
-    
-    // Kirim data ke modul perhitungan
-    this.sendToCalculation(calculationData);
-  },
-
-  validateFields: function() {
-    const state = formState[currentModuleKey] && formState[currentModuleKey][currentMode] ? formState[currentModuleKey][currentMode] : {};
-    const missingFields = [];
-
-    // Validasi Data Material
-    const quickFc = document.getElementById('quickFc').value;
-    const quickFy = document.getElementById('quickFy').value;
-    const quickFyt = document.getElementById('quickFyt').value;
-
-    if (!quickFc || quickFc.toString().trim() === '') {
-      missingFields.push("f'c (Kuat Tekan Beton) - Data Material");
-    }
-    if (!quickFy || quickFy.toString().trim() === '') {
-      missingFields.push("fy (Kuat Leleh Baja) - Data Material");
-    }
-    if (!quickFyt || quickFyt.toString().trim() === '') {
-      missingFields.push("fyt (Kuat Leleh Baja Begel) - Data Material");
-    }
-
-    // Field wajib dari Data Dimensi
-    const dimensiFields = ['h', 'b', 'sb'];
-    dimensiFields.forEach(field => {
-      if (!state[field] || state[field].toString().trim() === '') {
-        missingFields.push(`${this.getFieldLabel(field)} (Data Dimensi)`);
+      const calculationData = this.collectData();
+      const validation = this.validateKolomInput(calculationData);
+      
+      if (validation.errors.length > 0) {
+          const msg = validation.errors.join('\n');
+          if (typeof showAlert === 'function') {
+              showAlert(`Terdapat kesalahan pada input:\n\n${msg}`, '⚠️ Validasi Input Gagal');
+          } else {
+              alert(`Terdapat kesalahan pada input:\n\n${msg}`);
+          }
+          return;
       }
-    });
-
-    // Field wajib dari Data Beban (Pu, Vu, Mux, Muy)
-    const bebanFields = ['pu', 'vu', 'mux', 'muy'];
-    bebanFields.forEach(field => {
-      if (!state[field] || state[field].toString().trim() === '') {
-        missingFields.push(`${this.getBebanFieldLabel(field)} (Data Beban)`);
+      
+      if (validation.warnings.length > 0) {
+          const msg = validation.warnings.join('\n');
+          this.showConfirmAlert(
+              `Peringatan (saran):\n\n${msg}\n\nApakah Anda tetap ingin melanjutkan perhitungan?`,
+              '⚠️ Peringatan Input',
+              () => {
+                  this.sendToCalculation(calculationData);
+              },
+              () => {
+                  console.log('Perhitungan dibatalkan oleh pengguna.');
+              }
+          );
+      } else {
+          this.sendToCalculation(calculationData);
       }
-    });
-
-    // REVISI: Field wajib dari Data Tulangan (hanya untuk mode evaluasi)
-    // nx dan ny menggantikan n tunggal untuk mendukung biaxial
-    if (currentMode === 'evaluasi') {
-      const tulanganFields = ['d', 'phi', 'nx', 'ny', 's'];
-      tulanganFields.forEach(field => {
-        if (!state[field] || state[field].toString().trim() === '') {
-          missingFields.push(`${this.getTulanganFieldLabel(field)} (Data Tulangan)`);
-        }
-      });
-    }
-
-    return missingFields;
   },
 
-  getFieldLabel: function(key) {
-    const labels = {
-      'h': 'h (Tinggi Penampang)',
-      'b': 'b (Lebar Penampang)',
-      'sb': 'Sb (Selimut Beton)'
-    };
-    return labels[key] || key;
-  },
+  showConfirmAlert: function(message, title, onConfirm, onCancel) {
+      const rootStyles = getComputedStyle(document.documentElement);
+      const buttonColor = rootStyles.getPropertyValue('--color-buttons').trim() || '#282B53';
 
-  getBebanFieldLabel: function(field) {
-    const labels = {
-      'pu': 'Pu (Beban Aksial Ultimit)',
-      'vu': 'Vu (Gaya Geser Ultimit)',
-      'mux': 'Mux (Momen Ultimit Arah X)',
-      'muy': 'Muy (Momen Ultimit Arah Y)'
-    };
-    return labels[field] || field;
-  },
+      if (typeof showAlert !== 'function') {
+          const proceed = confirm(message);
+          if (proceed) onConfirm(); else if (onCancel) onCancel();
+          return;
+      }
 
-  // REVISI: Tambah label nx dan ny, hapus n tunggal
-  getTulanganFieldLabel: function(field) {
-    const labels = {
-      'd':   'D (Diameter Tulangan Utama)',
-      'phi': 'ɸ (Diameter Tulangan Begel)',
-      'nx':  'nx (Jumlah Tulangan Arah X)',
-      'ny':  'ny (Jumlah Tulangan Arah Y)',
-      's':   's (Jarak Tulangan Begel)'
-    };
-    return labels[field] || field;
+      showAlert(message, title);
+
+      const checkInterval = setInterval(() => {
+          const alertContent = document.getElementById('alertContent');
+          const alertModal = document.getElementById('alertModal');
+          if (!alertContent || !alertModal || !alertModal.classList.contains('active')) {
+              if (!alertModal || !alertModal.classList.contains('active')) {
+                  clearInterval(checkInterval);
+              }
+              return;
+          }
+
+          if (alertContent.querySelector('.confirm-actions')) {
+              clearInterval(checkInterval);
+              return;
+          }
+
+          const actionsDiv = document.createElement('div');
+          actionsDiv.className = 'confirm-actions';
+          actionsDiv.style.cssText = `
+              margin-top: 20px;
+              display: flex;
+              justify-content: flex-end;
+              gap: 12px;
+          `;
+
+          const btnBatal = document.createElement('button');
+          btnBatal.textContent = 'Batal';
+          btnBatal.className = 'btn';
+          btnBatal.style.cssText = `
+              background: white;
+              color: ${buttonColor};
+              border: 2px solid ${buttonColor};
+              padding: 8px 20px;
+              border-radius: 6px;
+              cursor: pointer;
+              font-weight: 600;
+              transition: all 0.2s ease;
+          `;
+          btnBatal.addEventListener('mouseenter', function() {
+              this.style.background = buttonColor;
+              this.style.color = 'white';
+          });
+          btnBatal.addEventListener('mouseleave', function() {
+              this.style.background = 'white';
+              this.style.color = buttonColor;
+          });
+          btnBatal.addEventListener('click', function() {
+              if (alertModal) alertModal.classList.remove('active');
+              if (typeof closeAlert === 'function') closeAlert();
+              clearInterval(checkInterval);
+              if (onCancel) onCancel();
+          });
+
+          const btnLanjut = document.createElement('button');
+          btnLanjut.textContent = 'Lanjutkan';
+          btnLanjut.className = 'btn primary';
+          btnLanjut.style.cssText = `
+              background: ${buttonColor};
+              color: white;
+              border: 2px solid ${buttonColor};
+              padding: 8px 20px;
+              border-radius: 6px;
+              cursor: pointer;
+              font-weight: 600;
+              transition: all 0.2s ease;
+          `;
+          btnLanjut.addEventListener('mouseenter', function() {
+              this.style.opacity = '0.9';
+          });
+          btnLanjut.addEventListener('mouseleave', function() {
+              this.style.opacity = '1';
+          });
+          btnLanjut.addEventListener('click', function() {
+              if (alertModal) alertModal.classList.remove('active');
+              if (typeof closeAlert === 'function') closeAlert();
+              clearInterval(checkInterval);
+              onConfirm();
+          });
+
+          actionsDiv.appendChild(btnBatal);
+          actionsDiv.appendChild(btnLanjut);
+          alertContent.appendChild(actionsDiv);
+
+          clearInterval(checkInterval);
+      }, 100);
   },
 
   collectData: function() {
@@ -410,7 +551,6 @@ window.modules.kolom = {
       fyt: document.getElementById('quickFyt').value
     };
 
-    // Data yang akan dikirim ke calc-kolom.js
     const calculationData = {
       module: currentModuleKey,
       mode: currentMode,
@@ -427,22 +567,18 @@ window.modules.kolom = {
       },
       material: quickInputs,
       lanjutan: {
-        lambda: state.lambda || '1', // default value jika kosong
-        n_kaki: state.n_kaki || '2'  // default value jika kosong
+        lambda: state.lambda || '1',
+        n_kaki: state.n_kaki || '2'
       }
     };
 
-    // REVISI: Tambahkan data tulangan hanya untuk mode evaluasi
-    // nx = jumlah tulangan yang dievaluasi terhadap Mux (arah X)
-    // ny = jumlah tulangan yang dievaluasi terhadap Muy (arah Y)
-    // total batang terpasang di penampang = nx + ny - 4
     if (currentMode === 'evaluasi') {
       calculationData.tulangan = {
-        d:   state.d,
+        d: state.d,
         phi: state.phi,
-        nx:  state.nx,
-        ny:  state.ny,
-        s:   state.s
+        nx: state.nx,
+        ny: state.ny,
+        s: state.s
       };
     }
 
@@ -450,17 +586,14 @@ window.modules.kolom = {
   },
 
   sendToCalculation: function(data) {
-    // Gunakan fungsi yang langsung redirect seperti pada modul balok
     if (typeof window.calculateKolomWithRedirect === 'function') {
       console.log("🚀 Mengirim data ke calculateKolomWithRedirect...", data);
       window.calculateKolomWithRedirect(data);
     } else if (typeof window.calculateKolom === 'function') {
-      // Fallback ke fungsi lama - PERBAIKAN: gunakan key yang berbeda
       console.log("⚠️ Menggunakan calculateKolom lama...");
       const result = window.calculateKolom(data);
       
       if (result.status === "sukses") {
-        // PERBAIKAN: Gunakan key yang berbeda untuk kolom
         sessionStorage.setItem('calculationResultKolom', JSON.stringify({
           module: data.module,
           mode: data.mode,
@@ -470,64 +603,55 @@ window.modules.kolom = {
           inputData: data,
           timestamp: new Date().toISOString()
         }));
-        
-        // Redirect manual
         window.location.href = 'report.html';
       } else {
-        showAlert(`Perhitungan gagal: ${result.message || 'Terjadi kesalahan'}`);
+        if (typeof showAlert === 'function') {
+          showAlert(`Perhitungan gagal: ${result.message || 'Terjadi kesalahan'}`);
+        } else {
+          alert(`Perhitungan gagal: ${result.message || 'Terjadi kesalahan'}`);
+        }
       }
     } else {
       const dataStr = JSON.stringify(data, null, 2);
       const variablesList = this.formatVariablesList(data);
-      
-      showAlert(
-        `calc-kolom.js tidak ditemukan.\n\nData yang akan dikirim ke calc-kolom.js:\n\n${dataStr}\n\n=== VARIABEL YANG TERSEDIA ===\n${variablesList}`,
-        "‼️ calc-kolom.js Tidak Ditemukan"
-      );
-      
-      // Untuk testing, tampilkan di console
+      if (typeof showAlert === 'function') {
+        showAlert(
+          `calc-kolom.js tidak ditemukan.\n\nData yang akan dikirim ke calc-kolom.js:\n\n${dataStr}\n\n=== VARIABEL YANG TERSEDIA ===\n${variablesList}`,
+          "‼️ calc-kolom.js Tidak Ditemukan"
+        );
+      } else {
+        alert(`calc-kolom.js tidak ditemukan.\n\nData yang akan dikirim:\n\n${dataStr}`);
+      }
       updateLog(`Calculation data for ${currentModuleKey}.${currentMode}:`, data);
     }
   },
 
-  // REVISI: formatVariablesList — tampilkan nx dan ny, hapus n tunggal
   formatVariablesList: function(data) {
     let variablesList = [];
-    
-    // Data Material
     variablesList.push("=== DATA MATERIAL ===");
     variablesList.push(`fc: ${data.material.fc} MPa`);
     variablesList.push(`fy: ${data.material.fy} MPa`);
     variablesList.push(`fyt: ${data.material.fyt} MPa`);
-    
-    // Data Dimensi
     variablesList.push("\n=== DATA DIMENSI ===");
     variablesList.push(`h: ${data.dimensi.h} mm`);
     variablesList.push(`b: ${data.dimensi.b} mm`);
     variablesList.push(`sb: ${data.dimensi.sb} mm`);
-    
-    // Data Beban
     variablesList.push("\n=== DATA BEBAN ===");
     variablesList.push(`Pu: ${data.beban.pu} kN`);
     variablesList.push(`Vu: ${data.beban.vu} kN`);
     variablesList.push(`Mux: ${data.beban.mux} kNm`);
     variablesList.push(`Muy: ${data.beban.muy} kNm`);
-    
-    // Data Lanjutan
     variablesList.push("\n=== DATA LANJUTAN ===");
     variablesList.push(`lambda: ${data.lanjutan.lambda || '1 (default)'}`);
-    variablesList.push(`n_kaki (kaki begel): ${data.lanjutan.n_kaki || '2 (default)'}`);
-    
-    // Data Tulangan (hanya untuk evaluasi)
+    variablesList.push(`n_kaki: ${data.lanjutan.n_kaki || '2 (default)'}`);
     if (data.mode === 'evaluasi' && data.tulangan) {
       variablesList.push("\n=== DATA TULANGAN ===");
       variablesList.push(`d: ${data.tulangan.d} mm`);
       variablesList.push(`phi: ${data.tulangan.phi} mm`);
-      variablesList.push(`nx: ${data.tulangan.nx} (arah X, untuk Mux)`);
-      variablesList.push(`ny: ${data.tulangan.ny} (arah Y, untuk Muy)`);
+      variablesList.push(`nx: ${data.tulangan.nx}`);
+      variablesList.push(`ny: ${data.tulangan.ny}`);
       variablesList.push(`s: ${data.tulangan.s} mm`);
     }
-    
     return variablesList.join('\n');
   }
 };
