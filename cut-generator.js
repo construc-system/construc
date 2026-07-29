@@ -1,4 +1,4 @@
-// cut-generator.js - Final untuk Kolom (dengan perbaikan path pencarian dimensi dan nX/nY)
+// cut-generator.js - Final untuk Kolom (Hapus spasi di PL terakhir)
 
 // ==================== FUNGSI UMUM ====================
 function applyNonScalingStroke(element) {
@@ -498,10 +498,9 @@ if (!window.loadDataFromStorage) {
     };
 }
 
-// ==================== CREATE KOLOM CONFIG (DENGAN PATH YANG DIPERBAIKI) ====================
+// ==================== CREATE KOLOM CONFIG ====================
 function createKolomConfigFromData(data) {
     try {
-        // Cari dimensi dari berbagai kemungkinan lokasi
         const dimensi =
             data.inputData?.dimensi ||
             data.rekap?.input?.dimensi ||
@@ -589,12 +588,7 @@ window.renderKolomFromStorage = function(containerId = "svg-container-tumpuan") 
 };
 
 // ==================== REGISTRI PELAT & RENDER UTAMA ====================
-window.pelatRenderers = {
-    dua_arah: null,
-    kantilever: null,
-    satu_arah: null
-};
-
+window.pelatRenderers = { dua_arah: null, kantilever: null, satu_arah: null };
 window.renderPenampangPelat = function(config, containerId) {
     const jenisPelat = getJenisPelatLengkap();
     const renderer = window.pelatRenderers[jenisPelat];
@@ -608,11 +602,7 @@ window.renderPenampangPelat = function(config, containerId) {
 };
 
 // ==================== REGISTRI FONDASI & RENDER UTAMA ====================
-window.foundationRenderers = {
-    tunggal: null,
-    menerus: null
-};
-
+window.foundationRenderers = { tunggal: null, menerus: null };
 window.renderPenampangFondasiByType = function(jenisFondasi, config, containerId) {
     const renderer = window.foundationRenderers[jenisFondasi];
     if (!renderer) {
@@ -626,6 +616,23 @@ window.renderPenampangFondasiByType = function(jenisFondasi, config, containerId
 
 // ==================== FUNGSI CAD ====================
 window.cadConfig = { tumpuan: null, lapangan: null, kolom: null, fondasi: null, activeType: 'tumpuan' };
+
+const polylineCAD = (points, closed = false) => {
+    if (!points.length) return '';
+    const fmt = (num) => Number(num.toFixed(3));
+    let cmd = `PL ${fmt(points[0][0])},${fmt(points[0][1])} W 0 0 `;
+    for (let i = 1; i < points.length; i++) {
+        const dx = points[i][0] - points[i-1][0];
+        const dy = points[i][1] - points[i-1][1];
+        cmd += `@${fmt(dx)},${fmt(dy)} `;
+    }
+    if (closed) {
+        cmd += 'C ';
+    } else {
+        cmd += 'ENTER ';
+    }
+    return cmd;
+};
 
 function generateCADForPenampangNonCircle(config, offsetX = 0) {
     try {
@@ -673,39 +680,29 @@ function generateCADForPenampangNonCircle(config, offsetX = 0) {
         };
         const cadLines = [];
         const addOffset = (x, y) => `${x + offsetX},${y}`;
+
         cadLines.push(`RECTANGLE ${addOffset(0, 0)} ${addOffset(cadVars.lebarRect, cadVars.tinggiRect)}`);
         cadLines.push(`ARC C ${addOffset(cadVars.x1, cadVars.y1)} ${addOffset(cadVars.x7, cadVars.y4)} ${addOffset(cadVars.x2, cadVars.y1)}`);
         cadLines.push(`ARC C ${addOffset(cadVars.x3, cadVars.y1)} ${addOffset(cadVars.x4, cadVars.y1)} ${addOffset(cadVars.x3, cadVars.y2)}`);
         cadLines.push(`ARC C ${addOffset(cadVars.x3, cadVars.x1)} ${addOffset(cadVars.x3, cadVars.x2)} ${addOffset(cadVars.x4, cadVars.x1)}`);
         cadLines.push(`ARC C ${addOffset(cadVars.x1, cadVars.x1)} ${addOffset(cadVars.x2, cadVars.x1)} ${addOffset(cadVars.x1, cadVars.x2)}`);
-        cadLines.push(`PL ${addOffset(cadVars.x2, cadVars.x1)} ${addOffset(cadVars.x2, cadVars.y1)} C`);
-        cadLines.push("ENTER");
-        cadLines.push(`PL ${addOffset(cadVars.x1, cadVars.y2)} ${addOffset(cadVars.x3, cadVars.y2)} C`);
-        cadLines.push("ENTER");
-        cadLines.push(`PL ${addOffset(cadVars.x4, cadVars.y1)} ${addOffset(cadVars.x4, cadVars.x1)} C`);
-        cadLines.push("ENTER");
-        cadLines.push(`PL ${addOffset(cadVars.x3, cadVars.x2)} ${addOffset(cadVars.x1, cadVars.x2)} C`);
-        cadLines.push("ENTER");
-        cadLines.push(`PL ${addOffset(cadVars.x5, cadVars.x1)} ${addOffset(cadVars.x5, cadVars.y1)} C`);
-        cadLines.push("ENTER");
-        cadLines.push(`PL ${addOffset(cadVars.x14, cadVars.y3)} ${addOffset(cadVars.x3, cadVars.y3)} C`);
-        cadLines.push("ENTER");
-        cadLines.push(`PL ${addOffset(cadVars.x6, cadVars.y1)} ${addOffset(cadVars.x6, cadVars.x1)} C`);
-        cadLines.push("ENTER");
-        cadLines.push(`PL ${addOffset(cadVars.x3, cadVars.x5)} ${addOffset(cadVars.x1, cadVars.x5)} C`);
-        cadLines.push("ENTER");
-        cadLines.push(`PL ${addOffset(cadVars.x8, cadVars.y5)} ${addOffset(cadVars.x9, cadVars.y6)} C`);
-        cadLines.push("ENTER");
-        cadLines.push(`PL ${addOffset(cadVars.x9, cadVars.y6)} ${addOffset(cadVars.x10, cadVars.y7)} C`);
-        cadLines.push("ENTER");
-        cadLines.push(`PL ${addOffset(cadVars.x10, cadVars.y7)} ${addOffset(cadVars.x7, cadVars.y4)} C`);
-        cadLines.push("ENTER");
-        cadLines.push(`PL ${addOffset(cadVars.x11, cadVars.y8)} ${addOffset(cadVars.x12, cadVars.y9)} C`);
-        cadLines.push("ENTER");
-        cadLines.push(`PL ${addOffset(cadVars.x12, cadVars.y9)} ${addOffset(cadVars.x13, cadVars.y10)} C`);
-        cadLines.push("ENTER");
-        cadLines.push(`PL ${addOffset(cadVars.x13, cadVars.y10)} ${addOffset(cadVars.x5, cadVars.y11)} C`);
-        cadLines.push("ENTER");
+
+        cadLines.push(polylineCAD([[cadVars.x2 + offsetX, cadVars.x1], [cadVars.x2 + offsetX, cadVars.y1]], true));
+        cadLines.push(polylineCAD([[cadVars.x1 + offsetX, cadVars.y2], [cadVars.x3 + offsetX, cadVars.y2]], true));
+        cadLines.push(polylineCAD([[cadVars.x4 + offsetX, cadVars.y1], [cadVars.x4 + offsetX, cadVars.x1]], true));
+        cadLines.push(polylineCAD([[cadVars.x3 + offsetX, cadVars.x2], [cadVars.x1 + offsetX, cadVars.x2]], true));
+        cadLines.push(polylineCAD([[cadVars.x5 + offsetX, cadVars.x1], [cadVars.x5 + offsetX, cadVars.y1]], true));
+        cadLines.push(polylineCAD([[cadVars.x14 + offsetX, cadVars.y3], [cadVars.x3 + offsetX, cadVars.y3]], true));
+        cadLines.push(polylineCAD([[cadVars.x6 + offsetX, cadVars.y1], [cadVars.x6 + offsetX, cadVars.x1]], true));
+        cadLines.push(polylineCAD([[cadVars.x3 + offsetX, cadVars.x5], [cadVars.x1 + offsetX, cadVars.x5]], true));
+        
+        cadLines.push(polylineCAD([[cadVars.x8 + offsetX, cadVars.y5], [cadVars.x9 + offsetX, cadVars.y6]], true));
+        cadLines.push(polylineCAD([[cadVars.x9 + offsetX, cadVars.y6], [cadVars.x10 + offsetX, cadVars.y7]], true));
+        cadLines.push(polylineCAD([[cadVars.x10 + offsetX, cadVars.y7], [cadVars.x7 + offsetX, cadVars.y4]], true));
+        cadLines.push(polylineCAD([[cadVars.x11 + offsetX, cadVars.y8], [cadVars.x12 + offsetX, cadVars.y9]], true));
+        cadLines.push(polylineCAD([[cadVars.x12 + offsetX, cadVars.y9], [cadVars.x13 + offsetX, cadVars.y10]], true));
+        cadLines.push(polylineCAD([[cadVars.x13 + offsetX, cadVars.y10], [cadVars.x5 + offsetX, cadVars.y11]], true));
+
         return cadLines;
     } catch (error) {
         console.error("Error in generateCADForPenampangNonCircle:", error);
@@ -716,36 +713,27 @@ function generateCADForPenampangNonCircle(config, offsetX = 0) {
 function generateCADForKolomNonCircle(config, offsetX = 0) {
     try {
         const { lebar, tinggi, D, begel, selimut } = config;
-        const r = D / 2;
         const cadVars = {
             lebarRect: lebar,
             tinggiRect: tinggi,
-            x1: selimut + begel + r,
             x2: selimut,
-            x3: lebar - selimut - begel - r,
-            x4: lebar - selimut,
-            x5: selimut + begel,
-            x6: lebar - selimut - begel
+            x5: selimut + begel
         };
         const cadLines = [];
         const addOffset = (x, y) => `${x + offsetX},${y}`;
+
         cadLines.push(`RECTANGLE ${addOffset(0, 0)} ${addOffset(cadVars.lebarRect, cadVars.tinggiRect)}`);
-        cadLines.push(`PL ${addOffset(cadVars.x2, cadVars.x2)} ${addOffset(cadVars.x2, cadVars.tinggiRect - cadVars.x2)} C`);
-        cadLines.push("ENTER");
-        cadLines.push(`PL ${addOffset(cadVars.x2, cadVars.tinggiRect - cadVars.x2)} ${addOffset(cadVars.lebarRect - cadVars.x2, cadVars.tinggiRect - cadVars.x2)} C`);
-        cadLines.push("ENTER");
-        cadLines.push(`PL ${addOffset(cadVars.lebarRect - cadVars.x2, cadVars.tinggiRect - cadVars.x2)} ${addOffset(cadVars.lebarRect - cadVars.x2, cadVars.x2)} C`);
-        cadLines.push("ENTER");
-        cadLines.push(`PL ${addOffset(cadVars.lebarRect - cadVars.x2, cadVars.x2)} ${addOffset(cadVars.x2, cadVars.x2)} C`);
-        cadLines.push("ENTER");
-        cadLines.push(`PL ${addOffset(cadVars.x5, cadVars.x5)} ${addOffset(cadVars.x5, cadVars.tinggiRect - cadVars.x5)} C`);
-        cadLines.push("ENTER");
-        cadLines.push(`PL ${addOffset(cadVars.x5, cadVars.tinggiRect - cadVars.x5)} ${addOffset(cadVars.lebarRect - cadVars.x5, cadVars.tinggiRect - cadVars.x5)} C`);
-        cadLines.push("ENTER");
-        cadLines.push(`PL ${addOffset(cadVars.lebarRect - cadVars.x5, cadVars.tinggiRect - cadVars.x5)} ${addOffset(cadVars.lebarRect - cadVars.x5, cadVars.x5)} C`);
-        cadLines.push("ENTER");
-        cadLines.push(`PL ${addOffset(cadVars.lebarRect - cadVars.x5, cadVars.x5)} ${addOffset(cadVars.x5, cadVars.x5)} C`);
-        cadLines.push("ENTER");
+
+        cadLines.push(polylineCAD([[cadVars.x2 + offsetX, cadVars.x2], [cadVars.x2 + offsetX, cadVars.tinggiRect - cadVars.x2]], true));
+        cadLines.push(polylineCAD([[cadVars.x2 + offsetX, cadVars.tinggiRect - cadVars.x2], [cadVars.lebarRect - cadVars.x2 + offsetX, cadVars.tinggiRect - cadVars.x2]], true));
+        cadLines.push(polylineCAD([[cadVars.lebarRect - cadVars.x2 + offsetX, cadVars.tinggiRect - cadVars.x2], [cadVars.lebarRect - cadVars.x2 + offsetX, cadVars.x2]], true));
+        cadLines.push(polylineCAD([[cadVars.lebarRect - cadVars.x2 + offsetX, cadVars.x2], [cadVars.x2 + offsetX, cadVars.x2]], true));
+
+        cadLines.push(polylineCAD([[cadVars.x5 + offsetX, cadVars.x5], [cadVars.x5 + offsetX, cadVars.tinggiRect - cadVars.x5]], true));
+        cadLines.push(polylineCAD([[cadVars.x5 + offsetX, cadVars.tinggiRect - cadVars.x5], [cadVars.lebarRect - cadVars.x5 + offsetX, cadVars.tinggiRect - cadVars.x5]], true));
+        cadLines.push(polylineCAD([[cadVars.lebarRect - cadVars.x5 + offsetX, cadVars.tinggiRect - cadVars.x5], [cadVars.lebarRect - cadVars.x5 + offsetX, cadVars.x5]], true));
+        cadLines.push(polylineCAD([[cadVars.lebarRect - cadVars.x5 + offsetX, cadVars.x5], [cadVars.x5 + offsetX, cadVars.x5]], true));
+
         return cadLines;
     } catch (error) {
         console.error("Error in generateCADForKolomNonCircle:", error);
@@ -791,46 +779,66 @@ window.generateCADText = function() {
         const tumpuan = window.cadConfig.tumpuan;
         const lapangan = window.cadConfig.lapangan;
         const kolom = window.cadConfig.kolom;
-        const combinedLines = [];
+        const rawLines = [];
+
         if (!tumpuan && !lapangan && !kolom) {
             throw new Error("Tidak ada data penampang!");
         }
         
-        // KOLOM SAJA (tanpa balok tumpuan/lapangan)
         if (kolom && !tumpuan && !lapangan) {
-            // Gunakan fungsi balok untuk menggambar persegi & begel (sistem lainnya)
-            const kolomNonCircle = generateCADForPenampangNonCircle(kolom, 0);
-            combinedLines.push(...kolomNonCircle);
-            // Tetap gunakan fungsi kolom untuk lingkaran tulangan
-            const kolomCircles = generateCADForKolomCircle(kolom, kolom.lingkaranData || [], 0);
-            combinedLines.push(...kolomCircles);
+            rawLines.push(...generateCADForPenampangNonCircle(kolom, 0));
+            rawLines.push(...generateCADForKolomCircle(kolom, kolom.lingkaranData || [], 0));
         }
         else if (tumpuan && !lapangan && !kolom) {
-            const tumpuanNonCircle = generateCADForPenampangNonCircle(tumpuan, 0);
-            combinedLines.push(...tumpuanNonCircle);
-            const tumpuanCircles = generateCADForCircle(tumpuan, tumpuan.lingkaranData || [], tumpuan.lingkaranTorsiData || [], 0);
-            combinedLines.push(...tumpuanCircles);
+            rawLines.push(...generateCADForPenampangNonCircle(tumpuan, 0));
+            rawLines.push(...generateCADForCircle(tumpuan, tumpuan.lingkaranData || [], tumpuan.lingkaranTorsiData || [], 0));
         }
         else if (!tumpuan && lapangan && !kolom) {
-            const lapanganNonCircle = generateCADForPenampangNonCircle(lapangan, 0);
-            combinedLines.push(...lapanganNonCircle);
-            const lapanganCircles = generateCADForCircle(lapangan, lapangan.lingkaranData || [], lapangan.lingkaranTorsiData || [], 0);
-            combinedLines.push(...lapanganCircles);
+            rawLines.push(...generateCADForPenampangNonCircle(lapangan, 0));
+            rawLines.push(...generateCADForCircle(lapangan, lapangan.lingkaranData || [], lapangan.lingkaranTorsiData || [], 0));
         }
         else if (tumpuan && lapangan && !kolom) {
             const offsetLapangan = tumpuan.lebar + 30;
-            const tumpuanNonCircle = generateCADForPenampangNonCircle(tumpuan, 0);
-            combinedLines.push(...tumpuanNonCircle);
-            const lapanganNonCircle = generateCADForPenampangNonCircle(lapangan, offsetLapangan);
-            combinedLines.push(...lapanganNonCircle);
-            const tumpuanCircles = generateCADForCircle(tumpuan, tumpuan.lingkaranData || [], tumpuan.lingkaranTorsiData || [], 0);
-            combinedLines.push(...tumpuanCircles);
-            const lapanganCircles = generateCADForCircle(lapangan, lapangan.lingkaranData || [], lapangan.lingkaranTorsiData || [], offsetLapangan);
-            combinedLines.push(...lapanganCircles);
+            rawLines.push(...generateCADForPenampangNonCircle(tumpuan, 0));
+            rawLines.push(...generateCADForPenampangNonCircle(lapangan, offsetLapangan));
+            rawLines.push(...generateCADForCircle(tumpuan, tumpuan.lingkaranData || [], tumpuan.lingkaranTorsiData || [], 0));
+            rawLines.push(...generateCADForCircle(lapangan, lapangan.lingkaranData || [], lapangan.lingkaranTorsiData || [], offsetLapangan));
+        }
+
+        let cadLinesOther = [];
+        let cadLinesPL = [];
+        let cadLinesCircle = [];
+
+        rawLines.forEach(cmd => {
+            if (!cmd || cmd.trim() === "" || cmd.trim() === "ENTER") return;
+            const trimCmd = cmd.trimStart();
+            if (trimCmd.startsWith("PL")) {
+                cadLinesPL.push(trimCmd);
+            } else if (trimCmd.startsWith("CIRCLE")) {
+                cadLinesCircle.push(trimCmd);
+            } else {
+                cadLinesOther.push(trimCmd);
+            }
+        });
+
+        let finalLines = [];
+        
+        if (cadLinesOther.length > 0) {
+            finalLines = finalLines.concat(cadLinesOther);
+            finalLines.push("ENTER");
+        }
+        if (cadLinesPL.length > 0) {
+            cadLinesPL[cadLinesPL.length - 1] = cadLinesPL[cadLinesPL.length - 1].trimEnd();
+            finalLines = finalLines.concat(cadLinesPL);
+            finalLines.push("ENTER");
+        }
+        if (cadLinesCircle.length > 0) {
+            finalLines = finalLines.concat(cadLinesCircle);
         }
         
-        if (combinedLines.length === 0) return "Error generating CAD text";
-        return combinedLines.join("\n");
+        if (finalLines.length === 0) return "Error generating CAD text";
+        return finalLines.join("\n");
+
     } catch (error) {
         console.error("Error in generateCADText:", error);
         return "Error generating CAD text: " + error.message;
@@ -885,4 +893,4 @@ window.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-console.log("✅ cut-generator.js final (balok, kolom, pelat) dengan perbaikan path pencarian kolom");
+console.log("✅ cut-generator.js final ter-load (Trim spasi PL terakhir)");

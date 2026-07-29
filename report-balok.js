@@ -22,6 +22,7 @@
             renderInputData(result.inputData || {});
             renderHasilPerhitungan(result);
             renderRingkasan(result);
+            renderEfisiensiTulangan(result);
             renderPenampang(result);
             
             console.log("✅ Laporan balok berhasil di-render");
@@ -521,9 +522,6 @@
                     // Berikan saran spesifik berdasarkan kondisi torsi yang tidak aman
                     if (detail) {
                         if (detail.perluTorsi) {
-                            if (!detail.amanBegel1 || !detail.amanBegel2) {
-                                saranPerbaikan.push(`Tambahkan luas sengkang torsi (Av,t) pada ${label} untuk memenuhi syarat minimum`);
-                            }
                             if (!detail.amanTorsi1) {
                                 saranPerbaikan.push(`Perbesar At/s sengkang torsi pada ${label} (minimum: ${detail.kontrolTorsi?.toFixed(3) || 'N/A'} mm²/mm)`);
                             }
@@ -714,37 +712,22 @@
         if (kontrol.kontrolGeser && kontrol.kontrolGeser[config.geser]) {
             const kontrolData = kontrol.kontrolGeser[config.geser];
             if (kontrolData.Av_aman !== undefined) {
+                // Diperbarui satuan mm² menjadi mm²/m 
                 html += renderStep(
                     stepNumberGenerator.next().value,
                     `Kontrol Tulangan Geser ${lokasi}`,
-                    `A<sub>v,d</sub> = ${kontrolData.detail?.Av_terpakai?.toFixed(2) || 'N/A'} mm² ≥ A<sub>v,u</sub> = ${kontrolData.detail?.Av_u?.toFixed(2) || 'N/A'} mm²`,
+                    `A<sub>v,d</sub> = ${kontrolData.detail?.Av_terpakai?.toFixed(2) || 'N/A'} mm²/m ≥ A<sub>v,u</sub> = ${kontrolData.detail?.Av_u?.toFixed(2) || 'N/A'} mm²/m`,
                     kontrolData.Av_aman
                 );
             }
         }
     
-        // 5. KONTROL TORSI - DIPERBARUI DENGAN 2 KONDISI
+        // 5. KONTROL TORSI
         if (kontrol.kontrolTorsi && kontrol.kontrolTorsi[config.torsi]) {
             const kontrolData = kontrol.kontrolTorsi[config.torsi];
             const detail = kontrolData.detail;
             
             if (detail?.perluTorsi) {
-                // Kontrol 1: amanBegel1
-                html += renderStep(
-                    stepNumberGenerator.next().value,
-                    `Kontrol Begel Torsi (Minimum 1) ${lokasi}`,
-                    `A<sub>v,t</sub> = ${detail?.Avt?.toFixed(2) || 'N/A'} mm² ≥ ${detail?.kontrolBegel1?.toFixed(2) || 'N/A'} mm²`,
-                    detail?.amanBegel1
-                );
-                
-                // Kontrol 2: amanBegel2
-                html += renderStep(
-                    stepNumberGenerator.next().value,
-                    `Kontrol Begel Torsi (Minimum 2) ${lokasi}`,
-                    `A<sub>v,t</sub> = ${detail?.Avt?.toFixed(2) || 'N/A'} mm² ≥ ${detail?.kontrolBegel2?.toFixed(2) || 'N/A'} mm²`,
-                    detail?.amanBegel2
-                );
-                
                 // Kontrol 3: amanTorsi1 (At_per_S >= kontrolTorsi)
                 html += renderStep(
                     stepNumberGenerator.next().value,
@@ -753,13 +736,13 @@
                     detail?.amanTorsi1
                 );
                 
-                // Kontrol 4: amanTorsi2 (A1_terpasang >= A1)
+                // Kontrol 4: amanTorsi2 (A1_terpasang >= A1) -> Diubah A1,d dan A1,u
                 const A1_terpasang = detail?.A1_terpasang || 0;
                 const A1 = detail?.A1 || 0;
                 html += renderStep(
                     stepNumberGenerator.next().value,
                     `Kontrol Tulangan Longitudinal Torsi ${lokasi}`,
-                    `A<sub>1,terpasang</sub> = ${A1_terpasang.toFixed(2)} mm² ≥ A<sub>1</sub> = ${A1.toFixed(2)} mm²`,
+                    `A<sub>1,d</sub> = ${A1_terpasang.toFixed(2)} mm² ≥ A<sub>1,u</sub> = ${A1.toFixed(2)} mm²`,
                     detail?.amanTorsi2
                 );
             } else {
@@ -807,6 +790,228 @@
         };
         
         return labels[key] || key.replace(/_/g, ' ').toUpperCase();
+    }
+
+    // ==================== FUNGSI EFISIENSI TULANGAN ====================
+    function renderEfisiensiTulangan(result) {
+        const controlContainer = document.getElementById('controlContainer');
+        if (!controlContainer) return;
+        const parentSection = controlContainer.closest('.section');
+
+        // Pastikan tidak menduplikasi saat re-render
+        let existingSection = document.getElementById('efisiensi-section-balok');
+        if (existingSection) existingSection.remove();
+
+        const section = document.createElement('section');
+        section.className = 'section efisiensi-tulangan';
+        section.id = 'efisiensi-section-balok';
+
+        const { data, kontrol } = result;
+        if (!data || !kontrol) return;
+
+        // Helper fungsi amankan pembagian dengan 0
+        const safeDiv = (num, den) => (den && den > 0) ? (num / den) : 0;
+
+        // Ambil data untuk Utama (Lentur) - Batas Math.min(100) dilepas
+        const getLentur = (loc) => {
+            let pos, neg;
+            if (loc === 'kiri') { pos = data?.tulanganKiripositif; neg = data?.tulanganKirinegatif; }
+            if (loc === 'tengah') { pos = data?.tulanganTengahpositif; neg = data?.tulanganTengahnegatif; }
+            if (loc === 'kanan') { pos = data?.tulanganKananpositif; neg = data?.tulanganKanannegatif; }
+
+            const posRatio = safeDiv(pos?.Mu || 0, pos?.Md || 1);
+            const negRatio = safeDiv(neg?.Mu || 0, neg?.Md || 1);
+
+            if (posRatio > negRatio) {
+                return { b: pos?.Mu || 0, k: pos?.Md || 1, e: posRatio * 100 };
+            } else {
+                return { b: neg?.Mu || 0, k: neg?.Md || 1, e: negRatio * 100 };
+            }
+        };
+
+        // Ambil data untuk Geser - Batas Math.min(100) dilepas
+        const getGeser = (loc) => {
+            const det = kontrol?.kontrolGeser?.[loc]?.detail;
+            const b = det?.Av_u || 0;
+            const k = det?.Av_terpakai || 1;
+            return { b, k, e: safeDiv(b, k) * 100 };
+        };
+
+        // Ambil data untuk Torsi - Batas Math.min(100) dilepas
+        const getTorsi = (loc) => {
+            const det = kontrol?.kontrolTorsi?.[loc]?.detail;
+            if (!det) return { b: 0, k: 1, e: 0, type: 'Tu' };
+
+            if (det.perluTorsi) {
+                const b = det.A1 || 0; 
+                const k = det.A1_terpasang || 1; 
+                return { b, k, e: safeDiv(b, k) * 100, type: 'A1' };
+            } else {
+                const b = det.Tu || 0;
+                const k = det.Tu_min || 1;
+                return { b, k, e: safeDiv(b, k) * 100, type: 'Tu' };
+            }
+        };
+
+        const dataKiri = { lentur: getLentur('kiri'), geser: getGeser('kiri'), torsi: getTorsi('kiri') };
+        const dataTengah = { lentur: getLentur('tengah'), geser: getGeser('tengah'), torsi: getTorsi('tengah') };
+        const dataKanan = { lentur: getLentur('kanan'), geser: getGeser('kanan'), torsi: getTorsi('kanan') };
+
+        // Kalkulasi warna gradient
+        function getColorForEfficiency(pct) {
+            if (isNaN(pct)) return '#888';
+            pct = Math.max(0, Math.min(100, pct)); // Cap untuk warna tetap di 100
+            let r, g, b;
+            if (pct < 50) {
+                const factor = pct / 50;
+                r = Math.round(114 + factor * (255 - 114));
+                g = Math.round(28 + factor * (193 - 28));
+                b = Math.round(36 + factor * (7 - 36));
+            } else {
+                const factor = (pct - 50) / 50;
+                r = Math.round(255 + factor * (21 - 255));
+                g = Math.round(193 + factor * (87 - 193));
+                b = Math.round(7 + factor * (36 - 7));
+            }
+            return `rgb(${r}, ${g}, ${b})`;
+        }
+
+        // Fungsi render UI HTML untuk Card
+        const renderCard = (title, simB, simK, labelB, labelK, unit, valKiri, valTengah, valKanan) => {
+            const rawAvg = Math.round((valKiri.e + valTengah.e + valKanan.e) / 3) || 0;
+            
+            // Tentukan mana yang gagal (melebihi 100%)
+            let failedNames = [];
+            if (valKiri.e > 100) failedNames.push("Tumpuan Kiri");
+            if (valTengah.e > 100) failedNames.push("Lapangan");
+            if (valKanan.e > 100) failedNames.push("Tumpuan Kanan");
+
+            const isCardGagal = failedNames.length > 0;
+            
+            // Set output teks dan warna
+            const avgDisplay = isCardGagal ? "Gagal" : `${rawAvg}%`;
+            const failedColor = getColorForEfficiency(0); // Warna yang persis sama dengan 0%
+            const col = isCardGagal ? failedColor : getColorForEfficiency(rawAvg);
+            const progressWidth = Math.min(100, rawAvg);
+
+            // Logika teks informasi bagian bawah
+            let infoText = '';
+            if (isCardGagal) {
+                let failedText = "";
+                if (failedNames.length === 1) {
+                    failedText = failedNames[0];
+                } else if (failedNames.length === 2) {
+                    failedText = failedNames[0] + " dan " + failedNames[1];
+                } else if (failedNames.length === 3) {
+                    failedText = "Tumpuan Kiri, Lapangan, dan Tumpuan Kanan";
+                }
+                infoText = `Nilai efisiensi <strong>${failedText}</strong> melebihi batas kapasitas desain (> 100%), sehingga struktur dinyatakan gagal karna struktur tidak mampu menahan beban.`;
+            } else {
+                infoText = `Nilai&nbsp;<strong>${rawAvg}%</strong> merupakan hasil rata-rata tingkat efisiensi dari Tumpuan Kiri, Lapangan, dan Tumpuan Kanan.`;
+            }
+
+            const renderSub = (label, val) => {
+                let sb = simB, sk = simK, un = unit, lb = labelB, lk = labelK;
+                if (val.type === 'Tu') {
+                    sb = 'T<sub>u</sub>'; sk = 'T<sub>u,min</sub>'; un = 'kNm'; lb = '(Beban)'; lk = '(Batas)';
+                }
+                
+                // Logika utama untuk mengganti tulisan dan warna jika > 100
+                const isSubGagal = val.e > 100;
+                const eStr = isSubGagal ? "Gagal" : `${val.e.toFixed(1)}%`;
+                const cCol = isSubGagal ? failedColor : getColorForEfficiency(val.e);
+
+                return `
+                <div class="sub-item">
+                    <div class="sub-item-header">${label}</div>
+                    <div class="calc-details">
+                        <div class="calc-row"><span>${sb}&nbsp; ${lb}</span><span>${val.b.toFixed(2)} ${un}</span></div>
+                        <div class="calc-row"><span>${sk}&nbsp; ${lk}</span><span>${val.k.toFixed(2)} ${un}</span></div>
+                        <div class="calc-formula">
+                            <span>Efisiensi</span>
+                            <span style="color: ${cCol}; font-weight: 700;">${sb} / ${sk} &times; 100% = ${eStr}</span>
+                        </div>
+                    </div>
+                </div>`;
+            };
+
+            return `
+            <div class="efisiensi-card">
+                <div class="efisiensi-header" onclick="this.parentElement.classList.toggle('active')">
+                    <div class="efisiensi-title">${title}</div>
+                    <div class="progress-track">
+                        <div class="progress-fill" style="width: ${progressWidth}%; background-color: ${col};"></div>
+                    </div>
+                    <div class="efisiensi-value" style="color: ${col}">${avgDisplay}</div>
+                    <div class="chevron">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M6 9l6 6 6-6"/>
+                        </svg>
+                    </div>
+                </div>
+                <div class="efisiensi-body">
+                    <div class="sub-efisiensi">
+                        ${renderSub('Tumpuan Kiri', valKiri)}
+                        ${renderSub('Lapangan', valTengah)}
+                        ${renderSub('Tumpuan Kanan', valKanan)}
+                    </div>
+                    <div class="info-text-bottom">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line>
+                        </svg>
+                        <span>${infoText}</span>
+                    </div>
+                </div>
+            </div>`;
+        };
+
+        section.innerHTML = `
+            <h2>EFISIENSI TULANGAN</h2>
+            <div class="efisiensi-container">
+                ${renderCard('Tulangan Utama', 'M<sub>u</sub>', 'M<sub>d</sub>', '(Beban)', '(Kapasitas)', 'kNm', dataKiri.lentur, dataTengah.lentur, dataKanan.lentur)}
+                ${renderCard('Tulangan Geser', 'A<sub>v,u</sub>', 'A<sub>v,d</sub>', '(Perlu)', '(Desain)', 'mm&sup2;/m', dataKiri.geser, dataTengah.geser, dataKanan.geser)}
+                ${renderCard('Tulangan Torsi', 'A<sub>1,u</sub>', 'A<sub>1,d</sub>', '(Perlu)', '(Desain)', 'mm&sup2;', dataKiri.torsi, dataTengah.torsi, dataKanan.torsi)}
+            </div>
+        `;
+
+        // Inject custom CSS untuk Efisiensi Tulangan
+        if (!document.getElementById('efisiensi-style')) {
+            const style = document.createElement('style');
+            style.id = 'efisiensi-style';
+            style.textContent = `
+                .efisiensi-container { display: flex; flex-direction: column; gap: 0.75rem; }
+                .efisiensi-card { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; border-left: 4px solid var(--color-borders); overflow: hidden; transition: box-shadow 0.2s; }
+                .efisiensi-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+                .efisiensi-header { padding: 1rem; cursor: pointer; display: grid; grid-template-columns: 180px 1fr 60px 30px; align-items: center; gap: 1rem; transition: background-color 0.2s ease; }
+                .efisiensi-header:hover { background: #f1f3f5; }
+                .efisiensi-title { font-weight: 600; color: #333; font-size: 0.95rem; }
+                .efisiensi-value { font-family: 'JetBrains Mono', monospace; font-size: 1.1rem; font-weight: 700; text-align: right; }
+                .progress-track { background: #e9ecef; border-radius: 10px; height: 10px; width: 100%; overflow: hidden; }
+                .progress-fill { height: 100%; border-radius: 10px; transition: width 1s ease-in-out; }
+                .chevron { transition: transform 0.3s ease; color: #666; display: flex; justify-content: center; }
+                .efisiensi-card.active .chevron { transform: rotate(180deg); }
+                .efisiensi-body { display: none; padding: 1rem; background: #ffffff; border-top: 1px dashed #ddd; animation: fadeIn 0.3s ease; }
+                .efisiensi-card.active .efisiensi-body { display: block; }
+                @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+                .sub-efisiensi { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 1rem; margin-bottom: 0.5rem; }
+                .sub-item { background: #f8f9fa; border: 1px solid #eee; border-radius: 6px; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; }
+                .sub-item-header { font-size: 0.9rem; font-weight: 600; color: #222; padding-bottom: 0.25rem; border-bottom: 2px solid #e0e0e0; }
+                .calc-details { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: #555; background: #fff; padding: 0.5rem; border-radius: 4px; border: 1px solid #e0e0e0; display: flex; flex-direction: column; gap: 0.4rem; }
+                .calc-row { display: flex; justify-content: space-between; }
+                .calc-formula { margin-top: 0.2rem; padding-top: 0.4rem; border-top: 1px dashed #d0d0d0; display: flex; justify-content: space-between; align-items: center; }
+                .info-text-bottom { font-size: 0.75rem; color: #888; margin-top: 1.2rem; padding-top: 0.75rem; border-top: 1px solid #f0f0f0; display: flex; align-items: flex-start; gap: 0.5rem; }
+                .info-text-bottom svg { flex-shrink: 0; opacity: 0.7; margin-top: 0.1rem; }
+                .info-text-bottom span { line-height: 1.4; display: block; }
+                @media (max-width: 600px) {
+                    .efisiensi-header { grid-template-columns: 1fr auto auto; grid-template-areas: "title value chevron" "bar bar bar"; gap: 0.5rem; }
+                    .efisiensi-title { grid-area: title; } .efisiensi-value { grid-area: value; } .chevron { grid-area: chevron; } .progress-track { grid-area: bar; margin-top: 0.25rem; }
+                    .sub-efisiensi { grid-template-columns: 1fr; }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        parentSection.insertAdjacentElement('afterend', section);
     }
     
     // FUNGSI BARU: Render Penampang Balok (Dual View) dengan responsive

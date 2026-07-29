@@ -35,7 +35,7 @@ window.modules.balok = {
       const checkNumber = (val, fieldName) => {
           const num = parseNum(val);
           if (num === null) {
-              errors.push(`"${fieldName}" harus diisi dengan angka (gunakan titik untuk desimal).`);
+              errors.push(`${fieldName} harus diisi dengan angka (gunakan titik untuk desimal).`);
               return null;
           }
           return num;
@@ -43,40 +43,65 @@ window.modules.balok = {
 
       // 1. Material
       const fc = checkNumber(data.material.fc, "f'c");
-      if (fc !== null && fc <= 0) errors.push(`"f'c" harus lebih besar dari 0.`);
+      if (fc !== null && fc <= 0) errors.push(`f'<sub>c</sub> harus lebih besar dari 0.`);
       const fy = checkNumber(data.material.fy, "fy");
-      if (fy !== null && fy <= 0) errors.push(`"fy" harus lebih besar dari 0.`);
+      if (fy !== null && fy <= 0) errors.push(`f<sub>y</sub> harus lebih besar dari 0.`);
       const fyt = checkNumber(data.material.fyt, "fyt");
-      if (fyt !== null && fyt <= 0) errors.push(`"fyt" harus lebih besar dari 0.`);
+      if (fyt !== null && fyt <= 0) errors.push(`f<sub>yt</sub> harus lebih besar dari 0.`);
 
       // 2. Dimensi
       const h = checkNumber(data.dimensi.h, "h");
-      if (h !== null && h <= 0) errors.push(`"h" harus lebih besar dari 0.`);
+      if (h !== null && h <= 0) errors.push(`tinggi penampang balok (h) harus lebih besar dari 0.`);
       const b = checkNumber(data.dimensi.b, "b");
-      if (b !== null && b <= 0) errors.push(`"b" harus lebih besar dari 0.`);
+      if (b !== null && b <= 0) errors.push(`lebar penampang balok (b) harus lebih besar dari 0.`);
       const sb = checkNumber(data.dimensi.sb, "Sb");
-      if (sb !== null && sb <= 0) errors.push(`"Sb" harus lebih besar dari 0.`);
+      if (sb !== null && sb <= 0) errors.push(`selimut beton (S<sub>b</sub>) harus lebih besar dari 0.`);
       if (b !== null && h !== null && b > h) {
-          errors.push(`Nilai b (${b}) tidak boleh lebih besar dari h (${h}).`);
+          errors.push(`lebar penampang balok (b=${b}) tidak boleh lebih besar dari tinggi penampang balok (h=${h}).`);
       }
 
       // 3. Beban (allow zero)
-      const checkLoad = (val, fieldName) => {
+      const checkLoad = (val, fieldLabel, sectionLabel, errorType) => {
           const num = parseNum(val);
+          
+          // Kita buat format awal teksnya: "Momen ultimit positif pada tumpuan kanan"
+          const subjek = `${fieldLabel} pada ${sectionLabel}`;
+
           if (num === null) {
-              errors.push(`"${fieldName}" harus diisi dengan angka (gunakan titik untuk desimal).`);
+              errors.push(`${subjek} harus diisi dengan angka meskipun nilainya 0 (gunakan titik untuk desimal).`);
           } else if (num < 0) {
-              errors.push(`"${fieldName}" tidak boleh negatif.`);
+              errors.push(`${subjek} tidak boleh negatif.`);
           }
           return num;
       };
+
       const sections = ['left', 'center', 'right'];
       const loadFields = ['mu_pos', 'mu_neg', 'vu', 'tu'];
+
+      // 1. Map untuk konversi nama beban/gaya
+      const fieldMapping = {
+          'mu_pos': 'Momen ultimit positif (M<sub>u</sub><sup>+</sup>)',
+          'mu_neg': 'Momen ultimit negatif (M<sub>u</sub><sup>-</sup>)',
+          'vu': 'Gaya geser ultimit (V<sub>u</sub>) ',
+          'tu': 'Torsi ultimit (T<sub>u</sub>) '
+      };
+
+      // 2. Map untuk konversi lokasi struktur
+      const sectionMapping = {
+          'left': 'tumpuan kiri',
+          'center': 'lapangan',
+          'right': 'tumpuan kanan'
+      };
+
       sections.forEach(section => {
           const sectionData = data.beban[section] || {};
+          const sectionLabel = sectionMapping[section]; // Mengambil istilah lokasi
+
           loadFields.forEach(field => {
-              const fullName = `${section} ${field}`;
-              checkLoad(sectionData[field], fullName);
+              const fieldLabel = fieldMapping[field]; // Mengambil istilah beban
+              
+              // Kirim label bahasa Indonesia ke dalam fungsi checkLoad
+              checkLoad(sectionData[field], fieldLabel, sectionLabel);
           });
       });
 
@@ -89,28 +114,40 @@ window.modules.balok = {
           if (phi !== null && phi <= 0) errors.push(`"ɸ" harus lebih besar dari 0.`);
 
           const checkSection = (sectionName) => {
+              // Pemetaan istilah bahasa Inggris ke bahasa Indonesia
+              const namaBagian = sectionName === 'support' ? 'tumpuan' : 'lapangan';
+
               const sec = tulangan[sectionName] || {};
+              
+              // 1. Cek Tulangan Tarik (n)
               const n = checkNumber(sec.n, `${sectionName} n`);
               if (n === null) {
-                  errors.push(`"${sectionName} n" harus diisi.`);
+                  errors.push(`Jumlah tulangan tarik (n) pada ${namaBagian} harus diisi.`);
               } else if (n < 2) {
-                  errors.push(`"${sectionName} n" minimal 2 (saat ini ${n}).`);
+                  errors.push(`Jumlah tulangan tarik (n) pada ${namaBagian} minimum adalah 2 buah (saat ini ${n} buah).`);
               }
+              
+              // 2. Cek Tulangan Tekan (n')
               const np = checkNumber(sec.np, `${sectionName} n'`);
               if (np === null) {
-                  errors.push(`"${sectionName} n'" harus diisi.`);
+                  errors.push(`Jumlah tulangan tekan (n') pada ${namaBagian} harus diisi.`);
               } else if (np < 2) {
-                  errors.push(`"${sectionName} n'" minimal 2 (saat ini ${np}).`);
+                  errors.push(`Jumlah tulangan tekan (n') pada ${namaBagian} minimum adalah 2 buah (saat ini ${np} buah).`);
               }
+              
+              // 3. Cek Jumlah Baris Tulangan (nt)
               const nt = parseNum(sec.nt);
               if (nt !== null && nt < 0) {
-                  errors.push(`"${sectionName} nt" tidak boleh negatif.`);
+                  errors.push(`Jumlah baris tulangan (n<sub>t</sub>) pada ${namaBagian} tidak boleh negatif.`);
               }
+              
+              // 4. Cek Jarak Bersih (s)
               const s = checkNumber(sec.s, `${sectionName} s`);
               if (s !== null && s <= 0) {
-                  errors.push(`"${sectionName} s" harus lebih besar dari 0.`);
+                  errors.push(`Jarak bersih antar tulangan (s) pada ${namaBagian} harus lebih besar dari 0.`);
               }
           };
+          
           checkSection('support');
           checkSection('field');
       }
@@ -118,32 +155,51 @@ window.modules.balok = {
       // ========== PERINGATAN (SARAN) ==========
       // Material
       if (fc !== null && (fc < 17 || fc > 60)) {
-          warnings.push(`f'c = ${fc} MPa, disarankan antara 17–60 MPa.`);
+          const kondisi = fc > 60 ? 'terlalu besar' : 'terlalu kecil';
+          warnings.push(`f'<sub>c</sub> dengan nilai ${fc} MPa ${kondisi}, nilai yang umum digunakan antara 17–60 MPa.`);
+      }
+      if (fy !== null && (fy < 240 || fy > 500)) {
+          const kondisi = fy > 500 ? 'terlalu besar' : 'terlalu kecil';
+          warnings.push(`f<sub>y</sub> dengan nilai ${fy} MPa ${kondisi}, nilai yang umum digunakan antara 240–500 MPa.`);
+      }
+      if (fyt !== null && (fyt < 240 || fyt > 400)) {
+          const kondisi = fyt > 400 ? 'terlalu besar' : 'terlalu kecil';
+          warnings.push(`f<sub>yt</sub> dengan nilai ${fyt} MPa ${kondisi}, nilai yang umum digunakan antara 240–400 MPa.`);
       }
       // Dimensi
       if (b !== null && h !== null) {
-          if (b < 150) warnings.push(`b = ${b} mm, disarankan minimal 150 mm.`);
+          if (b < 150) errors.push(`lebar penampang (b) balok minimum adalah 150 mm.`);
           const ratio = h / b;
           if (ratio < 1.5 || ratio > 3) {
-              warnings.push(`Rasio h/b = ${ratio.toFixed(2)}, disarankan antara 1.5–3.0.`);
+              warnings.push(`Rasio b:h = 1:${ratio.toFixed(2)}, disarankan antara 1:1.5 hingga 1:3.0.`);
           }
       }
       // Beban
       sections.forEach(section => {
           const sectionData = data.beban[section] || {};
+          const sectionLabel = sectionMapping[section]; // Mengambil istilah lokasi (misal: "tumpuan kanan")
+          
           const mu_pos = parseNum(sectionData.mu_pos) || 0;
           const mu_neg = parseNum(sectionData.mu_neg) || 0;
           const vu = parseNum(sectionData.vu) || 0;
           const tu = parseNum(sectionData.tu) || 0;
-          const maxMu = Math.max(mu_pos, mu_neg);
-          if (maxMu > 1000) {
-              warnings.push(`Momen pada ${section} (${maxMu} kNm) melebihi 1000 kNm, periksa kembali.`);
+
+          // 1. Validasi Momen (Cek mu_pos dan mu_neg secara spesifik)
+          if (mu_pos > 1000) {
+              warnings.push(`Momen ultimit positif (M<sub>u</sub><sup>+</sup>) pada ${sectionLabel} sebesar ${mu_pos} kNm tidak wajar, momen ultimit pada umumnya tidak lebih dari 1000 kNm.`);
           }
+          if (mu_neg > 1000) {
+              warnings.push(`Momen ultimit negatif (M<sub>u</sub><sup>-</sup>) pada ${sectionLabel} sebesar ${mu_neg} kNm tidak wajar, momen ultimit pada umumnya tidak lebih dari 1000 kNm.`);
+          }
+
+          // 2. Validasi Gaya Geser (Vu)
           if (vu > 800) {
-              warnings.push(`Gaya geser pada ${section} (${vu} kN) melebihi 800 kN, periksa kembali.`);
+              warnings.push(`Gaya geser ultimit (V<sub>u</sub>) pada ${sectionLabel} sebesar ${vu} kN tidak wajar, gaya geser pada umumnya tidak lebih dari 800 kN.`);
           }
+
+          // 3. Validasi Torsi (Tu)
           if (tu > 100) {
-              warnings.push(`Torsi pada ${section} (${tu} kNm) melebihi 100 kNm, periksa kembali.`);
+              warnings.push(`Torsi ultimit (T<sub>u</sub>) pada ${sectionLabel} sebesar ${tu} kNm tidak wajar, torsi pada umumnya tidak lebih dari 100 kNm.`);
           }
       });
       // Tulangan
@@ -161,10 +217,20 @@ window.modules.balok = {
           const checkS = (sectionName) => {
               const sec = data.tulangan[sectionName] || {};
               const s = parseNum(sec.s);
-              if (s !== null && s > 600) {
-                  warnings.push(`Jarak sengkang pada ${sectionName} (s = ${s} mm) melebihi 600 mm.`);
+              
+              // Mapping untuk mengubah istilah bahasa Inggris ke bahasa Indonesia
+              const labelMap = {
+                  'support': 'tumpuan',
+                  'field': 'lapangan'
+              };
+              const sectionLabel = labelMap[sectionName] || sectionName;
+
+              // Rule baru: cek apakah s kurang dari 100 ATAU lebih dari 600
+              if (s !== null && (s < 100 || s > 600)) {
+                  warnings.push(`Jarak sengkang (s) pada tulangan ${sectionLabel} sebesar ${s}mm tidak wajar, jarak yang umum digunakan antara 100-600mm.`);
               }
           };
+
           checkS('support');
           checkS('field');
       }
@@ -517,7 +583,7 @@ window.modules.balok = {
       if (validation.warnings.length > 0) {
           const msg = validation.warnings.join('\n');
           this.showConfirmAlert(
-              `Peringatan (saran):\n\n${msg}\n\nApakah Anda tetap ingin melanjutkan perhitungan?`,
+              `Peringatan:\n\n${msg}\n\nApakah Anda tetap ingin melanjutkan perhitungan?`,
               '⚠️ Peringatan Input',
               () => {
                   this.sendToCalculation(calculationData);

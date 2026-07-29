@@ -260,11 +260,11 @@
                 { parameter: "$\\phi V_c$", hasil: formatNumber(phiVc), satuan: 'kN' },
                 { parameter: "$\\phi V_c / 2$", hasil: formatNumber(phiVc_half), satuan: 'kN' },
                 { parameter: "$V_u < \\phi V_c / 2$", isStatus: true, statusHtml: `<span class="kondisi-text">Tidak perlu begel atau digunakan begel minimum</span>` },
-                { parameter: "$\\displaystyle s_1 = \\frac{n \\cdot 0.25 \\pi \\phi^2 \\cdot 1000}{A_{v,u}}$", hasil: formatNumber(s1), satuan: 'mm' },
+                { parameter: "$\\displaystyle s_1 = \\frac{n \\cdot 0.25 \\cdot \\pi \\cdot \\phi^2}{A_{v,u}}$", hasil: formatNumber(s1), satuan: 'mm' },
                 { parameter: rumus_s2, hasil: formatNumber(s2), satuan: 'mm' },
                 { parameter: rumus_s3, hasil: formatNumber(s3), satuan: 'mm' },
                 { parameter: "$s = \\min(s_1, s_2, s_3)$", hasil: formatNumber(sTerkecil), satuan: 'mm' },
-                { parameter: "$A_{v,terpasang}$", hasil: formatNumber(Av_terpakai), satuan: 'mm²/m' },
+                { parameter: "$\\displaystyle A_{v,terpasang} = \\frac{n \\cdot 0.25 \\cdot \\pi \\cdot \\phi^2}{s}$", hasil: formatNumber(Av_terpakai), satuan: 'mm²/m' },
                 { parameter: "$A_{v,u} \\le A_{v,terpasang}$", isStatus: true, statusHtml: `<span class="${Av_terpakai >= 0 ? 'status-aman' : 'status-tidak-aman'}">${Av_terpakai >= 0 ? 'AMAN' : 'TIDAK AMAN'}</span>` },
                 { parameter: `<strong>Digunakan Tulangan Geser ɸ${diameterSengkang}-${formatNumber(sTerkecil)}</strong>`, isFullRow: true }
             ];
@@ -278,11 +278,11 @@
                 { parameter: "$\\displaystyle A_{v1} = 0.062 \\sqrt{f'_c} \\frac{b \\cdot s}{f_{yt}}$", hasil: formatNumber(Av1), satuan: 'mm²/m' },
                 { parameter: "$\\displaystyle A_{v2} = 0.35 \\frac{b \\cdot s}{f_{yt}}$", hasil: formatNumber(Av2), satuan: 'mm²/m' },
                 { parameter: "$A_{v,u} = \\max(A_{v1}, A_{v2})$", hasil: formatNumber(Av_u_calc), satuan: 'mm²/m' },
-                { parameter: "$\\displaystyle s_1 = \\frac{n \\cdot 0.25 \\pi \\phi^2 \\cdot 1000}{A_{v,u}}$", hasil: formatNumber(s1), satuan: 'mm' },
+                { parameter: "$\\displaystyle s_1 = \\frac{n \\cdot 0.25 \\cdot \\pi \\cdot \\phi^2}{A_{v,u}}$", hasil: formatNumber(s1), satuan: 'mm' },
                 { parameter: rumus_s2, hasil: formatNumber(s2), satuan: 'mm' },
                 { parameter: rumus_s3, hasil: formatNumber(s3), satuan: 'mm' },
                 { parameter: "$s = \\min(s_1, s_2, s_3)$", hasil: formatNumber(sTerkecil), satuan: 'mm' },
-                { parameter: "$A_{v,terpasang}$", hasil: formatNumber(Av_terpakai), satuan: 'mm²/m' },
+                { parameter: "$\\displaystyle A_{v,terpasang} = \\frac{n \\cdot 0.25 \\cdot \\pi \\cdot \\phi^2}{s}$", hasil: formatNumber(Av_terpakai), satuan: 'mm²/m' },
                 { parameter: "$A_{v,u} \\le A_{v,terpasang}$", isStatus: true, statusHtml: `<span class="${Av_u_calc <= Av_terpakai ? 'status-aman' : 'status-tidak-aman'}">${Av_u_calc <= Av_terpakai ? 'AMAN' : 'TIDAK AMAN'}</span>` },
                 { parameter: `<strong>Digunakan Tulangan Geser ɸ${diameterSengkang}-${formatNumber(sTerkecil)}</strong>`, isFullRow: true }
             ];
@@ -302,11 +302,11 @@
                 { parameter: "$\\displaystyle A_{v2} = 0.35 \\frac{b \\cdot s}{f_{yt}}$", hasil: formatNumber(Av2), satuan: 'mm²/m' },
                 { parameter: "$\\displaystyle A_{v3} = \\frac{V_s \\cdot s}{f_{yt} \\cdot d}$", hasil: formatNumber(Av3), satuan: 'mm²/m' },
                 { parameter: "$A_{v,u} = \\max(A_{v1}, A_{v2}, A_{v3})$", hasil: formatNumber(Av_u_calc), satuan: 'mm²/m' },
-                { parameter: "$\\displaystyle s_1 = \\frac{n \\cdot 0.25 \\pi \\phi^2 \\cdot 1000}{A_{v,u}}$", hasil: formatNumber(s1), satuan: 'mm' },
+                { parameter: "$\\displaystyle s_1 = \\frac{n \\cdot 0.25 \\cdot \\pi \\cdot \\phi^2}{A_{v,u}}$", hasil: formatNumber(s1), satuan: 'mm' },
                 { parameter: rumus_s2, hasil: formatNumber(s2), satuan: 'mm' },
                 { parameter: rumus_s3, hasil: formatNumber(s3), satuan: 'mm' },
                 { parameter: "$s = \\min(s_1, s_2, s_3)$", hasil: formatNumber(sTerkecil), satuan: 'mm' },
-                { parameter: "$A_{v,terpasang}$", hasil: formatNumber(Av_terpakai), satuan: 'mm²/m' },
+                { parameter: "$\\displaystyle A_{v,terpasang} = \\frac{n \\cdot 0.25 \\cdot \\pi \\cdot \\phi^2}{s}$", hasil: formatNumber(Av_terpakai), satuan: 'mm²/m' },
                 { parameter: "$A_{v,u} \\le A_{v,terpasang}$", isStatus: true, statusHtml: `<span class="${Av_u_calc <= Av_terpakai ? 'status-aman' : 'status-tidak-aman'}">${Av_u_calc <= Av_terpakai ? 'AMAN' : 'TIDAK AMAN'}</span>` },
                 { parameter: `<strong>Digunakan Tulangan Geser ɸ${diameterSengkang}-${formatNumber(sTerkecil)}</strong>`, isFullRow: true }
             ];

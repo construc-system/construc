@@ -1,9 +1,8 @@
-// cut-pelat2arah.js - Render tampak pelat dua arah
-// (MODIFIKASI: tampak atas pakai height_display sebagai acuan offset)
+// cut-pelat2arah.js - Render tampak pelat dua arah + Ekspor CAD (real size, no scale)
 
 (function() {
     function renderPelatDuaArah(config, containerId) {
-        console.log("🎨 Rendering pelat dua arah:", config, containerId);
+        console.log("🎨 Rendering pelat dua arah (revisi dot spacing):", config, containerId);
         const container = document.getElementById(containerId);
         if (!container) {
             console.error(`Container ${containerId} tidak ditemukan`);
@@ -58,7 +57,6 @@
             }
         }
 
-        // Hitung skala tampilan
         let width_display, height_display;
         let skala_horizontal = 1, skala_vertikal = 1;
         let needScaleNote = false;
@@ -147,7 +145,6 @@
         rect.setAttribute("vector-effect", "non-scaling-stroke");
         svg.appendChild(rect);
 
-        // Fungsi bantu lokal
         function buatGaris(x1, y1, x2, y2, warna, strokeWidthPx = 2) {
             const line = document.createElementNS(svgNS, "line");
             line.setAttribute("x1", x1);
@@ -176,36 +173,69 @@
             return poly;
         }
 
-        const W = width_display;
+        function hitungPosisiTitik(startX, endX, stepAsli, radiusTitik, diameterTulanganDisplay) {
+            const leftBound = startX + radiusTitik;
+            const rightBound = endX - radiusTitik;
+            if (leftBound >= rightBound) return [];
+
+            const minStep = Math.max(stepAsli, 4.5 * radiusTitik); 
+            const step = minStep;
+
+            let positions = [];
+            let current = leftBound;
+            while (current <= rightBound) {
+                positions.push(current);
+                current += step;
+            }
+
+            const batasAmanUjung = Math.max(3 * diameterTulanganDisplay, 3 * radiusTitik);
+
+            if (positions.length > 0) {
+                const jarakKiri = positions[0] - leftBound;
+                if (jarakKiri >= batasAmanUjung) {
+                    positions.unshift(leftBound);
+                }
+            } else {
+                positions.push(leftBound);
+            }
+
+            const lastIdx = positions.length - 1;
+            const jarakKanan = rightBound - positions[lastIdx];
+            if (jarakKanan >= batasAmanUjung) {
+                positions.push(rightBound);
+            }
+
+            return positions;
+        }
+
+        function buatLingkaran(svg, cx, cy, radius, warna) {
+            const circle = document.createElementNS(svgNS, "circle");
+            circle.setAttribute("cx", cx);
+            circle.setAttribute("cy", cy);
+            circle.setAttribute("r", radius);
+            circle.setAttribute("fill", warna);
+            circle.setAttribute("stroke", "none");
+            svg.appendChild(circle);
+        }
+
         const strokePx = 2;
-        // segitiga 3.5% dari tinggi tampilan
         const segitigaLebar = height_display * 0.035;
         const segitigaTinggi = height_display * 0.035;
-        const jarak25 = W * 0.04167;   // default global, akan ditimpa di tampak atas
-        const jarak40 = W * 0.06667;
-        const jarak50 = W * 0.05833;
-        const jarak15 = W * 0.025;
         const warnaTulangan = "#000000";
         const warnaMerah = "#FF0000";
         const radiusTitik = strokePx * 3;
         const offsetTitikDariGaris = strokePx * 4;
-        const offsetUjung = strokePx * 3;
 
-        // ========== GAMBAR UNTUK DUA ARAH ==========
         if (jenis === 'atas') {
-            // --- MODIFIKASI: semua offset pakai height_display dengan faktor 1.5 ---
             const H = height_display;
-            // nilai asli 0.04167*1.5=0.0625; 0.06667*1.5=0.1; 0.05833*1.5=0.0875
             const jarak25 = H * 0.0625;
             const jarak40 = H * 0.1;
             const jarak50 = H * 0.0875;
-            // --- akhir modifikasi ---
 
             rect.setAttribute("stroke-width", strokePx);
             const tengahX_asli = offsetX + width_display / 2;
             const tengahY_asli = offsetY + height_display / 2;
             
-            // Garis merah vertikal (kanan)
             const xDasarMerah = offsetX + width_display - jarak25;
             const xLuar = xDasarMerah;
             const xDalam = xLuar - jarak50;
@@ -215,7 +245,6 @@
             buatGaris(xDalam, offsetY, xDalam, offsetY + height_display, warnaMerah, strokePx);
             buatSegitigaVertikalTunggal(svg, 'right', xDalam, ySegitigaMerahVert, segitigaLebar, segitigaTinggi, warnaMerah);
             
-            // Garis merah horizontal (bawah)
             const yDasarMerah = offsetY + height_display - jarak25;
             const yLuar = yDasarMerah;
             const yDalam = yLuar - jarak50;
@@ -225,7 +254,6 @@
             buatGaris(offsetX, yDalam, offsetX + width_display, yDalam, warnaMerah, strokePx);
             buatSegitiga(svg, 'down', 2, xSegitigaMerahHor, yDalam, segitigaLebar, segitigaTinggi, warnaMerah);
             
-            // Garis tulangan hitam vertikal lurus
             const tengahX = tengahX_asli + jarak25;
             const tengahY = tengahY_asli + jarak25;
             buatGaris(tengahX, offsetY, tengahX, offsetY + height_display, warnaTulangan, strokePx);
@@ -235,7 +263,6 @@
             const xTengahHor = offsetX + width_display / 2;
             buatSegitiga(svg, 'up', 2, xTengahHor, tengahY, segitigaLebar, segitigaTinggi, warnaTulangan);
             
-            // Garis pendek vertikal di tengah
             const panjangPendekVert = height_display / 4;
             const yAtas = offsetY;
             const yBawah = offsetY + height_display;
@@ -246,7 +273,6 @@
             const yTengahBawah = yBawah - panjangPendekVert / 2;
             buatSegitiga(svg, 'right', 1, tengahX_asli, yTengahBawah, segitigaLebar, segitigaTinggi, warnaTulangan);
             
-            // Garis pendek horizontal di tengah
             const panjangPendekHor = height_display / 4;
             const xKiri = offsetX;
             const xKanan = offsetX + width_display;
@@ -257,7 +283,6 @@
             const xTengahKanan = xKanan - panjangPendekHor / 2;
             buatSegitiga(svg, 'down', 1, xTengahKanan, tengahY_asli, segitigaLebar, segitigaTinggi, warnaTulangan);
             
-            // Polyline horizontal (bawah tengah)
             const y0 = tengahY_asli - jarak40;
             const lxUser = height_display;
             const step1 = lxUser / 5;
@@ -280,7 +305,6 @@
             const xTengahKananSegmen = offsetX + width_display - step1 / 2;
             buatSegitiga(svg, 'down', 1, xTengahKananSegmen, y0, segitigaLebar, segitigaTinggi, warnaTulangan);
             
-            // Polyline vertikal kiri (atas & bawah ke tengah)
             const xKiriVert = tengahX_asli - jarak40;
             const pAtasKiri1 = { x: xKiriVert, y: offsetY };
             const pAtasKiri2 = { x: xKiriVert, y: offsetY + step1 };
@@ -299,7 +323,6 @@
             buatSegitiga(svg, 'right', 1, xKiriVert, yTengahBawahKiri, segitigaLebar, segitigaTinggi, warnaTulangan);
         } 
         else if (jenis === 'depan') {
-            // ... (kode asli untuk tampak depan, tidak diubah)
             rect.setAttribute("stroke-width", strokePx);
             const h_asli = config.h;
             const y_ratio_atas = selimutBeton / h_asli;
@@ -332,25 +355,24 @@
             const diameterBagiDisplay = diameterTulanganBagi * faktorSkala;
             const diameterUtamaDisplay = diameterTulanganUtama * faktorSkala;
             
-            const posAtasKiri = hitungPosisiTitikKiriKanan(offsetX, offsetX + panjangPendek, stepBagiDisplay, diameterBagiDisplay, offsetUjung, true);
+            const posAtasKiri = hitungPosisiTitik(offsetX, offsetX + panjangPendek, stepBagiDisplay, radiusTitik, diameterBagiDisplay);
             for (let cx of posAtasKiri) buatLingkaran(svg, cx, y_atas + offsetTitikDariGaris, radiusTitik, warnaMerah);
-            const posAtasKanan = hitungPosisiTitikKiriKanan(offsetX + width_display - panjangPendek, offsetX + width_display, stepBagiDisplay, diameterBagiDisplay, offsetUjung, true);
+            const posAtasKanan = hitungPosisiTitik(offsetX + width_display - panjangPendek, offsetX + width_display, stepBagiDisplay, radiusTitik, diameterBagiDisplay);
             for (let cx of posAtasKanan) buatLingkaran(svg, cx, y_atas + offsetTitikDariGaris, radiusTitik, warnaMerah);
             
-            const posBawahKiri = hitungPosisiTitikKiriKanan(offsetX, offsetX + panjangPendek, stepBagiDisplay, diameterBagiDisplay, offsetUjung, false);
+            const posBawahKiri = hitungPosisiTitik(offsetX, offsetX + panjangPendek, stepBagiDisplay, radiusTitik, diameterBagiDisplay);
             for (let cx of posBawahKiri) buatLingkaran(svg, cx, y_bawah - offsetTitikDariGaris, radiusTitik, warnaMerah);
-            const posBawahKanan = hitungPosisiTitikKananKiri(offsetX + width_display - panjangPendek, offsetX + width_display, stepBagiDisplay, diameterBagiDisplay, offsetUjung, false);
+            const posBawahKanan = hitungPosisiTitik(offsetX + width_display - panjangPendek, offsetX + width_display, stepBagiDisplay, radiusTitik, diameterBagiDisplay);
             for (let cx of posBawahKanan) buatLingkaran(svg, cx, y_bawah - offsetTitikDariGaris, radiusTitik, warnaMerah);
             
             const xStartBawah = offsetX + step1 + finalStep2;
             const xEndBawah = offsetX + width_display - step1 - finalStep2;
             if (xStartBawah < xEndBawah) {
-                const posHitam = hitungPosisiTitikKiriKanan(xStartBawah, xEndBawah, stepUtamaDisplay, diameterUtamaDisplay, offsetUjung, true);
+                const posHitam = hitungPosisiTitik(xStartBawah, xEndBawah, stepUtamaDisplay, radiusTitik, diameterUtamaDisplay);
                 for (let cx of posHitam) buatLingkaran(svg, cx, y_bawah - offsetTitikDariGaris, radiusTitik, warnaTulangan);
             }
         }
         else if (jenis === 'samping') {
-            // ... (kode asli untuk tampak samping, tidak diubah)
             rect.setAttribute("stroke-width", strokePx);
             let diameterTulanganBagiY_local = 10;
             if (dataStorage && dataStorage.rekap && dataStorage.rekap.formatted && dataStorage.rekap.formatted.tulangan_bagi_y) {
@@ -396,25 +418,25 @@
             const stepUtamaDisplay = jarakTulanganUtama * faktorSkala;
             const diameterUtamaDisplay = diameterTulanganUtama * faktorSkala;
             
-            const posAtasKiri = hitungPosisiTitikKiriKanan(xKiri, xKiri + panjangPendek, stepBagiDisplay, diameterBagiDisplay, offsetUjung, true);
-            for (let cx of posAtasKiri) buatLingkaran(svg, cx, y_atas - offsetTitikDariGaris, radiusTitik, warnaMerah);
-            const posAtasKanan = hitungPosisiTitikKiriKanan(xKanan - panjangPendek, xKanan, stepBagiDisplay, diameterBagiDisplay, offsetUjung, true);
-            for (let cx of posAtasKanan) buatLingkaran(svg, cx, y_atas - offsetTitikDariGaris, radiusTitik, warnaMerah);
+            const posAtasKiri = hitungPosisiTitik(xKiri, xKiri + panjangPendek, stepBagiDisplay, radiusTitik, diameterBagiDisplay);
+            for (let cx of posAtasKiri) buatLingkaran(svg, cx, y_atas + offsetTitikDariGaris, radiusTitik, warnaMerah);
+            const posAtasKanan = hitungPosisiTitik(xKanan - panjangPendek, xKanan, stepBagiDisplay, radiusTitik, diameterBagiDisplay);
+            for (let cx of posAtasKanan) buatLingkaran(svg, cx, y_atas + offsetTitikDariGaris, radiusTitik, warnaMerah);
             
-            const posBawahKiri = hitungPosisiTitikKiriKanan(xKiri, xKiri + panjangPendek, stepBagiDisplay, diameterBagiDisplay, offsetUjung, false);
-            for (let cx of posBawahKiri) buatLingkaran(svg, cx, y_bawah + offsetTitikDariGaris, radiusTitik, warnaMerah);
-            const posBawahKanan = hitungPosisiTitikKananKiri(xKanan - panjangPendek, xKanan, stepBagiDisplay, diameterBagiDisplay, offsetUjung, false);
-            for (let cx of posBawahKanan) buatLingkaran(svg, cx, y_bawah + offsetTitikDariGaris, radiusTitik, warnaMerah);
+            const posBawahKiri = hitungPosisiTitik(xKiri, xKiri + panjangPendek, stepBagiDisplay, radiusTitik, diameterBagiDisplay);
+            for (let cx of posBawahKiri) buatLingkaran(svg, cx, y_bawah - offsetTitikDariGaris, radiusTitik, warnaMerah);
+            const posBawahKanan = hitungPosisiTitik(xKanan - panjangPendek, xKanan, stepBagiDisplay, radiusTitik, diameterBagiDisplay);
+            for (let cx of posBawahKanan) buatLingkaran(svg, cx, y_bawah - offsetTitikDariGaris, radiusTitik, warnaMerah);
             
             const xStartBawah = offsetX + step1_display + step2_display;
             const xEndBawah = offsetX + width_display - step1_display - step2_display;
             if (xStartBawah < xEndBawah) {
-                const posHitam = hitungPosisiTitikKiriKanan(xStartBawah, xEndBawah, stepUtamaDisplay, diameterUtamaDisplay, offsetUjung, true);
-                for (let cx of posHitam) buatLingkaran(svg, cx, y_bawah + offsetTitikDariGaris, radiusTitik, warnaTulangan);
+                const posHitam = hitungPosisiTitik(xStartBawah, xEndBawah, stepUtamaDisplay, radiusTitik, diameterUtamaDisplay);
+                for (let cx of posHitam) buatLingkaran(svg, cx, y_bawah - offsetTitikDariGaris, radiusTitik, warnaTulangan);
             }
         }
 
-        console.log(`✅ Tampak ${jenis} dua arah selesai.`);
+        console.log(`✅ Tampak dua arah selesai.`);
         return {
             config,
             containerId,
@@ -434,12 +456,9 @@
     window.pelatRenderers.dua_arah = renderPelatDuaArah;
     console.log("✅ cut-pelat2arah.js loaded");
 
-   window.pelatRenderers.dua_arah = renderPelatDuaArah;
-    console.log("✅ cut-pelat2arah.js loaded");
-
     // ==================== EKSPOR CAD UNTUK PELAT DUA ARAH ====================
     
-    function generateCADPelatDuaArah(jenisTampak) {
+    function generateCADPelatDuaArah() {
         try {
             const dataStorage = getPelatDataFromStorage();
             if (!dataStorage) {
@@ -457,7 +476,6 @@
             
             const selimutBeton = Number(dimensi.sb) || 20;
             
-            // Ambil data tulangan dari storage
             let jarakTulanganBagi = 325, diameterTulanganBagi = 10;
             let jarakTulanganUtama = 150, diameterTulanganUtama = 10;
             let jarakTulanganBagiY = 325, diameterTulanganBagiY = 10;
@@ -491,353 +509,358 @@
             const Lx_mm = lx * 1000;
             const Ly_mm = ly * 1000;
             const H_mm = h;
-            
-            // ==================== HELPER CAD ====================
-            const lingkaran = (cx, cy, diameter) => `CIRCLE ${cx},${cy} ${diameter/2} `;
-            const garis = (x1, y1, x2, y2) => `LINE ${x1},${y1} ${x2},${y2} `;
-            
-            const polyline = (points, tebal, closed = false) => {
-                if (!points.length) return '';
-                let cmd = `PL ${points[0][0]},${points[0][1]} W ${tebal} ${tebal} `;
-                for (let i = 1; i < points.length; i++) {
-                    const dx = points[i][0] - points[i-1][0];
-                    const dy = points[i][1] - points[i-1][1];
-                    cmd += `@${dx},${dy} `;
+
+            let cadLinesNonCircle = [];
+            let cadLinesCircle = [];
+
+            const tambahPerintah = (cmd, adalahCircle = false) => {
+                if (!cmd) return;
+                if (adalahCircle) {
+                    cadLinesCircle.push(cmd);
+                } else {
+                    cadLinesNonCircle.push(cmd);
                 }
-                if (closed) cmd += 'C ';
-                return cmd;
             };
-            
-            function hitungPosisiTitikCAD(start, end, step, diameter) {
-                let positions = [];
-                if (start <= end) {
-                    for (let x = start; x <= end; x += step) {
-                        positions.push(x);
-                    }
-                    const last = positions[positions.length - 1];
-                    if (end - last >= 4 * diameter) positions.push(end);
-                    else positions[positions.length - 1] = end;
-                } else {
-                    for (let x = start; x >= end; x -= step) {
-                        positions.push(x);
-                    }
-                    const last = positions[positions.length - 1];
-                    if (last - end >= 4 * diameter) positions.push(end);
-                    else positions[positions.length - 1] = end;
-                }
-                return positions;
-            }
-            function hitungPosisiTitikCAD1(start, end, step, diameter) {
-                let positions = [];
-                let current = start;
 
-                if (start <= end) {
-                    // Logika hitung maju (Normal)
-                    while (current <= end) {
-                        positions.push(current);
-                        current += step;
-                    }
-                } else {
-                    // Logika hitung mundur (Jika start > end)
-                    while (current >= end) {
-                        positions.push(current);
-                        current -= step; // Gunakan pengurangan agar nilai mengecil
-                    }
-                }
-                return positions;
-            }
-            const buatSegitigaCAD = (centerX, centerY, arah, ukuran, tebal) => {
-                const setengah = ukuran / 2;
-                let p1, p2, p3;
-                if (arah === 'up') {
-                    p1 = [centerX - setengah, centerY];
-                    p2 = [centerX + setengah, centerY];
-                    p3 = [centerX, centerY - ukuran];
-                } else if (arah === 'down') {
-                    p1 = [centerX - setengah, centerY];
-                    p2 = [centerX + setengah, centerY];
-                    p3 = [centerX, centerY + ukuran];
-                } else if (arah === 'left') {
-                    p1 = [centerX, centerY - setengah];
-                    p2 = [centerX, centerY + setengah];
-                    p3 = [centerX - ukuran, centerY];
-                } else if (arah === 'right') {
-                    p1 = [centerX, centerY - setengah];
-                    p2 = [centerX, centerY + setengah];
-                    p3 = [centerX + ukuran, centerY];
-                } else {
-                    return '';
-                }
-                return polyline([p1, p2, p3], tebal, true);
-            };
-            
-            const flipY = (y, tinggiTotal) => tinggiTotal - y;
-            
-            let cadLines = [];
-            
-            // Tentukan tinggi total untuk flip Y
-            let tinggiTotal;
-            if (jenisTampak === 'depan') tinggiTotal = H_mm;
-            else if (jenisTampak === 'atas') tinggiTotal = Lx_mm;
-            else tinggiTotal = H_mm; // samping
-            
-            // Frame
-            if (jenisTampak === 'depan') {
-                cadLines.push(garis(0, 0, Lx_mm, 0));
-                cadLines.push(garis(Lx_mm, 0, Lx_mm, H_mm));
-                cadLines.push(garis(Lx_mm, H_mm, 0, H_mm));
-                cadLines.push(garis(0, H_mm, 0, 0));
-            } else if (jenisTampak === 'atas') {
-                cadLines.push(garis(0, 0, Ly_mm, 0));
-                cadLines.push(garis(Ly_mm, 0, Ly_mm, Lx_mm));
-                cadLines.push(garis(Ly_mm, Lx_mm, 0, Lx_mm));
-                cadLines.push(garis(0, Lx_mm, 0, 0));
-            } else if (jenisTampak === 'samping') {
-                cadLines.push(garis(0, 0, Ly_mm, 0));
-                cadLines.push(garis(Ly_mm, 0, Ly_mm, H_mm));
-                cadLines.push(garis(Ly_mm, H_mm, 0, H_mm));
-                cadLines.push(garis(0, H_mm, 0, 0));
-            }
-            
-            const ukuranSegitiga = 0.035 * Lx_mm; // 3.5% Lx (sesuai tinggi tampilan)
-            const setdiameterTulanganUtama = diameterTulanganUtama/2; // 3.5% Lx (sesuai tinggi tampilan)
-            const setdiameterTulanganBagi = diameterTulanganBagi/2; // 3.5% Lx (sesuai tinggi tampilan)
+            const daftarTampak = ['depan', 'samping', 'atas'];
 
-            // ========== TAMPAK DEPAN ==========
-            if (jenisTampak === 'depan') {
-                const yAtas = selimutBeton+setdiameterTulanganUtama;
-                const yBawah = H_mm - selimutBeton-setdiameterTulanganUtama;
-                const step1 = Lx_mm / 5;
-                const step2 = Lx_mm / 20;
-                const tengahX = Lx_mm / 2;
-                const panjangPendek = Lx_mm / 4;
-                const tebal = diameterTulanganUtama;
-                
-                // Polyline utama
-                cadLines.push(polyline([
-                    [0, flipY(yAtas, tinggiTotal)],
-                    [step1, flipY(yAtas, tinggiTotal)],
-                    [step1 + step2, flipY(yBawah, tinggiTotal)],
-                    [tengahX, flipY(yBawah, tinggiTotal)]
-                ], tebal));
-                
-                cadLines.push(polyline([
-                    [Lx_mm, flipY(yAtas, tinggiTotal)],
-                    [Lx_mm - step1, flipY(yAtas, tinggiTotal)],
-                    [Lx_mm - step1 - step2, flipY(yBawah, tinggiTotal)],
-                    [tengahX, flipY(yBawah, tinggiTotal)]
-                ], tebal));
-                
-                // Garis pendek
-                cadLines.push(polyline([[0, flipY(yAtas, tinggiTotal)], [panjangPendek, flipY(yAtas, tinggiTotal)]], tebal));
-                cadLines.push(polyline([[Lx_mm - panjangPendek, flipY(yAtas, tinggiTotal)], [Lx_mm, flipY(yAtas, tinggiTotal)]], tebal));
-                cadLines.push(polyline([[0, flipY(yBawah, tinggiTotal)], [panjangPendek, flipY(yBawah, tinggiTotal)]], tebal));
-                cadLines.push(polyline([[Lx_mm - panjangPendek, flipY(yBawah, tinggiTotal)], [Lx_mm, flipY(yBawah, tinggiTotal)]], tebal));
-                
-                // Lingkaran tulangan bagi (merah)
-                const yBagiAtas = selimutBeton + diameterTulanganUtama + diameterTulanganBagi/2;
-                const yBagiBawah = H_mm - (selimutBeton + diameterTulanganUtama + diameterTulanganBagi/2);
-                const stepBagi = jarakTulanganBagi;
-                const dStart = diameterTulanganBagi/2;
-                
-                const posAtasKiri = hitungPosisiTitikCAD(dStart, panjangPendek - diameterTulanganBagi/2, stepBagi, diameterTulanganBagi);
-                for (let x of posAtasKiri) {
-                    cadLines.push(lingkaran(x, flipY(yBagiAtas, tinggiTotal), diameterTulanganBagi));
-                }
-                const posAtasKanan = hitungPosisiTitikCAD(Lx_mm - dStart, Lx_mm - panjangPendek + diameterTulanganBagi/2, stepBagi, diameterTulanganBagi);
-                for (let x of posAtasKanan) {
-                    cadLines.push(lingkaran(x, flipY(yBagiAtas, tinggiTotal), diameterTulanganBagi));
-                }
-                console.log("Cek yBagiBawah:", yBagiBawah, "tinggiTotal:", tinggiTotal);
-                const posBawahKiri = hitungPosisiTitikCAD1(dStart, panjangPendek - diameterTulanganBagi/2, stepBagi, diameterTulanganBagi);
-                for (let x of posBawahKiri) {
-                    cadLines.push(lingkaran(x, flipY(yBagiBawah, tinggiTotal), diameterTulanganBagi));
-                }
-                const posBawahKanan = hitungPosisiTitikCAD1(Lx_mm - dStart, Lx_mm - panjangPendek + dStart, stepBagi, diameterTulanganBagi);
-                for (let x of posBawahKanan) {
-                    cadLines.push(lingkaran(x, flipY(yBagiBawah, tinggiTotal), diameterTulanganBagi));
+            daftarTampak.forEach(jenisTampak => {
+                let cadOffsetY = 0;
+                if (jenisTampak === 'samping') {
+                    cadOffsetY = 0;
+                } else if (jenisTampak === 'atas') {
+                    cadOffsetY = 1.5 * H_mm;
+                } else if (jenisTampak === 'depan') {
+                    cadOffsetY = (2 * H_mm) + Lx_mm;
                 }
                 
-                // Lingkaran tulangan utama (hitam) di bawah tengah
-                const xStart = panjangPendek;
-                const xEnd = Lx_mm - panjangPendek;
-                const yUtamaBawah = H_mm - (selimutBeton + diameterTulanganUtama + setdiameterTulanganUtama);
-                const posHitam = hitungPosisiTitikCAD(xStart + diameterTulanganUtama/2, xEnd - diameterTulanganUtama/2, jarakTulanganUtama, diameterTulanganUtama);
-                for (let x of posHitam) {
-                    cadLines.push(lingkaran(x, flipY(yUtamaBawah, tinggiTotal), diameterTulanganUtama));
-                }
-            }
-            
-            // ========== TAMPAK ATAS ==========
-            else if (jenisTampak === 'atas') {
-                const y0 = Lx_mm/2 - Lx_mm*0.12;
-                const step1 = Lx_mm / 5;
-                const step2 = Lx_mm / 20;
-                const step3 = step1/4;
-                const y0CAD = flipY(y0, tinggiTotal);
-                const yRendah = flipY(y0 + step2, tinggiTotal);
-                // ---- Garis merah vertikal kanan ----
-                const xLuar = Ly_mm - step3;
-                const xDalam = xLuar - step3*2;
-                cadLines.push(polyline([[xLuar, 0], [xLuar, Lx_mm]], diameterTulanganBagi));
-                cadLines.push(polyline([[xDalam, 0], [xDalam, Lx_mm]], diameterTulanganBagi));
-                const ySegiMVert = Lx_mm / 4;
-                cadLines.push(buatSegitigaCAD(xLuar, flipY(ySegiMVert, tinggiTotal), 'left', ukuranSegitiga, diameterTulanganBagi));
-                cadLines.push(buatSegitigaCAD(xDalam, flipY(ySegiMVert, tinggiTotal), 'right', ukuranSegitiga, diameterTulanganBagi));
+                const lingkaran = (cx, cy, diameter) => `CIRCLE ${cx},${cy + cadOffsetY} ${diameter/2} `;
+                const garis = (x1, y1, x2, y2) => `LINE ${x1},${y1 + cadOffsetY} ${x2},${y2 + cadOffsetY} `;
                 
-                // ---- Garis merah horizontal bawah ----
-                const yLuar = Lx_mm - step3;
-                const yDalam = yLuar - step3*2;
-                cadLines.push(polyline([[0, flipY(yLuar, tinggiTotal)], [Ly_mm, flipY(yLuar, tinggiTotal)]], diameterTulanganBagi));
-                cadLines.push(polyline([[0, flipY(yDalam, tinggiTotal)], [Ly_mm, flipY(yDalam, tinggiTotal)]], diameterTulanganBagi));
-                const xSegiMHor = Ly_mm / 4;
-                cadLines.push(buatSegitigaCAD(xSegiMHor-ukuranSegitiga/2, flipY(yLuar, tinggiTotal), 'down', ukuranSegitiga, diameterTulanganBagi));
-                cadLines.push(buatSegitigaCAD(xSegiMHor-ukuranSegitiga/2, flipY(yDalam, tinggiTotal), 'up', ukuranSegitiga, diameterTulanganBagi));
-                cadLines.push(buatSegitigaCAD(xSegiMHor+ukuranSegitiga/2, flipY(yLuar, tinggiTotal), 'down', ukuranSegitiga, diameterTulanganBagi));
-                cadLines.push(buatSegitigaCAD(xSegiMHor+ukuranSegitiga/2, flipY(yDalam, tinggiTotal), 'up', ukuranSegitiga, diameterTulanganBagi));
+                const polyline = (points, tebal, closed = false) => {
+                    if (!points.length) return '';
+                    let cmd = `PL ${points[0][0]},${points[0][1] + cadOffsetY} W ${tebal} ${tebal} `;
+                    for (let i = 1; i < points.length; i++) {
+                        const dx = points[i][0] - points[i-1][0];
+                        const dy = points[i][1] - points[i-1][1];
+                        cmd += `@${dx},${dy} `;
+                    }
+                    if (closed) cmd += 'C ';
+                    return cmd;
+                };
+                
+                function hitungPosisiTitikCAD(start, end, step, diameter) {
+                    let positions = [];
+                    if (start <= end) {
+                        for (let x = start; x <= end; x += step) {
+                            positions.push(x);
+                        }
+                        const last = positions[positions.length - 1];
+                        if (end - last >= 4 * diameter) positions.push(end);
+                        else positions[positions.length - 1] = end;
+                    } else {
+                        for (let x = start; x >= end; x -= step) {
+                            positions.push(x);
+                        }
+                        const last = positions[positions.length - 1];
+                        if (last - end >= 4 * diameter) positions.push(end);
+                        else positions[positions.length - 1] = end;
+                    }
+                    return positions;
+                }
 
-                // ---- Garis hitam vertikal lurus ----
-                const xHitamVert = Ly_mm/2 + Lx_mm*0.06;
-                cadLines.push(polyline([[xHitamVert, 0], [xHitamVert, Lx_mm]], diameterTulanganUtama));
-                cadLines.push(buatSegitigaCAD(xHitamVert, flipY(Lx_mm/2, tinggiTotal), 'left', ukuranSegitiga, diameterTulanganUtama));
+                function hitungPosisiTitikCAD1(start, end, step, diameter) {
+                    let positions = [];
+                    let current = start;
+
+                    if (start <= end) {
+                        while (current <= end) {
+                            positions.push(current);
+                            current += step;
+                        }
+                    } else {
+                        while (current >= end) {
+                            positions.push(current);
+                            current -= step;
+                        }
+                    }
+                    return positions;
+                }
+
+                const buatSegitigaCAD = (centerX, centerY, arah, ukuran, tebal) => {
+                    const setengah = ukuran / 2;
+                    let p1, p2, p3;
+                    if (arah === 'up') {
+                        p1 = [centerX - setengah, centerY];
+                        p2 = [centerX + setengah, centerY];
+                        p3 = [centerX, centerY - ukuran];
+                    } else if (arah === 'down') {
+                        p1 = [centerX - setengah, centerY];
+                        p2 = [centerX + setengah, centerY];
+                        p3 = [centerX, centerY + ukuran];
+                    } else if (arah === 'left') {
+                        p1 = [centerX, centerY - setengah];
+                        p2 = [centerX, centerY + setengah];
+                        p3 = [centerX - ukuran, centerY];
+                    } else if (arah === 'right') {
+                        p1 = [centerX, centerY - setengah];
+                        p2 = [centerX, centerY + setengah];
+                        p3 = [centerX + ukuran, centerY];
+                    } else {
+                        return '';
+                    }
+                    return polyline([p1, p2, p3], tebal, true);
+                };
                 
-                // ---- Garis hitam horizontal lurus ----
-                const yHitamHor = Lx_mm/2 + Lx_mm*0.06;
-                cadLines.push(polyline([[0, flipY(yHitamHor, tinggiTotal)], [Ly_mm, flipY(yHitamHor, tinggiTotal)]], diameterTulanganUtama));
-                cadLines.push(buatSegitigaCAD(Ly_mm/2-ukuranSegitiga/2, flipY(yHitamHor, tinggiTotal), 'down', ukuranSegitiga, diameterTulanganUtama));
-                cadLines.push(buatSegitigaCAD(Ly_mm/2+ukuranSegitiga/2, flipY(yHitamHor, tinggiTotal), 'down', ukuranSegitiga, diameterTulanganUtama));
+                const flipY = (y, tinggiTotal) => tinggiTotal - y;
                 
-                // ---- Garis pendek vertikal tengah ----
-                const xTengah = Ly_mm/2;
-                const pVert = Lx_mm / 4;
-                cadLines.push(polyline([[xTengah, 0], [xTengah, pVert]], diameterTulanganUtama));
-                cadLines.push(buatSegitigaCAD(xTengah, flipY(step1/2, tinggiTotal), 'right', ukuranSegitiga, diameterTulanganUtama));
-                cadLines.push(polyline([[xTengah, Lx_mm - pVert], [xTengah, Lx_mm]], diameterTulanganUtama));
-                cadLines.push(buatSegitigaCAD(xTengah, flipY(Lx_mm - step1/2, tinggiTotal), 'right', ukuranSegitiga, diameterTulanganUtama));
+                let tinggiTotal;
+                if (jenisTampak === 'depan') tinggiTotal = H_mm;
+                else if (jenisTampak === 'atas') tinggiTotal = Lx_mm;
+                else tinggiTotal = H_mm; 
                 
-                // ---- Garis pendek horizontal tengah ----
-                const yTengah = Lx_mm/2;
-                const pHor = Lx_mm / 4;   // perhatikan: lebar pendek horizontal = Lx/4
-                cadLines.push(polyline([[0, flipY(yTengah, tinggiTotal)], [pHor, flipY(yTengah, tinggiTotal)]], diameterTulanganUtama));
-                cadLines.push(buatSegitigaCAD(step1/2, flipY(yTengah, tinggiTotal), 'up', ukuranSegitiga, diameterTulanganUtama));
-                cadLines.push(polyline([[Ly_mm - pHor, flipY(yTengah, tinggiTotal)], [Ly_mm, flipY(yTengah, tinggiTotal)]], diameterTulanganUtama));
-                cadLines.push(buatSegitigaCAD(Ly_mm - step1/2, flipY(yTengah, tinggiTotal), 'up', ukuranSegitiga, diameterTulanganUtama));
+                if (jenisTampak === 'depan') {
+                    tambahPerintah(garis(0, 0, Lx_mm, 0));
+                    tambahPerintah(garis(Lx_mm, 0, Lx_mm, H_mm));
+                    tambahPerintah(garis(Lx_mm, H_mm, 0, H_mm));
+                    tambahPerintah(garis(0, H_mm, 0, 0));
+                } else if (jenisTampak === 'atas') {
+                    tambahPerintah(garis(0, 0, Ly_mm, 0));
+                    tambahPerintah(garis(Ly_mm, 0, Ly_mm, Lx_mm));
+                    tambahPerintah(garis(Ly_mm, Lx_mm, 0, Lx_mm));
+                    tambahPerintah(garis(0, Lx_mm, 0, 0));
+                } else if (jenisTampak === 'samping') {
+                    tambahPerintah(garis(0, 0, Ly_mm, 0));
+                    tambahPerintah(garis(Ly_mm, 0, Ly_mm, H_mm));
+                    tambahPerintah(garis(Ly_mm, H_mm, 0, H_mm));
+                    tambahPerintah(garis(0, H_mm, 0, 0));
+                }
                 
-                // ---- Polyline horizontal bawah ----
-              
-                // Kiri
-                cadLines.push(polyline([
-                    [0, y0CAD],
-                    [step1, y0CAD],
-                    [step1 + step2, yRendah],
-                    [Ly_mm/2, yRendah]
-                ], diameterTulanganUtama));
-                // Kanan
-                cadLines.push(polyline([
-                    [Ly_mm, y0CAD],
-                    [Ly_mm - step1, y0CAD],
-                    [Ly_mm - step1 - step2, yRendah],
-                    [Ly_mm/2, yRendah]
-                ], diameterTulanganUtama));
-                
-                cadLines.push(buatSegitigaCAD(Ly_mm/2-ukuranSegitiga/2, yRendah, 'down', ukuranSegitiga, diameterTulanganUtama));
-                cadLines.push(buatSegitigaCAD(Ly_mm/2+ukuranSegitiga/2, yRendah, 'down', ukuranSegitiga, diameterTulanganUtama));
-                cadLines.push(buatSegitigaCAD(step1/2, y0CAD, 'up', ukuranSegitiga, diameterTulanganUtama));
-                cadLines.push(buatSegitigaCAD(Ly_mm - step1/2, y0CAD, 'up', ukuranSegitiga, diameterTulanganUtama));
-                
-                // ---- Polyline vertikal kiri ----
-                const xKiriVert = Ly_mm/2 - Lx_mm*0.12;
-                const xTitik = xKiriVert + step2;
-                const yTengahCAD = flipY(Lx_mm/2, tinggiTotal);
-                
-                // Atas
-                cadLines.push(polyline([
-                    [xKiriVert, flipY(0, tinggiTotal)],
-                    [xKiriVert, flipY(step1, tinggiTotal)],
-                    [xTitik, flipY(step1 + step2, tinggiTotal)],
-                    [xTitik, yTengahCAD]
-                ], diameterTulanganUtama));
-                // Bawah
-                cadLines.push(polyline([
-                    [xKiriVert, flipY(Lx_mm, tinggiTotal)],
-                    [xKiriVert, flipY(Lx_mm - step1, tinggiTotal)],
-                    [xTitik, flipY(Lx_mm - step1 - step2, tinggiTotal)],
-                    [xTitik, yTengahCAD]
-                ], diameterTulanganUtama));
-                
-                cadLines.push(buatSegitigaCAD(xTitik, yTengahCAD, 'left', ukuranSegitiga, diameterTulanganUtama));
-                cadLines.push(buatSegitigaCAD(xKiriVert, flipY(step1/2, tinggiTotal), 'right', ukuranSegitiga, diameterTulanganUtama));
-                cadLines.push(buatSegitigaCAD(xKiriVert, flipY(Lx_mm - step1/2, tinggiTotal), 'right', ukuranSegitiga, diameterTulanganUtama));
+                const ukuranSegitiga = 0.035 * Lx_mm;
+                const setdiameterTulanganUtama = diameterTulanganUtama/2;
+                const setdiameterTulanganBagi = diameterTulanganBagi/2;
+
+                if (jenisTampak === 'depan') {
+                    const yAtas = selimutBeton+setdiameterTulanganUtama;
+                    const yBawah = H_mm - selimutBeton-setdiameterTulanganUtama;
+                    const step1 = Lx_mm / 5;
+                    const step2 = Lx_mm / 20;
+                    const tengahX = Lx_mm / 2;
+                    const panjangPendek = Lx_mm / 4;
+                    const tebal = diameterTulanganUtama;
+                    
+                    tambahPerintah(polyline([
+                        [0, flipY(yAtas, tinggiTotal)],
+                        [step1, flipY(yAtas, tinggiTotal)],
+                        [step1 + step2, flipY(yBawah, tinggiTotal)],
+                        [tengahX, flipY(yBawah, tinggiTotal)]
+                    ], tebal));
+                    
+                    tambahPerintah(polyline([
+                        [Lx_mm, flipY(yAtas, tinggiTotal)],
+                        [Lx_mm - step1, flipY(yAtas, tinggiTotal)],
+                        [Lx_mm - step1 - step2, flipY(yBawah, tinggiTotal)],
+                        [tengahX, flipY(yBawah, tinggiTotal)]
+                    ], tebal));
+                    
+                    tambahPerintah(polyline([[0, flipY(yAtas, tinggiTotal)], [panjangPendek, flipY(yAtas, tinggiTotal)]], tebal));
+                    tambahPerintah(polyline([[Lx_mm - panjangPendek, flipY(yAtas, tinggiTotal)], [Lx_mm, flipY(yAtas, tinggiTotal)]], tebal));
+                    tambahPerintah(polyline([[0, flipY(yBawah, tinggiTotal)], [panjangPendek, flipY(yBawah, tinggiTotal)]], tebal));
+                    tambahPerintah(polyline([[Lx_mm - panjangPendek, flipY(yBawah, tinggiTotal)], [Lx_mm, flipY(yBawah, tinggiTotal)]], tebal));
+                    
+                    const yBagiAtas = selimutBeton + diameterTulanganUtama + diameterTulanganBagi/2;
+                    const yBagiBawah = H_mm - (selimutBeton + diameterTulanganUtama + diameterTulanganBagi/2);
+                    const stepBagi = jarakTulanganBagi;
+                    const dStart = diameterTulanganBagi/2;
+                    
+                    const posAtasKiri = hitungPosisiTitikCAD(dStart, panjangPendek - diameterTulanganBagi/2, stepBagi, diameterTulanganBagi);
+                    for (let x of posAtasKiri) {
+                        tambahPerintah(lingkaran(x, flipY(yBagiAtas, tinggiTotal), diameterTulanganBagi), true);
+                    }
+                    const posAtasKanan = hitungPosisiTitikCAD(Lx_mm - dStart, Lx_mm - panjangPendek + diameterTulanganBagi/2, stepBagi, diameterTulanganBagi);
+                    for (let x of posAtasKanan) {
+                        tambahPerintah(lingkaran(x, flipY(yBagiAtas, tinggiTotal), diameterTulanganBagi), true);
+                    }
+                    const posBawahKiri = hitungPosisiTitikCAD1(dStart, panjangPendek - diameterTulanganBagi/2, stepBagi, diameterTulanganBagi);
+                    for (let x of posBawahKiri) {
+                        tambahPerintah(lingkaran(x, flipY(yBagiBawah, tinggiTotal), diameterTulanganBagi), true);
+                    }
+                    const posBawahKanan = hitungPosisiTitikCAD1(Lx_mm - dStart, Lx_mm - panjangPendek + dStart, stepBagi, diameterTulanganBagi);
+                    for (let x of posBawahKanan) {
+                        tambahPerintah(lingkaran(x, flipY(yBagiBawah, tinggiTotal), diameterTulanganBagi), true);
+                    }
+                    
+                    const xStart = panjangPendek;
+                    const xEnd = Lx_mm - panjangPendek;
+                    const yUtamaBawah = H_mm - (selimutBeton + diameterTulanganUtama + setdiameterTulanganUtama);
+                    const posHitam = hitungPosisiTitikCAD(xStart + diameterTulanganUtama/2, xEnd - diameterTulanganUtama/2, jarakTulanganUtama, diameterTulanganUtama);
+                    for (let x of posHitam) {
+                        tambahPerintah(lingkaran(x, flipY(yUtamaBawah, tinggiTotal), diameterTulanganUtama), true);
+                    }
+                }
+                else if (jenisTampak === 'atas') {
+                    const y0 = Lx_mm/2 - Lx_mm*0.12;
+                    const step1 = Lx_mm / 5;
+                    const step2 = Lx_mm / 20;
+                    const step3 = step1/4;
+                    const y0CAD = flipY(y0, tinggiTotal);
+                    const yRendah = flipY(y0 + step2, tinggiTotal);
+
+                    const xLuar = Ly_mm - step3;
+                    const xDalam = xLuar - step3*2;
+                    tambahPerintah(polyline([[xLuar, 0], [xLuar, Lx_mm]], diameterTulanganBagi));
+                    tambahPerintah(polyline([[xDalam, 0], [xDalam, Lx_mm]], diameterTulanganBagi));
+                    const ySegiMVert = Lx_mm / 4;
+                    tambahPerintah(buatSegitigaCAD(xLuar, flipY(ySegiMVert, tinggiTotal), 'left', ukuranSegitiga, diameterTulanganBagi));
+                    tambahPerintah(buatSegitigaCAD(xDalam, flipY(ySegiMVert, tinggiTotal), 'right', ukuranSegitiga, diameterTulanganBagi));
+                    
+                    const yLuar = Lx_mm - step3;
+                    const yDalam = yLuar - step3*2;
+                    tambahPerintah(polyline([[0, flipY(yLuar, tinggiTotal)], [Ly_mm, flipY(yLuar, tinggiTotal)]], diameterTulanganBagi));
+                    tambahPerintah(polyline([[0, flipY(yDalam, tinggiTotal)], [Ly_mm, flipY(yDalam, tinggiTotal)]], diameterTulanganBagi));
+                    const xSegiMHor = Ly_mm / 4;
+                    tambahPerintah(buatSegitigaCAD(xSegiMHor-ukuranSegitiga/2, flipY(yLuar, tinggiTotal), 'down', ukuranSegitiga, diameterTulanganBagi));
+                    tambahPerintah(buatSegitigaCAD(xSegiMHor-ukuranSegitiga/2, flipY(yDalam, tinggiTotal), 'up', ukuranSegitiga, diameterTulanganBagi));
+                    tambahPerintah(buatSegitigaCAD(xSegiMHor+ukuranSegitiga/2, flipY(yLuar, tinggiTotal), 'down', ukuranSegitiga, diameterTulanganBagi));
+                    tambahPerintah(buatSegitigaCAD(xSegiMHor+ukuranSegitiga/2, flipY(yDalam, tinggiTotal), 'up', ukuranSegitiga, diameterTulanganBagi));
+
+                    const xHitamVert = Ly_mm/2 + Lx_mm*0.06;
+                    tambahPerintah(polyline([[xHitamVert, 0], [xHitamVert, Lx_mm]], diameterTulanganUtama));
+                    tambahPerintah(buatSegitigaCAD(xHitamVert, flipY(Lx_mm/2, tinggiTotal), 'left', ukuranSegitiga, diameterTulanganUtama));
+                    
+                    const yHitamHor = Lx_mm/2 + Lx_mm*0.06;
+                    tambahPerintah(polyline([[0, flipY(yHitamHor, tinggiTotal)], [Ly_mm, flipY(yHitamHor, tinggiTotal)]], diameterTulanganUtama));
+                    tambahPerintah(buatSegitigaCAD(Ly_mm/2-ukuranSegitiga/2, flipY(yHitamHor, tinggiTotal), 'down', ukuranSegitiga, diameterTulanganUtama));
+                    tambahPerintah(buatSegitigaCAD(Ly_mm/2+ukuranSegitiga/2, flipY(yHitamHor, tinggiTotal), 'down', ukuranSegitiga, diameterTulanganUtama));
+                    
+                    const xTengah = Ly_mm/2;
+                    const pVert = Lx_mm / 4;
+                    tambahPerintah(polyline([[xTengah, 0], [xTengah, pVert]], diameterTulanganUtama));
+                    tambahPerintah(buatSegitigaCAD(xTengah, flipY(step1/2, tinggiTotal), 'right', ukuranSegitiga, diameterTulanganUtama));
+                    tambahPerintah(polyline([[xTengah, Lx_mm - pVert], [xTengah, Lx_mm]], diameterTulanganUtama));
+                    tambahPerintah(buatSegitigaCAD(xTengah, flipY(Lx_mm - step1/2, tinggiTotal), 'right', ukuranSegitiga, diameterTulanganUtama));
+                    
+                    const yTengah = Lx_mm/2;
+                    const pHor = Lx_mm / 4;
+                    tambahPerintah(polyline([[0, flipY(yTengah, tinggiTotal)], [pHor, flipY(yTengah, tinggiTotal)]], diameterTulanganUtama));
+                    tambahPerintah(buatSegitigaCAD(step1/2, flipY(yTengah, tinggiTotal), 'up', ukuranSegitiga, diameterTulanganUtama));
+                    tambahPerintah(polyline([[Ly_mm - pHor, flipY(yTengah, tinggiTotal)], [Ly_mm, flipY(yTengah, tinggiTotal)]], diameterTulanganUtama));
+                    tambahPerintah(buatSegitigaCAD(Ly_mm - step1/2, flipY(yTengah, tinggiTotal), 'up', ukuranSegitiga, diameterTulanganUtama));
+                    
+                    tambahPerintah(polyline([
+                        [0, y0CAD],
+                        [step1, y0CAD],
+                        [step1 + step2, yRendah],
+                        [Ly_mm/2, yRendah]
+                    ], diameterTulanganUtama));
+                    tambahPerintah(polyline([
+                        [Ly_mm, y0CAD],
+                        [Ly_mm - step1, y0CAD],
+                        [Ly_mm - step1 - step2, yRendah],
+                        [Ly_mm/2, yRendah]
+                    ], diameterTulanganUtama));
+                    
+                    tambahPerintah(buatSegitigaCAD(Ly_mm/2-ukuranSegitiga/2, yRendah, 'down', ukuranSegitiga, diameterTulanganUtama));
+                    tambahPerintah(buatSegitigaCAD(Ly_mm/2+ukuranSegitiga/2, yRendah, 'down', ukuranSegitiga, diameterTulanganUtama));
+                    tambahPerintah(buatSegitigaCAD(step1/2, y0CAD, 'up', ukuranSegitiga, diameterTulanganUtama));
+                    tambahPerintah(buatSegitigaCAD(Ly_mm - step1/2, y0CAD, 'up', ukuranSegitiga, diameterTulanganUtama));
+                    
+                    const xKiriVert = Ly_mm/2 - Lx_mm*0.12;
+                    const xTitik = xKiriVert + step2;
+                    const yTengahCAD = flipY(Lx_mm/2, tinggiTotal);
+                    
+                    tambahPerintah(polyline([
+                        [xKiriVert, flipY(0, tinggiTotal)],
+                        [xKiriVert, flipY(step1, tinggiTotal)],
+                        [xTitik, flipY(step1 + step2, tinggiTotal)],
+                        [xTitik, yTengahCAD]
+                    ], diameterTulanganUtama));
+                    tambahPerintah(polyline([
+                        [xKiriVert, flipY(Lx_mm, tinggiTotal)],
+                        [xKiriVert, flipY(Lx_mm - step1, tinggiTotal)],
+                        [xTitik, flipY(Lx_mm - step1 - step2, tinggiTotal)],
+                        [xTitik, yTengahCAD]
+                    ], diameterTulanganUtama));
+                    
+                    tambahPerintah(buatSegitigaCAD(xTitik, yTengahCAD, 'left', ukuranSegitiga, diameterTulanganUtama));
+                    tambahPerintah(buatSegitigaCAD(xKiriVert, flipY(step1/2, tinggiTotal), 'right', ukuranSegitiga, diameterTulanganUtama));
+                    tambahPerintah(buatSegitigaCAD(xKiriVert, flipY(Lx_mm - step1/2, tinggiTotal), 'right', ukuranSegitiga, diameterTulanganUtama));
+                }
+                else if (jenisTampak === 'samping') {
+                    const yAtas = selimutBeton + diameterTulanganUtama/2+diameterTulanganBagi;
+                    const yBawah = H_mm - (selimutBeton + Math.max(diameterTulanganUtama, diameterTulanganBagi)+diameterTulanganUtama/2);
+                    const step1 = Lx_mm / 5;
+                    const step2 = Lx_mm / 20;
+                    const tengahX = Ly_mm / 2;
+                    const panjangPendek = Lx_mm / 4;
+                    
+                    tambahPerintah(polyline([
+                        [0, flipY(yAtas, tinggiTotal)],
+                        [step1, flipY(yAtas, tinggiTotal)],
+                        [step1 + step2, flipY(yBawah, tinggiTotal)],
+                        [tengahX, flipY(yBawah, tinggiTotal)]
+                    ], diameterTulanganUtama));
+                    
+                    tambahPerintah(polyline([
+                        [Ly_mm, flipY(yAtas, tinggiTotal)],
+                        [Ly_mm - step1, flipY(yAtas, tinggiTotal)],
+                        [Ly_mm - step1 - step2, flipY(yBawah, tinggiTotal)],
+                        [tengahX, flipY(yBawah, tinggiTotal)]
+                    ], diameterTulanganUtama));
+                    
+                    tambahPerintah(polyline([[0, flipY(yAtas, tinggiTotal)], [panjangPendek, flipY(yAtas, tinggiTotal)]], diameterTulanganUtama));
+                    tambahPerintah(polyline([[Ly_mm - panjangPendek, flipY(yAtas, tinggiTotal)], [Ly_mm, flipY(yAtas, tinggiTotal)]], diameterTulanganUtama));
+                    tambahPerintah(polyline([[0, flipY(yBawah, tinggiTotal)], [panjangPendek, flipY(yBawah, tinggiTotal)]], diameterTulanganUtama));
+                    tambahPerintah(polyline([[Ly_mm - panjangPendek, flipY(yBawah, tinggiTotal)], [Ly_mm, flipY(yBawah, tinggiTotal)]], diameterTulanganUtama));
+                    
+                    const yBagiAtas = yAtas - diameterTulanganBagi/2-diameterTulanganUtama/2;
+                    const yBagiBawah = yBawah + diameterTulanganBagi/2+diameterTulanganUtama/2;
+                    const stepBagi = jarakTulanganBagiY;
+                    
+                    const posAtasKiri = hitungPosisiTitikCAD(diameterTulanganBagi/2, panjangPendek - diameterTulanganBagi/2, stepBagi, diameterTulanganBagi);
+                    for (let x of posAtasKiri) {
+                        tambahPerintah(lingkaran(x, flipY(yBagiAtas, tinggiTotal), diameterTulanganBagi), true);
+                    }
+                    const posAtasKanan = hitungPosisiTitikCAD(Ly_mm - diameterTulanganBagi/2, Ly_mm - panjangPendek + diameterTulanganBagi/2, stepBagi, diameterTulanganBagi);
+                    for (let x of posAtasKanan) {
+                        tambahPerintah(lingkaran(x, flipY(yBagiAtas, tinggiTotal), diameterTulanganBagi), true);
+                    }
+                    
+                    const posBawahKiri = hitungPosisiTitikCAD1(diameterTulanganBagi/2, panjangPendek - diameterTulanganBagi/2, stepBagi, diameterTulanganBagi);
+                    for (let x of posBawahKiri) {
+                        tambahPerintah(lingkaran(x, flipY(yBagiBawah, tinggiTotal), diameterTulanganBagi), true);
+                    }
+                    const posBawahKanan = hitungPosisiTitikCAD1(Ly_mm - diameterTulanganBagi/2, Ly_mm - panjangPendek + diameterTulanganBagi/2, stepBagi, diameterTulanganBagi);
+                    for (let x of posBawahKanan) {
+                        tambahPerintah(lingkaran(x, flipY(yBagiBawah, tinggiTotal), diameterTulanganBagi), true);
+                    }
+                    
+                    const xStart = step1 + step2;
+                    const xEnd = Ly_mm - step1 - step2;
+                    const yUtamaBawah = yBawah + diameterTulanganUtama;
+                    const posHitam = hitungPosisiTitikCAD(xStart + diameterTulanganUtama/2, xEnd - diameterTulanganUtama/2, jarakTulanganUtama, diameterTulanganUtama);
+                    for (let x of posHitam) {
+                        tambahPerintah(lingkaran(x, flipY(yUtamaBawah, tinggiTotal), diameterTulanganUtama), true);
+                    }
+                }
+            });
+            
+            if (cadLinesNonCircle.length > 0) {
+                let lastIdx = cadLinesNonCircle.length - 1;
+                cadLinesNonCircle[lastIdx] = cadLinesNonCircle[lastIdx].trimEnd();
             }
             
-            // ========== TAMPAK SAMPING ==========
-            else if (jenisTampak === 'samping') {
-                const yAtas = selimutBeton + diameterTulanganUtama/2+diameterTulanganBagi;
-                const yBawah = H_mm - (selimutBeton + Math.max(diameterTulanganUtama, diameterTulanganBagi)+diameterTulanganUtama/2);
-                const step1 = Lx_mm / 5;   // dipakai sebagai jarak horizontal (mm)
-                const step2 = Lx_mm / 20;
-                const tengahX = Ly_mm / 2;
-                const panjangPendek = Lx_mm / 4;
-                
-                // Polyline utama
-                cadLines.push(polyline([
-                    [0, flipY(yAtas, tinggiTotal)],
-                    [step1, flipY(yAtas, tinggiTotal)],
-                    [step1 + step2, flipY(yBawah, tinggiTotal)],
-                    [tengahX, flipY(yBawah, tinggiTotal)]
-                ], diameterTulanganUtama));
-                
-                cadLines.push(polyline([
-                    [Ly_mm, flipY(yAtas, tinggiTotal)],
-                    [Ly_mm - step1, flipY(yAtas, tinggiTotal)],
-                    [Ly_mm - step1 - step2, flipY(yBawah, tinggiTotal)],
-                    [tengahX, flipY(yBawah, tinggiTotal)]
-                ], diameterTulanganUtama));
-                
-                // Garis pendek
-                cadLines.push(polyline([[0, flipY(yAtas, tinggiTotal)], [panjangPendek, flipY(yAtas, tinggiTotal)]], diameterTulanganUtama));
-                cadLines.push(polyline([[Ly_mm - panjangPendek, flipY(yAtas, tinggiTotal)], [Ly_mm, flipY(yAtas, tinggiTotal)]], diameterTulanganUtama));
-                cadLines.push(polyline([[0, flipY(yBawah, tinggiTotal)], [panjangPendek, flipY(yBawah, tinggiTotal)]], diameterTulanganUtama));
-                cadLines.push(polyline([[Ly_mm - panjangPendek, flipY(yBawah, tinggiTotal)], [Ly_mm, flipY(yBawah, tinggiTotal)]], diameterTulanganUtama));
-                
-                // Lingkaran bagi (merah)
-                const yBagiAtas = yAtas - diameterTulanganBagi/2-diameterTulanganUtama/2;
-                const yBagiBawah = yBawah + diameterTulanganBagi/2+diameterTulanganUtama/2;
-                const stepBagi = jarakTulanganBagiY;
-                
-                const posAtasKiri = hitungPosisiTitikCAD(diameterTulanganBagi/2, panjangPendek - diameterTulanganBagi/2, stepBagi, diameterTulanganBagi);
-                for (let x of posAtasKiri) {
-                    cadLines.push(lingkaran(x, flipY(yBagiAtas, tinggiTotal), diameterTulanganBagi));
-                }
-                const posAtasKanan = hitungPosisiTitikCAD(Ly_mm - diameterTulanganBagi/2, Ly_mm - panjangPendek + diameterTulanganBagi/2, stepBagi, diameterTulanganBagi);
-                for (let x of posAtasKanan) {
-                    cadLines.push(lingkaran(x, flipY(yBagiAtas, tinggiTotal), diameterTulanganBagi));
-                }
-                
-                const posBawahKiri = hitungPosisiTitikCAD1(diameterTulanganBagi/2, panjangPendek - diameterTulanganBagi/2, stepBagi, diameterTulanganBagi);
-                for (let x of posBawahKiri) {
-                    cadLines.push(lingkaran(x, flipY(yBagiBawah, tinggiTotal), diameterTulanganBagi));
-                }
-                const posBawahKanan = hitungPosisiTitikCAD1(Ly_mm - diameterTulanganBagi/2, Ly_mm - panjangPendek + diameterTulanganBagi/2, stepBagi, diameterTulanganBagi);
-                for (let x of posBawahKanan) {
-                    cadLines.push(lingkaran(x, flipY(yBagiBawah, tinggiTotal), diameterTulanganBagi));
-                }
-                
-                // Lingkaran utama (hitam) di bawah tengah
-                const xStart = step1 + step2;
-                const xEnd = Ly_mm - step1 - step2;
-                const yUtamaBawah = yBawah + diameterTulanganUtama;
-                const posHitam = hitungPosisiTitikCAD(xStart + diameterTulanganUtama/2, xEnd - diameterTulanganUtama/2, jarakTulanganUtama, diameterTulanganUtama);
-                for (let x of posHitam) {
-                    cadLines.push(lingkaran(x, flipY(yUtamaBawah, tinggiTotal), diameterTulanganUtama));
-                }
+            let finalLines = [...cadLinesNonCircle];
+            
+            if (cadLinesCircle.length > 0 && cadLinesNonCircle.length > 0) {
+                finalLines.push("ENTER");
             }
             
-            return cadLines.join("\n");
+            finalLines = finalLines.concat(cadLinesCircle);
+            return finalLines.join("\n");
         } catch (error) {
             console.error("Gagal generate CAD pelat dua arah:", error);
             alert("Gagal generate CAD: " + error.message);
-            // Ubah return "" menjadi return pesan error agar tercopy ke clipboard
             return "ERROR DETECTED: " + error.message + "\nDI BARIS/STACK: " + error.stack; 
         }
     }

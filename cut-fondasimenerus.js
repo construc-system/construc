@@ -1,6 +1,5 @@
 // cut-fondasimenerus.js - Render tampak fondasi menerus (strip footing)
-// Revisi: Perbaikan posisi dot dengan offset radius titik dari ujung garis,
-//        serta aturan jarak minimum antar dot (2.5 * radiusTitik) dan jarak ujung (3 * diameter tulangan)
+// Revisi: Perbaikan AutoDimensi, Hapus nilai default, Penggabungan fungsi CAD, dan Urutan perintah (LINE -> PL -> CIRCLE)
 
 (function() {
     function renderFondasiMenerus(config, containerId) {
@@ -12,34 +11,7 @@
         }
         container.innerHTML = "";
 
-        const { jenis, L, B, H } = config;
-
-        // Validasi parameter
-        if (jenis === 'atas') {
-            if (!L || !B) {
-                console.error("Parameter fondasi menerus tampak atas tidak lengkap", config);
-                container.innerHTML = `<div style="text-align: center; padding: 2rem; color: #dc3545;"><p>Data fondasi menerus tidak lengkap</p><p>Periksa L, B</p></div>`;
-                return { config, containerId, scaleInfo: null, jenisFondasi: 'menerus', error: true };
-            }
-        } else if (jenis === 'samping') {
-            if (!L || !H) {
-                console.error("Parameter fondasi menerus tampak samping tidak lengkap", config);
-                container.innerHTML = `<div style="text-align: center; padding: 2rem; color: #dc3545;"><p>Data fondasi menerus tidak lengkap</p><p>Periksa L, H</p></div>`;
-                return { config, containerId, scaleInfo: null, jenisFondasi: 'menerus', error: true };
-            }
-        } else if (jenis === 'depan') {
-            if (!B || !H) {
-                console.error("Parameter fondasi menerus tampak depan tidak lengkap", config);
-                container.innerHTML = `<div style="text-align: center; padding: 2rem; color: #dc3545;"><p>Data fondasi menerus tidak lengkap</p><p>Periksa B, H</p></div>`;
-                return { config, containerId, scaleInfo: null, jenisFondasi: 'menerus', error: true };
-            }
-        } else {
-            console.error("Jenis tampak tidak dikenal:", jenis);
-            container.innerHTML = `<div style="text-align: center; padding: 2rem; color: #dc3545;"><p>Jenis tampak harus 'atas', 'samping', atau 'depan'</p></div>`;
-            return { config, containerId, scaleInfo: null, jenisFondasi: 'menerus', error: true };
-        }
-
-        // Ambil data dari session storage
+        // Ambil data dari session storage terlebih dahulu agar bisa ditimpa ke config jika autodimensi on
         let fondasiData = null;
         try {
             const saved = sessionStorage.getItem('calculationResultFondasi') || sessionStorage.getItem('calculationResult');
@@ -52,55 +24,82 @@
             const parts = path.split('.');
             let current = fondasiData;
             for (let p of parts) {
-                if (current[p] === undefined) return defaultValue;
+                if (current[p] === undefined || current[p] === null) return defaultValue;
                 current = current[p];
             }
             return current;
         }
 
-        // Parameter tulangan
-        let selimutBeton = 75; // default
-        let diameterUtama = 16, spasiUtama = 250;
-        let diameterBagi = 16, spasiBagi = 400;
+        // Prioritaskan hasil kalkulasi autodimensi jika ada
+        let { jenis, L, B, H } = config;
+        L = parseFloat(getData('data.dimensiOptimal.Lx')) || parseFloat(L) || 0;
+        B = parseFloat(getData('data.dimensiOptimal.Ly')) || parseFloat(B) || 0;
+        H = parseFloat(getData('data.dimensiOptimal.h')) || parseFloat(H) || 0;
+
+        // Validasi parameter
+        if (jenis === 'atas') {
+            if (!L || !B) {
+                console.error("Parameter fondasi menerus tampak atas tidak lengkap", {L, B});
+                container.innerHTML = `<div style="text-align: center; padding: 2rem; color: #dc3545;"><p>Data fondasi menerus tidak lengkap</p><p>Periksa L, B</p></div>`;
+                return { config, containerId, scaleInfo: null, jenisFondasi: 'menerus', error: true };
+            }
+        } else if (jenis === 'samping') {
+            if (!L || !H) {
+                console.error("Parameter fondasi menerus tampak samping tidak lengkap", {L, H});
+                container.innerHTML = `<div style="text-align: center; padding: 2rem; color: #dc3545;"><p>Data fondasi menerus tidak lengkap</p><p>Periksa L, H</p></div>`;
+                return { config, containerId, scaleInfo: null, jenisFondasi: 'menerus', error: true };
+            }
+        } else if (jenis === 'depan') {
+            if (!B || !H) {
+                console.error("Parameter fondasi menerus tampak depan tidak lengkap", {B, H});
+                container.innerHTML = `<div style="text-align: center; padding: 2rem; color: #dc3545;"><p>Data fondasi menerus tidak lengkap</p><p>Periksa B, H</p></div>`;
+                return { config, containerId, scaleInfo: null, jenisFondasi: 'menerus', error: true };
+            }
+        }
+
+        // Hapus nilai default
+        let selimutBeton = parseFloat(getData('data.parameter.sbeton')) || parseFloat(getData('data.parameter.ds')) || parseFloat(getData('data.kuatDukung.Cb')) || 0;
+        let diameterUtama = 0, spasiUtama = 0;
+        let diameterBagi = 0, spasiBagi = 0;
 
         // Ambil dari rekap
         const tulanganUtamaStr = getData('rekap.tulangan_utama', '');
         const tulanganBagiStr = getData('rekap.tulangan_bagi', '');
         if (tulanganUtamaStr) {
-            const matchUtama = tulanganUtamaStr.match(/ɸ(\d+)-(\d+)/);
+            const matchUtama = tulanganUtamaStr.match(/[Øɸ](\d+)-(\d+)/);
             if (matchUtama) {
                 diameterUtama = parseInt(matchUtama[1], 10);
                 spasiUtama = parseInt(matchUtama[2], 10);
             }
         }
         if (tulanganBagiStr) {
-            const matchBagi = tulanganBagiStr.match(/ɸ(\d+)-(\d+)/);
+            const matchBagi = tulanganBagiStr.match(/[Øɸ](\d+)-(\d+)/);
             if (matchBagi) {
                 diameterBagi = parseInt(matchBagi[1], 10);
                 spasiBagi = parseInt(matchBagi[2], 10);
             }
         }
 
-        // Coba ambil selimut dari data
-        const ds = getData('data.parameter.ds', null);
-        const cb = getData('data.kuatDukung.Cb', null);
-        if (ds) selimutBeton = Number(ds);
-        else if (cb) selimutBeton = Number(cb);
-        else {
-            // Hitung dari tinggi efektif jika ada
+        // Ambil dari input jika direkap masih 0
+        if (diameterUtama === 0) diameterUtama = parseFloat(getData('inputData.tulangan.d')) || 0;
+        if (spasiUtama === 0) spasiUtama = parseFloat(getData('data.tulangan.s')) || parseFloat(getData('inputData.tulangan.s')) || 0;
+        if (diameterBagi === 0) diameterBagi = parseFloat(getData('inputData.tulangan.db')) || 0;
+        if (spasiBagi === 0) spasiBagi = parseFloat(getData('data.tulangan.sb')) || parseFloat(getData('inputData.tulangan.sb')) || 0;
+
+        if (!selimutBeton) {
             const d = getData('data.parameter.d', null);
             if (d && H) {
                 const h_mm = H * 1000;
                 selimutBeton = Math.round(h_mm - d - diameterUtama/2);
-                if (selimutBeton < 20) selimutBeton = 75;
+                if (selimutBeton < 20) selimutBeton = 0; 
             }
         }
+        
         console.log(`Selimut beton: ${selimutBeton} mm, Utama: D${diameterUtama}-${spasiUtama}, Bagi: D${diameterBagi}-${spasiBagi}`);
 
         // Dimensi asli (mm)
         let width_original_mm, height_original_mm;
         if (jenis === 'atas') {
-            // Tampak atas: width = B (lebar), height = L (panjang)
             width_original_mm = B * 1000;
             height_original_mm = L * 1000;
         } else if (jenis === 'samping') {
@@ -255,24 +254,11 @@
             }
         }
 
-        /**
-         * Menghitung posisi dot pada garis dengan aturan:
-         * - Dot tidak boleh keluar dari ujung garis (offset radius titik)
-         * - Jarak minimum antar dot = max(stepAsli, 2.5 * radiusTitik)
-         * - Dot ujung (batas kiri/kanan) ditambahkan hanya jika jarak ke dot terdekat >= 3 * diameterTulanganDisplay
-         * @param {number} startX - ujung kiri garis
-         * @param {number} endX - ujung kanan garis
-         * @param {number} stepAsli - jarak antar tulangan dalam display (berdasarkan spasi)
-         * @param {number} radiusTitik - radius dot dalam display
-         * @param {number} diameterTulanganDisplay - diameter tulangan (mm) dalam display
-         * @returns {number[]} array posisi x dot
-         */
         function hitungPosisiTitik(startX, endX, stepAsli, radiusTitik, diameterTulanganDisplay) {
             const leftBound = startX + radiusTitik;
             const rightBound = endX - radiusTitik;
             if (leftBound >= rightBound) return [];
 
-            // Step minimum 2.5 * radius titik
             const minStep = 2.5 * radiusTitik;
             const step = Math.max(stepAsli, minStep);
 
@@ -283,18 +269,15 @@
                 current += step;
             }
 
-            // Cek penambahan dot di ujung kiri
             if (positions.length > 0) {
                 const jarakKiri = positions[0] - leftBound;
                 if (jarakKiri >= 3 * diameterTulanganDisplay) {
                     positions.unshift(leftBound);
                 }
             } else {
-                // Jika tidak ada dot sama sekali, tambahkan di tengah? Tapi seharusnya tidak terjadi
                 positions.push(leftBound);
             }
 
-            // Cek penambahan dot di ujung kanan
             const lastIdx = positions.length - 1;
             const jarakKanan = rightBound - positions[lastIdx];
             if (jarakKanan >= 3 * diameterTulanganDisplay) {
@@ -317,11 +300,10 @@
         const strokePx = 2;
         const warnaHitam = "#000000";
         const warnaMerah = "#FF0000";
-        // Ukuran visual konsisten dengan fondasi tunggal
         const segitigaLebar = height_display * 0.035;
         const segitigaTinggi = height_display * 0.035;
-        const radiusTitik = strokePx * 8;      // 16px
-        const offsetTitikDariGaris = strokePx * 10; // 20px
+        const radiusTitik = strokePx * 8;      
+        const offsetTitikDariGaris = strokePx * 10; 
 
         // Gambar outline fondasi
         buatRect(offsetX, offsetY, width_display, height_display, "#000000", strokePx, "#f8f9fa");
@@ -331,7 +313,6 @@
             const gapHor = width_display * 0.02;
             const gapVer = height_display * 0.02;
 
-            // === Tulangan utama (hitam) - garis horizontal di tengah ===
             const y_garis_hor = offsetY + (8/15) * height_display;
             const x_kiri_hor = offsetX + gapHor;
             const x_kanan_hor = offsetX + width_display - gapHor;
@@ -343,7 +324,6 @@
             buatGaris(x_kiri_hor, y_garis_hor, x_kiri_hor + deltaHor, y_garis_hor - deltaHor, warnaHitam, strokePx);
             buatGaris(x_kanan_hor, y_garis_hor, x_kanan_hor - deltaHor, y_garis_hor - deltaHor, warnaHitam, strokePx);
 
-            // === Tulangan bagi (merah) - satu garis vertikal di tengah ===
             const x_tengah = offsetX + width_display / 2;
             const y_atas_vert = offsetY + gapVer;
             const y_bawah_vert = offsetY + height_display - gapVer;
@@ -361,18 +341,16 @@
             const x_kiri_garis = offsetX + gapDepan;
             const x_kanan_garis = offsetX + width_display - gapDepan;
 
-            // Hitung posisi garis tulangan bagi (dari bawah)
             const jarakDariBawah_mm = selimutBeton + diameterBagi;
             const tinggiTotal_mm = H * 1000;
-            const propDariBawah = jarakDariBawah_mm / tinggiTotal_mm;
+            const propDariBawah = (tinggiTotal_mm !== 0) ? (jarakDariBawah_mm / tinggiTotal_mm) : 0;
             const y_garis = offsetY + height_display * (1 - propDariBawah);
-            // Garis warna hitam (batas tulangan)
             buatGaris(x_kiri_garis, y_garis, x_kanan_garis, y_garis, warnaHitam, strokePx);
 
-            const y_dot = y_garis + offsetTitikDariGaris; // dot di bawah garis
+            const y_dot = y_garis + offsetTitikDariGaris;
 
             const lebarFondasi_m = B;
-            const faktorSkala = width_display / (lebarFondasi_m * 1000);
+            const faktorSkala = (lebarFondasi_m !== 0) ? (width_display / (lebarFondasi_m * 1000)) : 0;
             const stepBagi = spasiBagi * faktorSkala;
             const diameterBagiDisplay = diameterBagi * faktorSkala;
 
@@ -388,17 +366,16 @@
             const x_kiri_garis = offsetX + gapSamping;
             const x_kanan_garis = offsetX + width_display - gapSamping;
 
-            // Hitung posisi garis tulangan utama (dari bawah) - warna merah
             const jarakDariBawah_mm = selimutBeton + diameterUtama;
             const tinggiTotal_mm = H * 1000;
-            const propDariBawah = jarakDariBawah_mm / tinggiTotal_mm;
+            const propDariBawah = (tinggiTotal_mm !== 0) ? (jarakDariBawah_mm / tinggiTotal_mm) : 0;
             const y_garis = offsetY + height_display * (1 - propDariBawah);
             buatGaris(x_kiri_garis, y_garis, x_kanan_garis, y_garis, warnaMerah, strokePx);
 
-            const y_dot = y_garis - radiusTitik; // dot di atas garis
+            const y_dot = y_garis - radiusTitik; 
 
             const panjangFondasi_m = L;
-            const faktorSkala = width_display / (panjangFondasi_m * 1000);
+            const faktorSkala = (panjangFondasi_m !== 0) ? (width_display / (panjangFondasi_m * 1000)) : 0;
             const stepUtama = spasiUtama * faktorSkala;
             const diameterUtamaDisplay = diameterUtama * faktorSkala;
 
@@ -408,8 +385,7 @@
             }
         }
 
-        // Teks skala tidak proporsional dihilangkan
-        console.log(`✅ Fondasi menerus tampak ${jenis} selesai (dot dengan aturan jarak) .`);
+        console.log(`✅ Fondasi menerus tampak ${jenis} selesai (dot dengan aturan jarak).`);
         return {
             config,
             containerId,
@@ -428,256 +404,342 @@
     }
 
     window.foundationRenderers.menerus = renderFondasiMenerus;
-    console.log("✅ cut-fondasimenerus.js (dot dengan offset radius dan aturan jarak)");
-    function generateCADFondasiMenerus(jenisTampak) {
-    try {
-        // Ambil data dari session storage
-        let fondasiData = null;
+    console.log("✅ cut-fondasimenerus.js renderer terpasang");
+
+    // =========================================================================
+    // Fungsi CAD Fondasi Menerus (Tanpa Parameter, Gabung 3 View)
+    // =========================================================================
+    function generateCADFondasiMenerus() {
         try {
-            const saved = sessionStorage.getItem('calculationResultFondasi') || sessionStorage.getItem('calculationResult');
-            if (saved) fondasiData = JSON.parse(saved);
-        } catch(e) { console.warn("Gagal baca session storage", e); }
+            let fondasiData = null;
+            try {
+                const saved = sessionStorage.getItem('calculationResultFondasi') || sessionStorage.getItem('calculationResult');
+                if (saved) fondasiData = JSON.parse(saved);
+            } catch(e) { console.warn("Gagal baca session storage", e); }
 
-        function getData(path, defaultValue = null) {
-            if (!fondasiData) return defaultValue;
-            const parts = path.split('.');
-            let current = fondasiData;
-            for (let p of parts) {
-                if (current[p] === undefined) return defaultValue;
-                current = current[p];
+            function getData(path, defaultValue = null) {
+                if (!fondasiData) return defaultValue;
+                const parts = path.split('.');
+                let current = fondasiData;
+                for (let p of parts) {
+                    if (current[p] === undefined || current[p] === null) return defaultValue;
+                    current = current[p];
+                }
+                return current;
             }
-            return current;
-        }
 
-        // Parameter dimensi (meter) – coba ambil dari berbagai sumber
-        let L = 2.0, B = 1.0, H = 0.5;
-        if (fondasiData?.inputData?.fondasi?.dimensi) {
-            const dim = fondasiData.inputData.fondasi.dimensi;
-            L = parseFloat(dim.lx) || L;
-            B = parseFloat(dim.ly) || B;
-            H = parseFloat(dim.h) || H;
-        } else if (fondasiData?.data?.parameter) {
-            L = parseFloat(fondasiData.data.parameter.lx) || L;
-            B = parseFloat(fondasiData.data.parameter.ly) || B;
-            H = parseFloat(fondasiData.data.parameter.h) || H;
-        } else if (fondasiData?.rekap?.dimensi) {
-            const match = fondasiData.rekap.dimensi.match(/([\d.]+)\s*[×x]\s*([\d.]+)\s*[×x]\s*([\d.]+)/);
-            if (match) {
-                L = parseFloat(match[1]);
-                B = parseFloat(match[2]);
-                H = parseFloat(match[3]);
+            // Hapus nilai default, pastikan membaca dimensi dari Autodimensi terlebih dulu
+            let L = parseFloat(getData('data.dimensiOptimal.Lx')) || parseFloat(getData('data.parameter.lx')) || parseFloat(getData('inputData.fondasi.dimensi.lx')) || 0;
+            let B = parseFloat(getData('data.dimensiOptimal.Ly')) || parseFloat(getData('data.parameter.ly')) || parseFloat(getData('inputData.fondasi.dimensi.ly')) || 0;
+            let H = parseFloat(getData('data.dimensiOptimal.h')) || parseFloat(getData('data.parameter.h')) || parseFloat(getData('inputData.fondasi.dimensi.h')) || 0;
+
+            // Fallback dimensi dari hasil rekap jika semuanya masih 0
+            if (L === 0 || B === 0 || H === 0) {
+                const rekapDim = getData('rekap.dimensi');
+                if (rekapDim) {
+                    const match = rekapDim.match(/([\d.]+)\s*[×x]\s*([\d.]+)\s*[×x]\s*([\d.]+)/);
+                    if (match) {
+                        L = parseFloat(match[1]);
+                        B = parseFloat(match[2]);
+                        H = parseFloat(match[3]);
+                    }
+                }
             }
-        }
 
-        // Parameter tulangan
-        let selimutBeton = 75;
-        let diameterUtama = 16, spasiUtama = 250;
-        let diameterBagi = 16, spasiBagi = 400;
+            // Parameter tulangan
+            let selimutBeton = parseFloat(getData('data.parameter.sbeton')) || parseFloat(getData('data.parameter.ds')) || parseFloat(getData('data.kuatDukung.Cb')) || 0;
+            let diameterUtama = 0, spasiUtama = 0;
+            let diameterBagi = 0, spasiBagi = 0;
 
-        const tulanganUtamaStr = getData('rekap.tulangan_utama', '');
-        const tulanganBagiStr = getData('rekap.tulangan_bagi', '');
-        if (tulanganUtamaStr) {
-            const matchUtama = tulanganUtamaStr.match(/ɸ(\d+)-(\d+)/);
-            if (matchUtama) {
-                diameterUtama = parseInt(matchUtama[1], 10);
-                spasiUtama = parseInt(matchUtama[2], 10);
+            const tulanganUtamaStr = getData('rekap.tulangan_utama', '');
+            const tulanganBagiStr = getData('rekap.tulangan_bagi', '');
+            if (tulanganUtamaStr) {
+                const matchUtama = tulanganUtamaStr.match(/[Øɸ](\d+)-(\d+)/);
+                if (matchUtama) {
+                    diameterUtama = parseInt(matchUtama[1], 10);
+                    spasiUtama = parseInt(matchUtama[2], 10);
+                }
             }
-        }
-        if (tulanganBagiStr) {
-            const matchBagi = tulanganBagiStr.match(/ɸ(\d+)-(\d+)/);
-            if (matchBagi) {
-                diameterBagi = parseInt(matchBagi[1], 10);
-                spasiBagi = parseInt(matchBagi[2], 10);
+            if (tulanganBagiStr) {
+                const matchBagi = tulanganBagiStr.match(/[Øɸ](\d+)-(\d+)/);
+                if (matchBagi) {
+                    diameterBagi = parseInt(matchBagi[1], 10);
+                    spasiBagi = parseInt(matchBagi[2], 10);
+                }
             }
-        }
 
-        // Hitung selimut dari data jika tersedia
-        const ds = getData('data.parameter.ds', null);
-        const cb = getData('data.kuatDukung.Cb', null);
-        if (ds) selimutBeton = Number(ds);
-        else if (cb) selimutBeton = Number(cb);
-        else {
-            const d = getData('data.parameter.d', null);
-            if (d && H) {
-                const h_mm = H * 1000;
-                selimutBeton = Math.round(h_mm - d - diameterUtama/2);
-                if (selimutBeton < 20) selimutBeton = 75;
+            if (diameterUtama === 0) diameterUtama = parseFloat(getData('inputData.tulangan.d')) || 0;
+            if (spasiUtama === 0) spasiUtama = parseFloat(getData('data.tulangan.s')) || parseFloat(getData('inputData.tulangan.s')) || 0;
+            if (diameterBagi === 0) diameterBagi = parseFloat(getData('inputData.tulangan.db')) || 0;
+            if (spasiBagi === 0) spasiBagi = parseFloat(getData('data.tulangan.sb')) || parseFloat(getData('inputData.tulangan.sb')) || 0;
+
+            if (!selimutBeton) {
+                const d = getData('data.parameter.d', null);
+                if (d && H) {
+                    const h_mm = H * 1000;
+                    selimutBeton = Math.round(h_mm - d - diameterUtama/2);
+                    if (selimutBeton < 20) selimutBeton = 0;
+                }
             }
-        }
 
-        // Dimensi dalam mm
-        const L_mm = L * 1000;
-        const B_mm = B * 1000;
-        const H_mm = H * 1000;
+            // Dimensi dalam mm
+            const L_mm = L * 1000;
+            const B_mm = B * 1000;
+            const H_mm = H * 1000;
 
-        // Helper CAD
-        const lingkaran = (cx, cy, diameter) => `CIRCLE ${cx},${cy} ${diameter/2} `;
-        const garis = (x1, y1, x2, y2) => `LINE ${x1},${y1} ${x2},${y2} `;
-        const polyline = (points, tebal, closed = false) => {
-            if (!points.length) return '';
-            let cmd = `PL ${points[0][0]},${points[0][1]} W ${tebal} ${tebal} `;
-            for (let i = 1; i < points.length; i++) {
-                const dx = points[i][0] - points[i-1][0];
-                const dy = points[i][1] - points[i-1][1];
-                cmd += `@${dx},${dy} `;
+            // Pemisahan pengumpulan baris perintah secara rapi (mencegah bug PL ngikut LINE)
+            let cadLinesLine = [];
+            let cadLinesPL = [];
+            let cadLinesCircle = [];
+
+            const tambahPerintah = (cmd) => {
+                if (!cmd) return;
+                const trimCmd = cmd.trimStart();
+                if (trimCmd.startsWith("LINE")) {
+                    cadLinesLine.push(cmd);
+                } else if (trimCmd.startsWith("PL")) {
+                    cadLinesPL.push(cmd);
+                } else if (trimCmd.startsWith("CIRCLE")) {
+                    cadLinesCircle.push(cmd);
+                } else {
+                    cadLinesLine.push(cmd);
+                }
+            };
+
+            function hitungPosisiTitikCAD(startXmm, endXmm, stepmm, diameterMM) {
+                let positions = [];
+                if (startXmm >= endXmm || stepmm <= 0) return positions;
+                let current = startXmm;
+                while (current <= endXmm) {
+                    positions.push(current);
+                    current += stepmm;
+                }
+                if (positions.length > 0) {
+                    const last = positions[positions.length - 1];
+                    if (endXmm - last >= 3 * diameterMM) positions.push(endXmm);
+                    else positions[positions.length - 1] = endXmm;
+                }
+                return positions;
             }
-            if (closed) cmd += 'C ';
-            return cmd;
-        };
 
-        function hitungPosisiTitikCAD(startXmm, endXmm, stepmm, diameterMM) {
-            let positions = [];
-            if (startXmm >= endXmm) return positions;
-            let current = startXmm;
-            while (current <= endXmm) {
-                positions.push(current);
-                current += stepmm;
+            // Urutan disatukan agar saat dicopy semua gambar langsung dieksekusi bersamaan
+            const daftarTampak = ['samping', 'atas', 'depan'];
+
+            daftarTampak.forEach(jenisTampak => {
+                let cadOffsetY = 0;
+                if (jenisTampak === 'samping') {
+                    cadOffsetY = 0;
+                } else if (jenisTampak === 'atas') {
+                    cadOffsetY = 1.5 * H_mm;
+                } else if (jenisTampak === 'depan') {
+                    cadOffsetY = (2 * H_mm) + L_mm;
+                }
+
+                // Helper CAD
+                const lingkaran = (cx, cy, diameter) => `CIRCLE ${cx},${cy + cadOffsetY} ${diameter/2} `;
+                const garis = (x1, y1, x2, y2) => `LINE ${x1},${y1 + cadOffsetY} ${x2},${y2 + cadOffsetY} `;
+                
+                const polyline = (points, tebal, closed = false) => {
+                    if (!points.length) return '';
+                    let cmd = `PL ${points[0][0]},${points[0][1] + cadOffsetY} W ${tebal} ${tebal} `;
+                    for (let i = 1; i < points.length; i++) {
+                        const dx = points[i][0] - points[i-1][0];
+                        const dy = points[i][1] - points[i-1][1];
+                        cmd += `@${dx},${dy} `;
+                    }
+                    if (closed) {
+                        cmd += 'C ';
+                    } else {
+                        cmd += 'ENTER ';
+                    }
+                    return cmd;
+                };
+
+                const buatSegitigaCADLocal = (centerX, centerY, arah, ukuran, tebal) => {
+                    const setengah = ukuran / 2;
+                    let p1, p2, p3;
+                    if (arah === 'up') {
+                        p1 = [centerX - setengah, centerY];
+                        p2 = [centerX + setengah, centerY];
+                        p3 = [centerX, centerY - ukuran];
+                    } else if (arah === 'down') {
+                        p1 = [centerX - setengah, centerY];
+                        p2 = [centerX + setengah, centerY];
+                        p3 = [centerX, centerY + ukuran];
+                    } else if (arah === 'left') {
+                        p1 = [centerX, centerY - setengah];
+                        p2 = [centerX, centerY + setengah];
+                        p3 = [centerX - ukuran, centerY];
+                    } else if (arah === 'right') {
+                        p1 = [centerX, centerY - setengah];
+                        p2 = [centerX, centerY + setengah];
+                        p3 = [centerX + ukuran, centerY];
+                    } else {
+                        return '';
+                    }
+                    return polyline([p1, p2, p3], tebal, true);
+                };
+
+                const flipY = (y, tinggiTotal) => tinggiTotal - y;
+                
+                let tinggiTotal;
+                if (jenisTampak === 'depan') tinggiTotal = H_mm;
+                else if (jenisTampak === 'atas') tinggiTotal = L_mm;
+                else if (jenisTampak === 'samping') tinggiTotal = H_mm;
+                else return;
+
+                // Frame kotak (outline fondasi)
+                if (jenisTampak === 'depan') {
+                    tambahPerintah(garis(0, 0, B_mm, 0));
+                    tambahPerintah(garis(B_mm, 0, B_mm, H_mm));
+                    tambahPerintah(garis(B_mm, H_mm, 0, H_mm));
+                    tambahPerintah(garis(0, H_mm, 0, 0));
+                } else if (jenisTampak === 'atas') {
+                    tambahPerintah(garis(0, 0, B_mm, 0));
+                    tambahPerintah(garis(B_mm, 0, B_mm, L_mm));
+                    tambahPerintah(garis(B_mm, L_mm, 0, L_mm));
+                    tambahPerintah(garis(0, L_mm, 0, 0));
+                } else if (jenisTampak === 'samping') {
+                    tambahPerintah(garis(0, 0, L_mm, 0));
+                    tambahPerintah(garis(L_mm, 0, L_mm, H_mm));
+                    tambahPerintah(garis(L_mm, H_mm, 0, H_mm));
+                    tambahPerintah(garis(0, H_mm, 0, 0));
+                }
+
+                const ukuranSegitiga = 0.035 * L_mm;
+
+                // ========== TAMPAK ATAS ==========
+                if (jenisTampak === 'atas') {
+                    const gapHor = selimutBeton;
+                    const gapVer = selimutBeton;
+
+                    // Tulangan utama (hitam) – garis horizontal
+                    const y_garis_hor = L_mm * (8/15);
+                    const x_kiri_hor = gapHor;
+                    const x_kanan_hor = B_mm - gapHor;
+                    
+                    tambahPerintah(polyline([
+                        [x_kiri_hor + ukuranSegitiga, flipY(y_garis_hor - ukuranSegitiga, tinggiTotal)],
+                        [x_kiri_hor, flipY(y_garis_hor, tinggiTotal)],
+                        [x_kanan_hor, flipY(y_garis_hor, tinggiTotal)],
+                        [x_kanan_hor - ukuranSegitiga, flipY(y_garis_hor - ukuranSegitiga, tinggiTotal)]
+                    ], diameterUtama));
+                    
+                    const x_segitiga_hor = x_kiri_hor + (8/15) * (x_kanan_hor - x_kiri_hor);
+                    tambahPerintah(buatSegitigaCADLocal(x_segitiga_hor, flipY(y_garis_hor, tinggiTotal), 'down', ukuranSegitiga, diameterUtama));
+
+                    // Tulangan bagi (merah) – garis vertikal tengah
+                    const x_tengah = B_mm / 2;
+                    const y_atas_vert = gapVer;
+                    const y_bawah_vert = L_mm - gapVer;
+                    const y_segitiga_vert = L_mm * (7/15);
+                    
+                    tambahPerintah(polyline([
+                        [x_tengah - ukuranSegitiga, flipY(y_atas_vert + ukuranSegitiga, tinggiTotal)],
+                        [x_tengah, flipY(y_atas_vert, tinggiTotal)],
+                        [x_tengah, flipY(y_bawah_vert, tinggiTotal)],
+                        [x_tengah - ukuranSegitiga, flipY(y_bawah_vert - ukuranSegitiga, tinggiTotal)]
+                    ], diameterBagi));
+                    
+                    tambahPerintah(buatSegitigaCADLocal(x_tengah, flipY(y_segitiga_vert, tinggiTotal), 'left', ukuranSegitiga, diameterBagi));
+                    tambahPerintah(buatSegitigaCADLocal(x_tengah, flipY(y_segitiga_vert, tinggiTotal)+ukuranSegitiga, 'left', ukuranSegitiga, diameterBagi)); // double untuk dua segitiga
+                }
+
+                // ========== TAMPAK DEPAN (arah lebar B) ==========
+                if (jenisTampak === 'depan') {
+                    const gap = selimutBeton;
+                    const x_kiri = gap;
+                    const x_kanan = B_mm - gap;
+
+                    // Garis tulangan bagi (merah)
+                    const y_garis = selimutBeton+diameterBagi+diameterUtama/2;
+                    tambahPerintah(polyline([[x_kiri, y_garis], [x_kanan, y_garis]], diameterUtama));
+
+                    const y_titik = selimutBeton+diameterBagi/2; 
+                    const step = spasiBagi;
+                    const posTitik = hitungPosisiTitikCAD(x_kiri + diameterBagi/2, x_kanan - diameterBagi/2, step, diameterBagi);
+                    for (let x of posTitik) {
+                        tambahPerintah(lingkaran(x, y_titik, diameterBagi));
+                    }
+                }
+
+                // ========== TAMPAK SAMPING (arah panjang L) ==========
+                if (jenisTampak === 'samping') {
+                    const gap = selimutBeton;
+                    const x_kiri = gap;
+                    const x_kanan = L_mm - gap;
+
+                    // Garis tulangan utama (merah)
+                    const y_garis = selimutBeton+diameterBagi/2;
+                    tambahPerintah(polyline([[x_kiri, y_garis], [x_kanan, y_garis]], diameterBagi));
+
+                    const y_titik = selimutBeton+diameterBagi+diameterUtama/2;
+                    const step = spasiUtama;
+                    const posTitik = hitungPosisiTitikCAD(x_kiri + diameterUtama/2, x_kanan - diameterUtama/2, step, diameterUtama);
+                    for (let x of posTitik) {
+                        tambahPerintah(lingkaran(x, y_titik, diameterUtama));
+                    }
+                }
+            });
+
+            // Penggabungan final dengan memastikan LINE dipisah dengan ENTER, dan PL dieksekusi sebelum CIRCLE
+            let finalLines = [];
+            
+            if (cadLinesLine.length > 0) {
+                finalLines = finalLines.concat(cadLinesLine);
+                finalLines.push("ENTER"); // Menghindari bug bocor / line tersangkut
             }
-            const last = positions[positions.length - 1];
-            if (endXmm - last >= 3 * diameterMM) positions.push(endXmm);
-            else positions[positions.length - 1] = endXmm;
-            return positions;
-        }
-
-        const flipY = (y, tinggiTotal) => tinggiTotal - y;
-        let cadLines = [];
-
-        // Tentukan tinggi total untuk flip Y (mengikuti orientasi CAD)
-        let tinggiTotal;
-        if (jenisTampak === 'depan') tinggiTotal = H_mm;
-        else if (jenisTampak === 'atas') tinggiTotal = L_mm;   // karena tinggi tampak atas = L (panjang)
-        else if (jenisTampak === 'samping') tinggiTotal = H_mm;
-        else return "ERROR: jenisTampak tidak valid";
-
-        // Frame kotak (outline fondasi)
-        if (jenisTampak === 'depan') {
-            cadLines.push(garis(0, 0, B_mm, 0));
-            cadLines.push(garis(B_mm, 0, B_mm, H_mm));
-            cadLines.push(garis(B_mm, H_mm, 0, H_mm));
-            cadLines.push(garis(0, H_mm, 0, 0));
-        } else if (jenisTampak === 'atas') {
-            cadLines.push(garis(0, 0, B_mm, 0));
-            cadLines.push(garis(B_mm, 0, B_mm, L_mm));
-            cadLines.push(garis(B_mm, L_mm, 0, L_mm));
-            cadLines.push(garis(0, L_mm, 0, 0));
-        } else if (jenisTampak === 'samping') {
-            cadLines.push(garis(0, 0, L_mm, 0));
-            cadLines.push(garis(L_mm, 0, L_mm, H_mm));
-            cadLines.push(garis(L_mm, H_mm, 0, H_mm));
-            cadLines.push(garis(0, H_mm, 0, 0));
-        }
-
-        const ukuranSegitiga = 0.035 * (jenisTampak === 'atas' ? L_mm : L_mm); // proporsional
-
-        // ========== TAMPAK ATAS ==========
-        if (jenisTampak === 'atas') {
-            const gapHor = selimutBeton;
-            const gapVer = selimutBeton;
-
-            // Tulangan utama (hitam) – garis horizontal
-            const y_garis_hor = L_mm * (8/15);
-            const x_kiri_hor = gapHor;
-            const x_kanan_hor = B_mm - gapHor;
-            cadLines.push(polyline([
-                [x_kiri_hor + ukuranSegitiga, flipY(y_garis_hor - ukuranSegitiga, tinggiTotal)],
-                [x_kiri_hor, flipY(y_garis_hor, tinggiTotal)],
-                [x_kanan_hor, flipY(y_garis_hor, tinggiTotal)],
-                [x_kanan_hor - ukuranSegitiga, flipY(y_garis_hor - ukuranSegitiga, tinggiTotal)]
-            ], diameterUtama));
-            const x_segitiga_hor = x_kiri_hor + (8/15) * (x_kanan_hor - x_kiri_hor);
-            cadLines.push(buatSegitigaCAD(x_segitiga_hor, flipY(y_garis_hor, tinggiTotal), 'down', ukuranSegitiga, diameterUtama));
-
-            // Tulangan bagi (merah) – garis vertikal tengah
-            const x_tengah = B_mm / 2;
-            const y_atas_vert = gapVer;
-            const y_bawah_vert = L_mm - gapVer;
-            const y_segitiga_vert = L_mm * (7/15);
-            cadLines.push(polyline([
-                [x_tengah - ukuranSegitiga, flipY(y_atas_vert + ukuranSegitiga, tinggiTotal)],
-                [x_tengah, flipY(y_atas_vert, tinggiTotal)],
-                [x_tengah, flipY(y_bawah_vert, tinggiTotal)],
-                [x_tengah - ukuranSegitiga, flipY(y_bawah_vert - ukuranSegitiga, tinggiTotal)]
-            ], diameterBagi));
-            cadLines.push(buatSegitigaCAD(x_tengah, flipY(y_segitiga_vert, tinggiTotal), 'left', ukuranSegitiga, diameterBagi));
-            cadLines.push(buatSegitigaCAD(x_tengah, flipY(y_segitiga_vert, tinggiTotal), 'left', ukuranSegitiga, diameterBagi)); // double untuk dua segitiga
-        }
-
-        // ========== TAMPAK DEPAN (arah lebar B) ==========
-        if (jenisTampak === 'depan') {
-            const gap = selimutBeton;
-            const x_kiri = gap;
-            const x_kanan = B_mm - gap;
-
-            // Garis tulangan bagi (merah)
-            const y_garis = selimutBeton+diameterBagi+diameterUtama/2;
-            cadLines.push(polyline([[x_kiri, y_garis], [x_kanan, y_garis]], diameterUtama));
-
-            const y_titik = selimutBeton+diameterBagi/2; // offset ke bawah (karena dot di bawah garis)
-            const step = spasiBagi;
-            const posTitik = hitungPosisiTitikCAD(x_kiri + diameterBagi/2, x_kanan - diameterBagi/2, step, diameterBagi);
-            for (let x of posTitik) {
-                cadLines.push(lingkaran(x, y_titik, diameterBagi));
+            
+            if (cadLinesPL.length > 0) {
+                finalLines = finalLines.concat(cadLinesPL);
+                finalLines.push("ENTER"); // Menghindari bug command polyline nyangkut
             }
-        }
-
-        // ========== TAMPAK SAMPING (arah panjang L) ==========
-        if (jenisTampak === 'samping') {
-            const gap = selimutBeton;
-            const x_kiri = gap;
-            const x_kanan = L_mm - gap;
-
-            // Garis tulangan utama (merah)
-            const y_garis = selimutBeton+diameterBagi/2;
-            cadLines.push(polyline([[x_kiri, y_garis], [x_kanan, y_garis]], diameterBagi));
-
-            const y_titik = selimutBeton+diameterBagi+diameterUtama/2;
-            const step = spasiUtama;
-            const posTitik = hitungPosisiTitikCAD(x_kiri + diameterUtama/2, x_kanan - diameterUtama/2, step, diameterUtama);
-            for (let x of posTitik) {
-                cadLines.push(lingkaran(x, y_titik, diameterUtama));
+            
+            if (cadLinesCircle.length > 0) {
+                finalLines = finalLines.concat(cadLinesCircle);
             }
-        }
+            
+            return finalLines.join("\n");
 
-        return cadLines.join("\n");
-    } catch (error) {
-        console.error("Gagal generate CAD fondasi menerus:", error);
-        return "ERROR DETECTED: " + error.message + "\n" + error.stack;
+        } catch (error) {
+            console.error("Gagal generate CAD fondasi menerus:", error);
+            return "ERROR DETECTED: " + error.message + "\n" + error.stack;
+        }
     }
-}
 
-// Fungsi helper buat segitiga untuk CAD
-function buatSegitigaCAD(centerX, centerY, arah, ukuran, tebal) {
-    const setengah = ukuran / 2;
-    let p1, p2, p3;
-    if (arah === 'up') {
-        p1 = [centerX - setengah, centerY];
-        p2 = [centerX + setengah, centerY];
-        p3 = [centerX, centerY - ukuran];
-    } else if (arah === 'down') {
-        p1 = [centerX - setengah, centerY];
-        p2 = [centerX + setengah, centerY];
-        p3 = [centerX, centerY + ukuran];
-    } else if (arah === 'left') {
-        p1 = [centerX, centerY - setengah];
-        p2 = [centerX, centerY + setengah];
-        p3 = [centerX - ukuran, centerY];
-    } else if (arah === 'right') {
-        p1 = [centerX, centerY - setengah];
-        p2 = [centerX, centerY + setengah];
-        p3 = [centerX + ukuran, centerY];
-    } else {
-        return '';
+    // Fungsi helper buat segitiga untuk CAD (Global fallback)
+    function buatSegitigaCAD(centerX, centerY, arah, ukuran, tebal) {
+        const setengah = ukuran / 2;
+        let p1, p2, p3;
+        if (arah === 'up') {
+            p1 = [centerX - setengah, centerY];
+            p2 = [centerX + setengah, centerY];
+            p3 = [centerX, centerY - ukuran];
+        } else if (arah === 'down') {
+            p1 = [centerX - setengah, centerY];
+            p2 = [centerX + setengah, centerY];
+            p3 = [centerX, centerY + ukuran];
+        } else if (arah === 'left') {
+            p1 = [centerX, centerY - setengah];
+            p2 = [centerX, centerY + setengah];
+            p3 = [centerX - ukuran, centerY];
+        } else if (arah === 'right') {
+            p1 = [centerX, centerY - setengah];
+            p2 = [centerX, centerY + setengah];
+            p3 = [centerX + ukuran, centerY];
+        } else {
+            return '';
+        }
+        let cmd = `PL ${p1[0]},${p1[1]} W ${tebal} ${tebal} `;
+        cmd += `@${p2[0]-p1[0]},${p2[1]-p1[1]} `;
+        cmd += `@${p3[0]-p2[0]},${p3[1]-p2[1]} `;
+        cmd += `C `;
+        return cmd;
     }
-    let cmd = `PL ${p1[0]},${p1[1]} W ${tebal} ${tebal} `;
-    cmd += `@${p2[0]-p1[0]},${p2[1]-p1[1]} `;
-    cmd += `@${p3[0]-p2[0]},${p3[1]-p2[1]} `;
-    cmd += `C `;
-    return cmd;
-}
 
-// Ekspos fungsi ke global
-window.generateCADFondasiMenerus = generateCADFondasiMenerus;
-window.buatSegitigaCADMenerus = buatSegitigaCAD; // opsional
+    // Ekspos fungsi ke global (Tanpa parameter jenisTampak)
+    window.generateCADFondasiMenerus = generateCADFondasiMenerus;
+    window.buatSegitigaCADMenerus = buatSegitigaCAD;
 
-console.log("✅ cut-fondasimenerus.js - fungsi CAD untuk fondasi menerus selesai");
+    console.log("✅ cut-fondasimenerus.js - fungsi CAD gabungan 3 view selesai diload");
 })();

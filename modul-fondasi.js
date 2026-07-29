@@ -1,4 +1,4 @@
-// Pastikan objek modules ada di scope global
+// modul-fondasi.js - Dengan validasi input lengkap
 if (typeof window.modules === 'undefined') {
     window.modules = {};
 }
@@ -23,21 +23,430 @@ window.modules.fondasi = {
       {label:"ɣc", key:"gamma_c", placeholder:"Berat Jenis Tanah", unit:"kN/m³"}
     ]
   },
-  info: "Mode Desain digunakan ketika data tulangan belum ditentukan. Pada mode ini, sistem akan melakukan perhitungan otomatis untuk mencari kombinasi tulangan yang paling efisien dan memenuhi syarat perencanaan.\n\nMode Evaluasi digunakan ketika data tulangan sudah tersedia. Mode ini memungkinkan pengguna meninjau apakah jumlah tulangan yang digunakan telah memenuhi ketentuan kekuatan dan keamanan struktur.",
 
-  // Inisialisasi tanahMode jika belum ada
+  // ==================== VALIDASI INPUT ====================
+  validateFondasiInput: function(data) {
+      const errors = [];
+      const warnings = [];
+
+      const parseNum = (val) => {
+          if (val === undefined || val === null || val === '') return null;
+          if (typeof val === 'string') val = val.replace(',', '.');
+          const num = parseFloat(val);
+          return isNaN(num) ? null : num;
+      };
+
+      const checkNumber = (val, fieldName) => {
+          const num = parseNum(val);
+          if (num === null) {
+              errors.push(`${fieldName} harus diisi dengan angka (gunakan titik untuk desimal).`);
+              return null;
+          }
+          return num;
+      };
+
+      // 1. Material
+      const fc = checkNumber(data.material.fc, "f'c");
+      if (fc !== null && fc <= 0) errors.push(`f'<sub>c</sub> harus lebih besar dari 0.`);
+      const fy = checkNumber(data.material.fy, "fy");
+      if (fy !== null && fy <= 0) errors.push(`f<sub>y</sub> harus lebih besar dari 0.`);
+      const gammaC = checkNumber(data.material.gammaC, "ɣc");
+      if (gammaC !== null && gammaC <= 0) errors.push(`ɣ<sub>c</sub> harus lebih besar dari 0.`);
+
+      // 2. Dimensi - bergantung pada mode fondasi
+      const fondasiMode = data.fondasi?.mode || 'tunggal';
+      const isAutoDimensi = data.fondasi?.autoDimensi || false;
+      const dimensi = data.fondasi?.dimensi || {};
+
+      // Validasi bx dan by (mutlak)
+      const bx = parseNum(dimensi.bx);
+      const by = parseNum(dimensi.by);
+      if (bx !== null && bx < 150) {
+          errors.push(`Lebar penampang (b<sub>x</sub>) minimum adalah 150 mm (saat ini ${bx} mm).`);
+      }
+      if (by !== null && by < 150) {
+          errors.push(`Panjang penampang (b<sub>y</sub>) minimum adalah 150 mm (saat ini ${by} mm).`);
+      }
+
+      if (fondasiMode === 'tunggal' || fondasiMode === 'bujur_sangkar' || fondasiMode === 'persegi_panjang') {
+          // Tunggal
+          const Lx = parseNum(dimensi.lx);
+          const Ly = parseNum(dimensi.ly);
+          const H = parseNum(dimensi.h);
+
+          if (!isAutoDimensi) {
+              // Lx, Ly, H wajib diisi manual
+              if (Lx === null) errors.push(`Lebar fondasi (L<sub>x</sub>) harus diisi dengan angka.`);
+              else if (Lx <= 0) errors.push(`Lebar fondasi (L<sub>x</sub>) harus lebih besar dari 0.`);
+              
+              if (Ly === null) errors.push(`Panjang fondasi (L<sub>y</sub>) harus diisi dengan angka.`);
+              else if (Ly <= 0) errors.push(`Panjang fondasi (L<sub>y</sub>) harus lebih besar dari 0.`);
+              
+              if (H === null) errors.push(`Tebal fondasi (h) harus diisi dengan angka.`);
+              else if (H <= 0) errors.push(`Tebal fondasi (h) harus lebih besar dari 0.`);
+          }
+
+          if (Lx !== null && Ly !== null && Lx > 0 && Ly > 0) {
+              if (Lx > Ly) {
+                  errors.push(`Lebar fondasi (L<sub>x</sub> = ${Lx} m) tidak boleh lebih besar dari panjang fondasi (L<sub>y</sub> = ${Ly} m).`);
+              }
+          }
+
+          // Validasi bx ≤ Lx (dalam mm) dan by ≤ Ly
+          if (bx !== null && Lx !== null && bx > 0 && Lx > 0) {
+              if (bx / 1000 > Lx) {
+                  errors.push(`Lebar penampang (b<sub>x</sub> = ${bx} mm) tidak boleh lebih besar dari lebar fondasi (L<sub>x</sub> = ${Lx} m).`);
+              }
+          }
+          if (by !== null && Ly !== null && by > 0 && Ly > 0) {
+              if (by / 1000 > Ly) {
+                  errors.push(`Panjang penampang (b<sub>y</sub> = ${by} mm) tidak boleh lebih besar dari panjang fondasi (L<sub>y</sub> = ${Ly} m).`);
+              }
+          }
+
+          // Peringatan untuk dimensi tunggal
+          if (Lx !== null && (Lx < 0.6 || Lx > 5.0)) {
+              warnings.push(`Lebar fondasi (L<sub>x</sub>) sebesar ${Lx} m tidak wajar, dimensi yang umum digunakan antara 0.6–5.0 m.`);
+          }
+          if (Ly !== null && (Ly < 0.6 || Ly > 5.0)) {
+              warnings.push(`Panjang fondasi (L<sub>y</sub>) sebesar ${Ly} m tidak wajar, dimensi yang umum digunakan antara 0.6–5.0 m.`);
+          }
+          if (H !== null && (H < 0.25 || H > 1.20)) {
+              warnings.push(`Tebal fondasi (h) sebesar ${H} m tidak wajar, dimensi yang umum digunakan antara 0.25–1.20 m.`);
+          }
+
+      } else if (fondasiMode === 'menerus') {
+          // Menerus
+          const Lx = parseNum(dimensi.lx);
+          const Ly = parseNum(dimensi.ly);
+          const H = parseNum(dimensi.h);
+
+          if (!isAutoDimensi) {
+              if (Lx === null) errors.push(`Lebar fondasi (L<sub>x</sub>) harus diisi dengan angka.`);
+              else if (Lx <= 0) errors.push(`Lebar fondasi (L<sub>x</sub>) harus lebih besar dari 0.`);
+              if (Ly === null) errors.push(`Panjang fondasi (L<sub>y</sub>) harus diisi dengan angka.`);
+              else if (Ly <= 0) errors.push(`Panjang fondasi (L<sub>y</sub>) harus lebih besar dari 0.`);
+              if (H === null) errors.push(`Tebal fondasi (h) harus diisi dengan angka.`);
+              else if (H <= 0) errors.push(`Tebal fondasi (h) harus lebih besar dari 0.`);
+          }
+
+          // Peringatan untuk dimensi menerus
+          if (Lx !== null && (Lx < 0.4 || Lx > 3.0)) {
+              warnings.push(`Lebar fondasi (L<sub>x</sub>) sebesar ${Lx} m tidak wajar, dimensi yang umum digunakan antara 0.4–3.0 m.`);
+          }
+          if (Ly !== null && (Ly < 0.6 || Ly > 50)) {
+              warnings.push(`Panjang fondasi (L<sub>y</sub>) sebesar ${Ly} m tidak wajar, dimensi yang umum digunakan antara 0.6–50 m.`);
+          }
+          if (H !== null && (H < 0.20 || H > 0.80)) {
+              warnings.push(`Tebal fondasi (h) sebesar ${H} m tidak wajar, dimensi yang umum digunakan antara 0.20–0.80 m.`);
+          }
+
+          if (Lx !== null && Ly !== null && Lx > 0 && Ly > 0) {
+              if (Lx > Ly) {
+                  errors.push(`Lebar fondasi (L<sub>x</sub> = ${Lx} m) tidak boleh lebih besar dari panjang fondasi (L<sub>y</sub> = ${Ly} m).`);
+              }
+          }
+
+          // bx ≤ Lx dan by ≤ Ly untuk menerus
+          if (bx !== null && Lx !== null && bx > 0 && Lx > 0) {
+              if (bx / 1000 > Lx) {
+                  errors.push(`Lebar penampang (b<sub>x</sub> = ${bx} mm) tidak boleh lebih besar dari lebar fondasi (L<sub>x</sub> = ${Lx} m).`);
+              }
+          }
+          if (by !== null && Ly !== null && by > 0 && Ly > 0) {
+              if (by / 1000 > Ly) {
+                  errors.push(`Panjang penampang (b<sub>y</sub> = ${by} mm) tidak boleh lebih besar dari panjang fondasi (L<sub>y</sub> = ${Ly} m).`);
+              }
+          }
+      }
+
+      // αs range 20-400
+      const alpha_s = parseNum(dimensi.alpha_s);
+      if (alpha_s !== null && (alpha_s < 20 || alpha_s > 400)) {
+          warnings.push(`Faktor posisi kolom (α<sub>s</sub>) sebesar ${alpha_s} tidak wajar, nilai yang umum digunakan antara 20–400.`);
+      }
+
+      // 3. Data Tanah
+      const tanahMode = data.tanah?.mode || 'auto';
+      const tanahAuto = data.tanah?.auto || {};
+      const tanahManual = data.tanah?.manual || {};
+
+      if (tanahMode === 'auto') {
+          const df = parseNum(tanahAuto.df);
+          const gamma = parseNum(tanahAuto.gamma);
+          const phi = parseNum(tanahAuto.phi);
+          const c = parseNum(tanahAuto.c);
+          const qc = parseNum(tanahAuto.qc);
+
+          if (df === null) errors.push(`Kedalaman fondasi (D<sub>f</sub>) harus diisi dengan angka.`);
+          else if (df < 0) errors.push(`Kedalaman fondasi (D<sub>f</sub>) tidak boleh negatif.`);
+          
+          if (gamma === null) errors.push(`Berat jenis tanah (ɣ) harus diisi dengan angka.`);
+          else if (gamma < 0) errors.push(`Berat jenis tanah (ɣ) tidak boleh negatif.`);
+
+          const terzaghi = tanahAuto.terzaghi || false;
+          const mayerhoff = tanahAuto.mayerhoff || false;
+
+          if (!terzaghi && !mayerhoff) {
+              errors.push(`Pilih minimal satu metode perhitungan tanah (Terzaghi atau Mayerhoff).`);
+          }
+
+          if (terzaghi) {
+              if (phi === null) errors.push(`Sudut gesek dalam (ɸ) harus diisi dengan angka (metode Terzaghi aktif).`);
+              else if (phi < 0) errors.push(`Sudut gesek dalam (ɸ) tidak boleh negatif.`);
+              
+              if (c === null) errors.push(`Kohesi (c) harus diisi dengan angka (metode Terzaghi aktif).`);
+              else if (c < 0) errors.push(`Kohesi (c) tidak boleh negatif.`);
+          }
+
+          if (mayerhoff) {
+              if (qc === null) errors.push(`Tahanan konus rata-rata (q<sub>c</sub>) harus diisi dengan angka (metode Mayerhoff aktif).`);
+              else if (qc < 0) errors.push(`Tahanan konus rata-rata (q<sub>c</sub>) tidak boleh negatif.`);
+          }
+
+          // Peringatan untuk data tanah auto
+          if (df !== null && (df < 0.5 || df > 5.0)) {
+              warnings.push(`Kedalaman fondasi (D<sub>f</sub>) sebesar ${df} m tidak wajar, nilai yang umum digunakan antara 0.5–5.0 m.`);
+          }
+          if (gamma !== null && (gamma < 12 || gamma > 24)) {
+              warnings.push(`Berat jenis tanah (ɣ) sebesar ${gamma} kN/m³ tidak wajar, nilai yang umum digunakan antara 12–24 kN/m³.`);
+          }
+          if (phi !== null && (phi < 0 || phi > 45)) {
+              warnings.push(`Sudut gesek dalam (ɸ) sebesar ${phi}° tidak wajar, nilai yang umum digunakan antara 0–45°.`);
+          }
+          if (c !== null && (c < 0 || c > 300)) {
+              warnings.push(`Kohesi (c) sebesar ${c} kPa tidak wajar, nilai yang umum digunakan antara 0–300 kPa.`);
+          }
+          if (qc !== null && (qc < 0.5 || qc > 50)) {
+              warnings.push(`Tahanan konus rata-rata (q<sub>c</sub>) sebesar ${qc} MPa tidak wajar, nilai yang umum digunakan antara 0.5–50 MPa.`);
+          }
+
+      } else if (tanahMode === 'manual') {
+          const qa = parseNum(tanahManual.qa);
+          const df = parseNum(tanahManual.df);
+          const gamma = parseNum(tanahManual.gamma);
+
+          if (qa === null) errors.push(`Kapasitas dukung izin tanah (q<sub>a</sub>) harus diisi dengan angka.`);
+          else if (qa < 0) errors.push(`Kapasitas dukung izin tanah (q<sub>a</sub>) tidak boleh negatif.`);
+          
+          if (df === null) errors.push(`Kedalaman fondasi (D<sub>f</sub>) harus diisi dengan angka.`);
+          else if (df < 0) errors.push(`Kedalaman fondasi (D<sub>f</sub>) tidak boleh negatif.`);
+          
+          if (gamma === null) errors.push(`Berat jenis tanah (ɣ) harus diisi dengan angka.`);
+          else if (gamma < 0) errors.push(`Berat jenis tanah (ɣ) tidak boleh negatif.`);
+
+          // Peringatan untuk data tanah manual
+          if (qa !== null && (qa < 50 || qa > 1000)) {
+              warnings.push(`Kapasitas dukung izin tanah (q<sub>a</sub>) sebesar ${qa} kPa tidak wajar, nilai yang umum digunakan antara 50–1000 kPa.`);
+          }
+          if (df !== null && (df < 0.5 || df > 5.0)) {
+              warnings.push(`Kedalaman fondasi (D<sub>f</sub>) sebesar ${df} m tidak wajar, nilai yang umum digunakan antara 0.5–5.0 m.`);
+          }
+          if (gamma !== null && (gamma < 12 || gamma > 24)) {
+              warnings.push(`Berat jenis tanah (ɣ) sebesar ${gamma} kN/m³ tidak wajar, nilai yang umum digunakan antara 12–24 kN/m³.`);
+          }
+      }
+
+      // 4. Data Beban
+      const beban = data.beban || {};
+      const Pu = parseNum(beban.pu);
+      const Mux = parseNum(beban.mux);
+      const Muy = parseNum(beban.muy);
+
+      if (Pu === null) errors.push(`Beban aksial ultimit (P<sub>u</sub>u) harus diisi dengan angka meskipun nilainya 0 (gunakan titik untuk desimal).`);
+      else if (Pu < 0) errors.push(`Beban aksial ultimit (P<sub>u</sub>) tidak boleh negatif.`);
+
+      if (Mux === null) errors.push(`Momen ultimit arah X (M<sub>ux</sub>) harus diisi dengan angka meskipun nilainya 0 (gunakan titik untuk desimal).`);
+      else if (Mux < 0) errors.push(`Momen ultimit arah X (M<sub>ux</sub>) tidak boleh negatif.`);
+
+      if (Muy === null) errors.push(`Momen ultimit arah Y (M<sub>uy</sub>) harus diisi dengan angka meskipun nilainya 0 (gunakan titik untuk desimal).`);
+      else if (Muy < 0) errors.push(`Momen ultimit arah Y (M<sub>uy</sub>) tidak boleh negatif.`);
+
+      // 5. Data Tulangan (hanya untuk mode evaluasi)
+      if (data.mode === 'evaluasi') {
+          const tulangan = data.tulangan || {};
+          const D = parseNum(tulangan.d);
+          const Db = parseNum(tulangan.db);
+          const s = parseNum(tulangan.s);
+          const sp = parseNum(tulangan.sp);
+          const st = parseNum(tulangan.st);
+          const sb = parseNum(tulangan.sb);
+
+          if (D === null) errors.push(`Diameter tulangan utama (D) harus diisi dengan angka.`);
+          else if (D <= 0) errors.push(`Diameter tulangan utama (D) harus lebih besar dari 0.`);
+
+          const isTunggalPersegiPanjang = (fondasiMode === 'tunggal' && parseNum(dimensi.lx) !== parseNum(dimensi.ly));
+          const isMenerus = (fondasiMode === 'menerus');
+          
+          if (isMenerus || isTunggalPersegiPanjang) {
+              if (Db === null) errors.push(`Diameter tulangan bagi (D<sub>b</sub>) harus diisi dengan angka.`);
+              else if (Db <= 0) errors.push(`Diameter tulangan bagi (D<sub>b</sub>) harus lebih besar dari 0.`);
+          }
+
+          if (s === null) errors.push(`Jarak tulangan utama (s) harus diisi dengan angka.`);
+          else if (s <= 0) errors.push(`Jarak tulangan utama (s) harus lebih besar dari 0.`);
+
+          if (isTunggalPersegiPanjang) {
+              if (sp === null) errors.push(`Jarak tulangan pusat (s<sub>p</sub>) harus diisi dengan angka.`);
+              else if (sp <= 0) errors.push(`Jarak tulangan pusat (s<sub>p</sub>) harus lebih besar dari 0.`);
+              
+              if (st === null) errors.push(`Jarak tulangan tepi (s<sub>t</sub>) harus diisi dengan angka.`);
+              else if (st <= 0) errors.push(`Jarak tulangan tepi (s<sub>t</sub>) harus lebih besar dari 0.`);
+          }
+
+          if (isMenerus) {
+              if (sb === null) errors.push(`Jarak tulangan bagi (s<sub>t</sub>) harus diisi dengan angka.`);
+              else if (sb <= 0) errors.push(`Jarak tulangan bagi (s<sub>t</sub>) harus lebih besar dari 0.`);
+          }
+
+          // Peringatan untuk jarak tulangan (100-450)
+          const commonD = [10, 13, 16, 19, 22, 25, 29, 32];
+          const commonDb = [8, 10, 13, 16, 19, 22, 25];
+
+          if (D !== null && !commonD.includes(D)) {
+              warnings.push(`Diameter tulangan utama (D) sebesar ${D} mm tidak umum, disarankan: ${commonD.join(', ')}.`);
+          }
+          if (Db !== null && !commonDb.includes(Db)) {
+              warnings.push(`Diameter tulangan bagi (D<sub>b</sub>) sebesar ${Db} mm tidak umum, disarankan: ${commonDb.join(', ')}.`);
+          }
+
+          // Cek s, sp, st, sb range 100-450
+          if (s !== null && (s < 100 || s > 450)) {
+              warnings.push(`Jarak tulangan utama (s) sebesar ${s} mm tidak wajar, jarak yang umum digunakan antara 100–450 mm.`);
+          }
+          if (sp !== null && (sp < 100 || sp > 450)) {
+              warnings.push(`Jarak tulangan pusat (s<sub>p</sub>) sebesar ${sp} mm tidak wajar, jarak yang umum digunakan antara 100–450 mm.`);
+          }
+          if (st !== null && (st < 100 || st > 450)) {
+              warnings.push(`Jarak tulangan tepi (s<sub>t</sub>) sebesar ${st} mm tidak wajar, jarak yang umum digunakan antara 100–450 mm.`);
+          }
+          if (sb !== null && (sb < 100 || sb > 450)) {
+              warnings.push(`Jarak tulangan bagi (s<sub>b</sub>) sebesar ${sb} mm tidak wajar, jarak yang umum digunakan antara 100–450 mm.`);
+          }
+      }
+
+      // Peringatan material
+      if (fc !== null && (fc < 17 || fc > 60)) {
+          const kondisi = fc > 60 ? 'terlalu besar' : 'terlalu kecil';
+          warnings.push(`f'<sub>c</sub> dengan nilai ${fc} MPa ${kondisi}, nilai yang umum digunakan antara 17–60 MPa.`);
+      }
+      if (gammaC !== null && (gammaC < 8 || gammaC > 40)) {
+          warnings.push(`ɣ<sub>c</sub> dengan nilai ${gammaC} kN/m³ tidak wajar, nilai yang umum digunakan antara 8–40 kN/m³.`);
+      }
+
+      return { errors, warnings };
+  },
+
+  // ========== SHOW CONFIRM ALERT ==========
+  showConfirmAlert: function(message, title, onConfirm, onCancel) {
+      const rootStyles = getComputedStyle(document.documentElement);
+      const buttonColor = rootStyles.getPropertyValue('--color-buttons').trim() || '#282B53';
+
+      if (typeof showAlert !== 'function') {
+          const proceed = confirm(message);
+          if (proceed) onConfirm(); else if (onCancel) onCancel();
+          return;
+      }
+
+      showAlert(message, title);
+
+      const checkInterval = setInterval(() => {
+          const alertContent = document.getElementById('alertContent');
+          const alertModal = document.getElementById('alertModal');
+          if (!alertContent || !alertModal || !alertModal.classList.contains('active')) {
+              if (!alertModal || !alertModal.classList.contains('active')) {
+                  clearInterval(checkInterval);
+              }
+              return;
+          }
+
+          if (alertContent.querySelector('.confirm-actions')) {
+              clearInterval(checkInterval);
+              return;
+          }
+
+          const actionsDiv = document.createElement('div');
+          actionsDiv.className = 'confirm-actions';
+          actionsDiv.style.cssText = `
+              margin-top: 20px;
+              display: flex;
+              justify-content: flex-end;
+              gap: 12px;
+          `;
+
+          const btnBatal = document.createElement('button');
+          btnBatal.textContent = 'Batal';
+          btnBatal.className = 'btn';
+          btnBatal.style.cssText = `
+              background: white;
+              color: ${buttonColor};
+              border: 2px solid ${buttonColor};
+              padding: 8px 20px;
+              border-radius: 6px;
+              cursor: pointer;
+              font-weight: 600;
+              transition: all 0.2s ease;
+          `;
+          btnBatal.addEventListener('mouseenter', function() {
+              this.style.background = buttonColor;
+              this.style.color = 'white';
+          });
+          btnBatal.addEventListener('mouseleave', function() {
+              this.style.background = 'white';
+              this.style.color = buttonColor;
+          });
+          btnBatal.addEventListener('click', function() {
+              if (alertModal) alertModal.classList.remove('active');
+              if (typeof closeAlert === 'function') closeAlert();
+              clearInterval(checkInterval);
+              if (onCancel) onCancel();
+          });
+
+          const btnLanjut = document.createElement('button');
+          btnLanjut.textContent = 'Lanjutkan';
+          btnLanjut.className = 'btn primary';
+          btnLanjut.style.cssText = `
+              background: ${buttonColor};
+              color: white;
+              border: 2px solid ${buttonColor};
+              padding: 8px 20px;
+              border-radius: 6px;
+              cursor: pointer;
+              font-weight: 600;
+              transition: all 0.2s ease;
+          `;
+          btnLanjut.addEventListener('mouseenter', function() {
+              this.style.opacity = '0.9';
+          });
+          btnLanjut.addEventListener('mouseleave', function() {
+              this.style.opacity = '1';
+          });
+          btnLanjut.addEventListener('click', function() {
+              if (alertModal) alertModal.classList.remove('active');
+              if (typeof closeAlert === 'function') closeAlert();
+              clearInterval(checkInterval);
+              onConfirm();
+          });
+
+          actionsDiv.appendChild(btnBatal);
+          actionsDiv.appendChild(btnLanjut);
+          alertContent.appendChild(actionsDiv);
+
+          clearInterval(checkInterval);
+      }, 100);
+  },
+
+  // ==================== INISIALISASI ====================
   initTanahMode: function() {
     if (typeof window.tanahMode === 'undefined') {
       window.tanahMode = {};
     }
   },
-  
-  // TAMBAHAN: Loading spinner functions
+
+  // ==================== LOADING SPINNER ====================
   showLoadingSpinner: function(message = "Melakukan perhitungan...") {
-    // Hapus spinner sebelumnya jika ada
     this.hideLoadingSpinner();
-    
-    // Buat overlay spinner
+
     const spinnerOverlay = document.createElement('div');
     spinnerOverlay.id = 'loadingSpinnerOverlay';
     spinnerOverlay.style.cssText = `
@@ -53,7 +462,7 @@ window.modules.fondasi = {
       z-index: 9999;
       backdrop-filter: blur(2px);
     `;
-    
+
     spinnerOverlay.innerHTML = `
       <div style="
         background: rgba(255, 255, 255, 0.95);
@@ -86,10 +495,9 @@ window.modules.fondasi = {
         ">Mohon tunggu sebentar...</p>
       </div>
     `;
-    
+
     document.body.appendChild(spinnerOverlay);
-    
-    // Tambahkan animasi spin jika belum ada
+
     if (!document.querySelector('#spinAnimationStyle')) {
       const style = document.createElement('style');
       style.id = 'spinAnimationStyle';
@@ -102,15 +510,15 @@ window.modules.fondasi = {
       document.head.appendChild(style);
     }
   },
-  
+
   hideLoadingSpinner: function() {
     const spinnerOverlay = document.getElementById('loadingSpinnerOverlay');
     if (spinnerOverlay) {
       spinnerOverlay.remove();
     }
   },
-  
-  // FUNGSI BARU: Simpan state autoDimensi ke sessionStorage
+
+  // ==================== SESSION STORAGE HELPERS ====================
   saveAutoDimensiToSessionStorage: function(fondasiMode, value) {
     try {
       const key = `autoDimensi_${fondasiMode}`;
@@ -120,13 +528,12 @@ window.modules.fondasi = {
       console.error('[SESSION] Error saving autoDimensi to sessionStorage:', error);
     }
   },
-  
-  // FUNGSI BARU: Muat state autoDimensi dari sessionStorage
+
   loadAutoDimensiFromSessionStorage: function(fondasiMode) {
     try {
       const key = `autoDimensi_${fondasiMode}`;
       const storedValue = sessionStorage.getItem(key);
-      
+
       if (storedValue !== null) {
         const value = storedValue === 'true';
         console.log(`[SESSION] autoDimensi loaded: ${key} = ${value}`);
@@ -135,163 +542,126 @@ window.modules.fondasi = {
     } catch (error) {
       console.error('[SESSION] Error loading autoDimensi from sessionStorage:', error);
     }
-    
     return undefined;
   },
-  
-  // PERBAIKAN: Fungsi untuk sync UI dengan state - dengan prioritas sessionStorage
+
   syncUIWithState: function(mode) {
-    // Pastikan currentModuleKey dan mode valid
     if (!currentModuleKey || !mode) return undefined;
-    
-    // Pastikan bebanMode diinisialisasi
+
     if (!bebanMode[currentModuleKey]) bebanMode[currentModuleKey] = {};
     if (!bebanMode[currentModuleKey][mode]) bebanMode[currentModuleKey][mode] = 'tunggal';
-    
+
     const currentFondasiMode = bebanMode[currentModuleKey][mode];
     const autoDimensiKey = `autoDimensi_${currentFondasiMode}`;
-    
-    // Pastikan state ada
+
     ensureState(currentModuleKey, mode);
-    
     const state = formState[currentModuleKey][mode];
-    
-    // PRIORITAS 1: Cek sessionStorage
+
     const sessionValue = this.loadAutoDimensiFromSessionStorage(currentFondasiMode);
     if (sessionValue !== undefined && state[autoDimensiKey] === undefined) {
       state[autoDimensiKey] = sessionValue;
       console.log(`[SYNC] autoDimensi dari sessionStorage: ${autoDimensiKey} = ${sessionValue}`);
     }
-    
-    // HANYA membaca state, tidak mengubah apapun
+
     const autoDimensiValue = state[autoDimensiKey];
-    
     console.log(`[SYNC] syncUIWithState: currentFondasiMode=${currentFondasiMode}, autoDimensiKey=${autoDimensiKey}, value=${autoDimensiValue}`);
-    
+
     return autoDimensiValue;
   },
-  
-  // FUNGSI BARU: Post-render UI reconciliation dengan prioritas lengkap
+
   reconcileUIWithState: function(mode) {
     console.log(`[RECONCILE] Memulai post-render reconciliation untuk mode: ${mode}`);
-    
-    // Pastikan currentModuleKey dan mode valid
+
     if (!currentModuleKey || !mode) return undefined;
-    
-    // Pastikan bebanMode diinisialisasi
+
     if (!bebanMode[currentModuleKey]) bebanMode[currentModuleKey] = {};
     if (!bebanMode[currentModuleKey][mode]) bebanMode[currentModuleKey][mode] = 'tunggal';
-    
+
     const currentFondasiMode = bebanMode[currentModuleKey][mode];
     const autoDimensiKey = `autoDimensi_${currentFondasiMode}`;
     const checkboxId = `autoDimensiCheckbox_${currentFondasiMode}`;
-    
-    // Pastikan state ada
+
     ensureState(currentModuleKey, mode);
-    
     const state = formState[currentModuleKey][mode];
     const checkbox = document.getElementById(checkboxId);
-    
-    // Hanya lanjutkan jika checkbox ada (mode desain)
+
     if (!checkbox) {
       console.log(`[RECONCILE] Checkbox ${checkboxId} tidak ditemukan, mungkin mode evaluasi`);
       return undefined;
     }
-    
+
     console.log(`[RECONCILE] State awal: ${autoDimensiKey} = ${state[autoDimensiKey]}, Checkbox DOM: ${checkbox.checked}`);
-    
-    // LOGIKA PRIORITAS: sessionStorage > formState > DOM (browser restore)
+
     let finalAutoDimensiState;
     let source = 'unknown';
-    
-    // PRIORITAS 1: sessionStorage
+
     const sessionValue = this.loadAutoDimensiFromSessionStorage(currentFondasiMode);
     if (sessionValue !== undefined) {
       finalAutoDimensiState = sessionValue;
       state[autoDimensiKey] = finalAutoDimensiState;
       source = 'sessionStorage';
       console.log(`[RECONCILE] Menggunakan nilai dari ${source}: ${autoDimensiKey} = ${finalAutoDimensiState}`);
-    }
-    // PRIORITAS 2: formState (jika sudah ada)
-    else if (state[autoDimensiKey] !== undefined && state[autoDimensiKey] !== null) {
+    } else if (state[autoDimensiKey] !== undefined && state[autoDimensiKey] !== null) {
       finalAutoDimensiState = state[autoDimensiKey];
       source = 'formState';
       console.log(`[RECONCILE] Menggunakan nilai dari ${source}: ${autoDimensiKey} = ${finalAutoDimensiState}`);
-    }
-    // PRIORITAS 3: DOM (browser restore)
-    else {
+    } else {
       finalAutoDimensiState = checkbox.checked;
       state[autoDimensiKey] = finalAutoDimensiState;
       source = 'DOM (browser restore)';
       console.log(`[RECONCILE] Menggunakan nilai dari ${source}: ${autoDimensiKey} = ${finalAutoDimensiState}`);
     }
-    
-    // Simpan ke sessionStorage jika belum ada
+
     if (sessionValue === undefined) {
       this.saveAutoDimensiToSessionStorage(currentFondasiMode, finalAutoDimensiState);
     }
-    
-    // Paksa DOM sesuai nilai final
+
     if (checkbox.checked !== finalAutoDimensiState) {
       checkbox.checked = finalAutoDimensiState;
       console.log(`[RECONCILE] DOM diperbarui dari ${source}: ${checkboxId}.checked = ${finalAutoDimensiState}`);
     }
-    
-    // APLIKASI EFEK UI BERDASARKAN STATE YANG SUDAH DITENTUKAN
+
     console.log(`[RECONCILE] Menerapkan efek UI untuk ${autoDimensiKey} = ${finalAutoDimensiState}`);
-    
-    // Tentukan field yang harus di-disable berdasarkan mode fondasi
-    const fieldsToManage = currentFondasiMode === 'tunggal' 
+
+    const fieldsToManage = currentFondasiMode === 'tunggal'
       ? ['ly_tunggal', 'lx_tunggal', 'h_tunggal']
       : ['ly_menerus', 'lx_menerus', 'h_menerus'];
-    
-    // Terapkan disable/enable pada field yang sesuai
+
     fieldsToManage.forEach(fieldKey => {
       const input = document.querySelector(`input[data-key="${fieldKey}"]`);
       if (input) {
         if (finalAutoDimensiState) {
-          // Nonaktifkan field saat autoDimensi aktif
           input.disabled = true;
           input.classList.add('disabled-field');
           input.title = "Field dinonaktifkan karena mode otomatis aktif";
-          
-          // JANGAN KOSONGKAN NILAI MANUAL DI STATE - hanya kosongkan di UI
-          // Nilai state tetap dipertahankan
           input.value = '';
         } else {
-          // Aktifkan field dan tampilkan nilai manual dari state jika ada
           input.disabled = false;
           input.classList.remove('disabled-field');
           input.title = "";
-          
-          // Tampilkan kembali nilai manual dari state ke UI
           if (state[fieldKey] !== undefined && state[fieldKey] !== null && state[fieldKey] !== '') {
             input.value = state[fieldKey];
           }
         }
       }
     });
-    
-    // Tampilkan/sembunyikan peringatan auto dimensi
+
     this.reconcileAutoDimensiInfo(currentFondasiMode, finalAutoDimensiState);
-    
+
     return finalAutoDimensiState;
   },
-  
-  // Fungsi untuk reconcile info auto dimensi
+
   reconcileAutoDimensiInfo: function(fondasiMode, isActive) {
-    // Hapus info yang sudah ada
     const existingInfo = document.querySelector('.auto-dimensi-info');
     if (existingInfo) {
       existingInfo.remove();
       console.log(`[RECONCILE] Menghapus info auto dimensi lama`);
     }
-    
-    // Jika aktif, tambahkan info baru
+
     if (isActive) {
       const checkboxId = `autoDimensiCheckbox_${fondasiMode}`;
       const checkboxContainer = document.getElementById(checkboxId)?.closest('.checkbox-row');
-      
+
       if (checkboxContainer) {
         const infoDiv = document.createElement('div');
         infoDiv.className = 'auto-dimensi-info';
@@ -321,17 +691,14 @@ window.modules.fondasi = {
       }
     }
   },
-  
+
+  // ==================== RENDER UTAMA ====================
   render: function(container, mode) {
     container.innerHTML = '';
-    
-    // PERBAIKAN: Pastikan mode yang benar
-    currentMode = mode; // Pastikan currentMode global terupdate
 
-    // Simpan container untuk akses nanti
+    currentMode = mode;
     this.currentContainer = container;
-    
-    // Tambahkan CSS untuk disabled fields
+
     const style = document.createElement('style');
     style.textContent = `
       .disabled-field {
@@ -360,7 +727,7 @@ window.modules.fondasi = {
       }
     `;
     document.head.appendChild(style);
-    
+
     // Header card
     const headerDiv = document.createElement('div');
     headerDiv.className = 'card-header-with-tips';
@@ -373,6 +740,7 @@ window.modules.fondasi = {
           <path d="M2 8V4"/>
           <path d="M22 6H2"/>
           <path d="M22 8V4"/>
+          <path d="M6 15v-3"/>
           <rect x="2" y="12" width="20" height="8" rx="2"/>
         </svg>
         Data Dimensi
@@ -381,25 +749,20 @@ window.modules.fondasi = {
     `;
     container.appendChild(headerDiv);
 
-    // Inisialisasi fondasiMode jika belum ada
+    // Inisialisasi fondasiMode
     if (!bebanMode[currentModuleKey]) bebanMode[currentModuleKey] = {};
     if (!bebanMode[currentModuleKey][mode]) bebanMode[currentModuleKey][mode] = 'tunggal';
     const currentFondasiMode = bebanMode[currentModuleKey][mode];
 
-    // PERBAIKAN: Gunakan syncUIWithState yang sudah membaca sessionStorage
     const autoDimensiChecked = this.syncUIWithState(mode);
-    
+
     console.log(`[RENDER] mode: ${mode}, fondasiMode: ${currentFondasiMode}, autoDimensi state: ${autoDimensiChecked}`);
-    
-    // PERBAIKAN: Inisialisasi state yang proper untuk checkbox Terzaghi dan Mayerhoff
+
     ensureState(currentModuleKey, mode);
-    
-    // Jika state terzaghi belum ada, set default ke true
+
     if (formState[currentModuleKey][mode]['terzaghi'] === undefined) {
         formState[currentModuleKey][mode]['terzaghi'] = true;
     }
-    
-    // Jika state mayerhoff belum ada, set default ke false  
     if (formState[currentModuleKey][mode]['mayerhoff'] === undefined) {
         formState[currentModuleKey][mode]['mayerhoff'] = false;
     }
@@ -422,12 +785,11 @@ window.modules.fondasi = {
       </div>
     `;
     container.appendChild(toggleDiv);
-    
-    // HANYA TAMPILKAN CHECKBOX UNTUK MODE DESAIN
+
+    // Checkbox auto dimensi hanya untuk mode desain
     if (mode !== 'evaluasi') {
-      // PERBAIKAN BUG: Buat ID unik untuk checkbox setiap mode fondasi
       const checkboxId = `autoDimensiCheckbox_${currentFondasiMode}`;
-      
+
       const autoDimensiDiv = document.createElement('div');
       autoDimensiDiv.className = 'checkbox-row';
       autoDimensiDiv.innerHTML = `
@@ -439,22 +801,15 @@ window.modules.fondasi = {
       container.appendChild(autoDimensiDiv);
     }
 
-    // Tambahkan jarak antara toggle dan konten
     const spacerDiv = document.createElement('div');
     spacerDiv.style.marginTop = '16px';
     container.appendChild(spacerDiv);
 
-    // Grid fields - dinamis berdasarkan fondasiMode
+    // Grid fields
     const grid = document.createElement('div');
     grid.className = 'form-grid';
+
     let fields;
-
-    // PERBAIKAN: Gunakan key yang spesifik untuk masing-masing mode fondasi
-    const fondasiSpecificKeys = {
-      tunggal: ['ly_tunggal', 'lx_tunggal', 'by_tunggal', 'bx_tunggal', 'h_tunggal', 'alpha_s_tunggal'],
-      menerus: ['ly_menerus', 'lx_menerus', 'by_menerus', 'bx_menerus', 'h_menerus', 'alpha_s_menerus']
-    };
-
     if (currentFondasiMode === 'tunggal') {
       fields = [
         {label:"L<sub>y</sub>", key:"ly_tunggal", placeholder:"Panjang Fondasi", unit:"m"},
@@ -465,14 +820,13 @@ window.modules.fondasi = {
         {label:"α<sub>s</sub>", key:"alpha_s_tunggal", placeholder:"Letak Kolom", unit:"", type:"dropdown", options:["Tengah", "Tepi", "Sudut"]}
       ];
     } else {
-      // menerus - fields hampir sama tapi dengan placeholder berbeda
       fields = [
         {label:"L<sub>y</sub>", key:"ly_menerus", placeholder:"Panjang Fondasi", unit:"m"},
         {label:"L<sub>x</sub>", key:"lx_menerus", placeholder:"Lebar Fondasi", unit:"m"},
         {label:"b<sub>y</sub>", key:"by_menerus", placeholder:"Panjang Sloof", unit:"mm"},
         {label:"b<sub>x</sub>", key:"bx_menerus", placeholder:"Lebar Penampang Sloof", unit:"mm"},
         {label:"h", key:"h_menerus", placeholder:"Tebal Fondasi", unit:"m"},
-        {label:"α<sub>s</sub>", key:"alpha_s_menerus", placeholder:"Faktor Letak Fondasi (wajib)", unit:""}
+        {label:"α<sub>s</sub>", key:"alpha_s_menerus", placeholder:"Faktor Letak Fondasi", unit:""}
       ];
     }
 
@@ -484,7 +838,6 @@ window.modules.fondasi = {
       const stateVal = (formState[currentModuleKey] && formState[currentModuleKey][mode] && formState[currentModuleKey][mode][f.key]) || '';
 
       if (f.type === 'dropdown') {
-        // Buat dropdown untuk alpha_s
         const dropdownContainer = document.createElement('div');
         dropdownContainer.className = 'custom-dropdown';
         dropdownContainer.innerHTML = `
@@ -514,13 +867,8 @@ window.modules.fondasi = {
         const input = document.createElement('input');
         input.setAttribute('data-key', f.key);
         input.setAttribute('placeholder', escapeHtml(f.placeholder));
-        
-        // Tampilkan nilai dari state
         input.value = escapeHtml(stateVal);
-        
-        // TIDAK MENERAPKAN DISABLE DI SINI - akan dilakukan di reconcileUIWithState
-        // Biarkan input dalam keadaan normal dulu
-        
+
         inputContainer.appendChild(input);
         cell.innerHTML = `<label>${f.label}</label>`;
         cell.appendChild(inputContainer);
@@ -530,36 +878,33 @@ window.modules.fondasi = {
     });
     container.appendChild(grid);
 
-    // Setup dropdown jika ada
+    // Setup dropdown
     if (currentFondasiMode === 'tunggal') {
       this.initAlphaSDropdown(container, mode);
     }
 
     // Setup fondasi mode toggle
     this.setupFondasiModeToggle(container, mode);
-    
-    // Setup auto dimensi checkbox (hanya untuk mode desain)
+
+    // Setup auto dimensi checkbox
     if (mode !== 'evaluasi') {
       this.setupAutoDimensiCheckbox(container, mode, currentFondasiMode);
     }
 
-    // Hapus card yang mungkin sudah ada
     this.removeExistingCards();
 
-    // TAMBAHAN: Render card Data Tanah untuk kedua mode
+    // Render Data Tanah
     this.renderTanahCard(container);
 
-    // Tambahkan card Data Beban untuk mode desain
+    // Render Data Beban
     if (mode === 'desain') {
       this.renderBebanCard(container);
       this.renderLanjutanCard(container);
     }
 
-    // Tambahkan card Data Beban, Data Tulangan, dan Data Lanjutan untuk mode evaluasi
     if (mode === 'evaluasi') {
       this.renderBebanCard(container);
-      
-      // Render tulangan card dinamis berdasarkan dimensi
+
       let lx, ly;
       if (currentFondasiMode === 'tunggal') {
         lx = (formState[currentModuleKey] && formState[currentModuleKey][mode] && formState[currentModuleKey][mode]['lx_tunggal']) || '';
@@ -569,39 +914,29 @@ window.modules.fondasi = {
         ly = (formState[currentModuleKey] && formState[currentModuleKey][mode] && formState[currentModuleKey][mode]['ly_menerus']) || '';
       }
       this.renderTulanganCard(container, currentFondasiMode, lx, ly);
-      
+
       this.renderLanjutanCard(container);
     }
 
-    // Wire input listeners
     this.wireInputListeners(container, mode);
 
-    // Setup tips button khusus untuk Data Dimensi
     this.setupDimensiTipsButton();
 
-    // TAMBAHAN: Setup calculate button
     this.setupCalculateButton();
-    
-    // PERBAIKAN PENTING: Panggil post-render reconciliation
-    // Ini akan memaksa sinkronisasi UI dengan state setelah semua elemen dirender
-    console.log(`[RENDER] Memanggil post-render reconciliation untuk mode: ${mode}`);
+
     if (mode !== 'evaluasi') {
-      // Gunakan setTimeout untuk memastikan DOM sudah benar-benar siap
       setTimeout(() => {
-        const reconciledState = this.reconcileUIWithState(mode);
-        console.log(`[RENDER] Reconciliation selesai, state final: ${reconciledState}`);
+        this.reconcileUIWithState(mode);
       }, 10);
     }
   },
 
-  // Fungsi untuk mendapatkan fields tulangan berdasarkan tipe fondasi dan dimensi
+  // ==================== FUNGSI BANTUAN RENDER ====================
   getTulanganFields: function(fondasiMode, lx, ly) {
-    // Konversi lx dan ly ke number untuk perbandingan
     const lxNum = parseFloat(lx) || 0;
     const lyNum = parseFloat(ly) || 0;
-    
+
     if (fondasiMode === 'menerus') {
-      // Fondasi menerus: D, Db, s, sb
       return [
         {label:"D", key:"d", placeholder:"Diameter Tulangan Utama", unit:"mm"},
         {label:"D<sub>b</sub>", key:"db", placeholder:"Diameter Tulangan Bagi", unit:"mm"},
@@ -609,15 +944,12 @@ window.modules.fondasi = {
         {label:"s<sub>b</sub>", key:"sb", placeholder:"Jarak Tulangan Bagi", unit:"mm"}
       ];
     } else if (fondasiMode === 'tunggal') {
-      // Fondasi tunggal
       if (lxNum === lyNum || Math.abs(lxNum - lyNum) < 0.001) {
-        // Lx = Ly (bujur sangkar): D dan s saja
         return [
           {label:"D", key:"d", placeholder:"Diameter Tulangan Utama", unit:"mm"},
           {label:"s", key:"s", placeholder:"Jarak Tulangan", unit:"mm"}
         ];
       } else {
-        // Lx ≠ Ly (persegi panjang): D, Db, s, sp, st
         return [
           {label:"D", key:"d", placeholder:"Diameter Tulangan Utama", unit:"mm"},
           {label:"D<sub>b</sub>", key:"db", placeholder:"Diameter Tulangan Bagi", unit:"mm"},
@@ -627,8 +959,7 @@ window.modules.fondasi = {
         ];
       }
     }
-    
-    // Default fallback
+
     return [
       {label:"D", key:"d", placeholder:"Diameter Tulangan Utama", unit:"mm"},
       {label:"D<sub>b</sub>", key:"db", placeholder:"Diameter Tulangan Bagi", unit:"mm"},
@@ -637,12 +968,11 @@ window.modules.fondasi = {
     ];
   },
 
-  // Fungsi untuk update tulangan card secara dinamis
   updateTulanganCard: function() {
     if (currentMode !== 'evaluasi') return;
-    
+
     const currentFondasiMode = bebanMode[currentModuleKey] && bebanMode[currentModuleKey][currentMode] ? bebanMode[currentModuleKey][currentMode] : 'tunggal';
-    
+
     let lx, ly;
     if (currentFondasiMode === 'tunggal') {
       lx = (formState[currentModuleKey] && formState[currentModuleKey][currentMode] && formState[currentModuleKey][currentMode]['lx_tunggal']) || '';
@@ -651,8 +981,7 @@ window.modules.fondasi = {
       lx = (formState[currentModuleKey] && formState[currentModuleKey][currentMode] && formState[currentModuleKey][currentMode]['lx_menerus']) || '';
       ly = (formState[currentModuleKey] && formState[currentModuleKey][currentMode] && formState[currentModuleKey][currentMode]['ly_menerus']) || '';
     }
-    
-    // Render ulang tulangan card
+
     this.renderTulanganCard(this.currentContainer, currentFondasiMode, lx, ly);
   },
 
@@ -665,16 +994,16 @@ window.modules.fondasi = {
           <h3>Data Dimensi</h3>
           <div style="line-height: 1.6;">
             <p>Atur metode penentuan dan jenis fondasi.</p>
-            
+
             <p><strong>Fondasi Tunggal</strong>: bx dan by dari dimensi kolom.</p>
             <p><strong>Fondasi Menerus</strong>: bx dan by dari panjang kritis sloof.</p>
-            
+
             <h4>αs (Faktor posisi kolom)</h4>
             <ul>
               <li><strong>Tunggal</strong>: Pilih posisi kolom (Tengah=40, Tepi=30, Sudut=20)</li>
               <li><strong>Menerus</strong>: Masukkan total kombinasi nilai αs secara manual sesuai dengan posisi kolom yang ada diatas fondasi</li>
             </ul>
-            
+
             <h4>Dimensi Ditentukan Sistem</h4>
             <p>Centang untuk sistem mencari dimensi optimal. Perhitungan akan lebih lama.</p>
             <p><em>Hanya tersedia di mode desain.</em></p>
@@ -694,45 +1023,37 @@ window.modules.fondasi = {
     });
   },
 
-  // Setup auto dimensi checkbox yang sederhana
   setupAutoDimensiCheckbox: function(container, mode, fondasiMode) {
-    // Hanya setup untuk mode desain
     if (mode !== 'evaluasi') {
       const autoDimensiKey = `autoDimensi_${fondasiMode}`;
       const checkboxId = `autoDimensiCheckbox_${fondasiMode}`;
-      
-      // Dapatkan checkbox
+
       const checkbox = document.getElementById(checkboxId);
       if (!checkbox) return;
-      
+
       console.log(`[SETUP] setupAutoDimensiCheckbox: ${autoDimensiKey}, checkboxId: ${checkboxId}`);
-      
-      // Hapus event listener lama jika ada dengan cloneNode
+
       const newCheckbox = checkbox.cloneNode(true);
       checkbox.parentNode.replaceChild(newCheckbox, checkbox);
-      
-      // Tambahkan event listener baru
+
       newCheckbox.addEventListener('change', (e) => {
         this.handleAutoDimensiChange(e.target, mode, fondasiMode);
       });
     }
   },
 
-  // Fungsi untuk handle perubahan autoDimensi oleh USER
   handleAutoDimensiChange: function(checkbox, mode, fondasiMode) {
     const autoDimensiKey = `autoDimensi_${fondasiMode}`;
     const isChecked = checkbox.checked;
-    
+
     console.log(`[USER CHANGE] handleAutoDimensiChange: ${autoDimensiKey} = ${isChecked} (user action)`);
-    
+
     if (isChecked) {
-      // Tampilkan modal konfirmasi
       showAlert(
         'Sistem akan mencari dimensi optimal. Perhitungan mungkin akan menjadi lebih lama.',
         '⚠️ Mode Dimensi Otomatis'
       );
-      
-      // Tunggu modal muncul
+
       setTimeout(() => {
         const alertContent = document.getElementById('alertContent');
         const confirmHTML = `
@@ -741,74 +1062,51 @@ window.modules.fondasi = {
             <button id="confirmAutoDimensi" class="btn" style="background: var(--color-buttons); color: var(--button-text-color, white); width: 85px; text-align: center; padding: 8px 12px; display: flex; align-items: center; justify-content: center;">Aktifkan</button>
           </div>
         `;
-        
+
         alertContent.innerHTML += confirmHTML;
-        
-        // Handler untuk tombol Aktifkan
+
         document.getElementById('confirmAutoDimensi').addEventListener('click', () => {
           ensureState(currentModuleKey, mode);
           formState[currentModuleKey][mode][autoDimensiKey] = true;
-          
-          // SIMPAN KE SESSIONSTORAGE
           this.saveAutoDimensiToSessionStorage(fondasiMode, true);
-          
           closeAlert();
-          
-          // Panggil reconciliation untuk sinkronisasi UI
           this.reconcileUIWithState(mode);
-          
           updateLog(`AutoDimensi diaktifkan oleh user untuk ${fondasiMode} (disimpan ke sessionStorage)`);
         });
-        
-        // Handler untuk tombol Batal
+
         document.getElementById('cancelAutoDimensi').addEventListener('click', () => {
           checkbox.checked = false;
           ensureState(currentModuleKey, mode);
           formState[currentModuleKey][mode][autoDimensiKey] = false;
-          
-          // SIMPAN KE SESSIONSTORAGE
           this.saveAutoDimensiToSessionStorage(fondasiMode, false);
-          
           closeAlert();
-          
-          // Panggil reconciliation untuk sinkronisasi UI
           this.reconcileUIWithState(mode);
-          
           updateLog(`AutoDimensi dibatalkan oleh user untuk ${fondasiMode} (disimpan ke sessionStorage)`);
         });
-        
+
       }, 50);
     } else {
-      // Jika dicentang dicabut oleh user
       ensureState(currentModuleKey, mode);
       formState[currentModuleKey][mode][autoDimensiKey] = false;
-      
-      // SIMPAN KE SESSIONSTORAGE
       this.saveAutoDimensiToSessionStorage(fondasiMode, false);
-      
-      // Panggil reconciliation untuk sinkronisasi UI
       this.reconcileUIWithState(mode);
-      
       updateLog(`AutoDimensi dinonaktifkan oleh user untuk ${fondasiMode} (disimpan ke sessionStorage)`);
     }
   },
 
-  // TAMBAHAN: Fungsi untuk render card Data Tanah dengan toggle Auto/Manual
+  // ==================== DATA TANAH CARD ====================
   renderTanahCard: function(container) {
     const tanahCard = document.createElement('div');
     tanahCard.className = 'card';
     tanahCard.id = 'tanahCard';
 
-    // Inisialisasi tanahMode jika belum ada
     this.initTanahMode();
     if (!window.tanahMode[currentModuleKey]) window.tanahMode[currentModuleKey] = {};
     if (!window.tanahMode[currentModuleKey][currentMode]) window.tanahMode[currentModuleKey][currentMode] = 'auto';
     const currentTanahMode = window.tanahMode[currentModuleKey][currentMode];
 
-    // Dapatkan nilai dari formState
     const currentState = formState[currentModuleKey] && formState[currentModuleKey][currentMode];
-    
-    // PERBAIKAN: Gunakan nilai yang sudah diinisialisasi dengan benar
+
     const terzaghiChecked = currentState && currentState.hasOwnProperty('terzaghi') ? currentState.terzaghi : true;
     const mayerhoffChecked = currentState && currentState.hasOwnProperty('mayerhoff') ? currentState.mayerhoff : false;
 
@@ -822,7 +1120,7 @@ window.modules.fondasi = {
     tanahCard.innerHTML = `
       <div class="card-header-with-tips">
         <h2>
-          <svg fill="#000000" version="1.1" id="Sand" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" 
+          <svg fill="#000000" version="1.1" id="Sand" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
                width="24px" height="24px" viewBox="0 0 256 256" enable-background="new 0 0 256 256" xml:space="preserve">
             <path d="M247.769,150.406c-0.621-7.079-8.779-11.157-16.669-15.101c-3.163-1.582-8.436-4.217-9.388-5.624
               c-2.966-7.613-4.592-8.336-16.975-13.843c-3.595-1.599-8.07-3.589-13.989-6.339c-16.138-7.497-28.605-17.704-38.623-25.906
@@ -830,18 +1128,18 @@ window.modules.fondasi = {
               c-16.338,14.143-45.719,32.539-59.563,36.186c-15.422,4.062-16.859,15.213,9.184,18.589c46.661,6.05,36.308,16.493,81.825,19.16
               c28.434,1.666,104.438-8.216,129.889-17.625c2.583-0.71,4.328-1.732,5.642-3.149C247.248,155.058,247.983,152.851,247.769,150.406z
                M110.318,148.391c-2.175,0.002-3.94-1.759-3.942-3.934s1.759-3.94,3.934-3.942c2.175-0.002,3.94,1.759,3.942,3.934
-              C114.254,146.623,112.493,148.389,110.318,148.391z M121.98,136.174c-1.933,0.002-3.502-1.563-3.504-3.497s1.563-3.502,3.497-3.504
-              s3.502,1.563,3.504,3.497S123.914,136.172,121.98,136.174z M129.877,155.371c-2.417,0.003-4.378-1.954-4.38-4.371
-              c-0.003-2.417,1.954-4.378,4.371-4.38c2.417-0.003,4.378,1.954,4.38,4.371S132.294,155.368,129.877,155.371z M153.353,120.756
-              c-11.005-12.065-17.739-30.072-23.983-41.293c0.519,0.224,1.052,0.486,1.596,0.792c4.137,2.325,9.088,6.379,14.823,11.074
-              c10.453,8.558,23.462,19.208,40.745,27.237c5.994,2.785,10.51,4.793,14.138,6.407c5.331,2.371,8.548,3.802,9.865,4.825
-              c0.632,0.49,0.825,0.858,1.89,3.598c1.81,4.659,7.552,7.529,14.201,10.853c2.536,1.268,6.914,3.531,9.521,5.373
-              c0.595,0.42,0.382,1.355-0.339,1.461c-2.599,0.381-7.172,0.66-14.533,0.182C204.288,150.163,175.392,144.919,153.353,120.756z
-               M70.992,179.579c0,2.777-2.252,5.029-5.029,5.029s-5.029-2.252-5.029-5.029c0-2.777,2.252-5.029,5.029-5.029
-              S70.992,176.802,70.992,179.579z M53.12,171.698c0,2.449-1.986,4.435-4.435,4.435s-4.435-1.986-4.435-4.435s1.986-4.435,4.435-4.435
-              S53.12,169.249,53.12,171.698z M33.06,181.874c0,2.209-1.791,4-4,4s-4-1.791-4-4s1.791-4,4-4S33.06,179.665,33.06,181.874z
-               M219.25,177.749c0,2.278-1.847,4.125-4.125,4.125S211,180.027,211,177.749s1.847-4.125,4.125-4.125S219.25,175.471,219.25,177.749z
-              "/>
+               C114.254,146.623,112.493,148.389,110.318,148.391z M121.98,136.174c-1.933,0.002-3.502-1.563-3.504-3.497s1.563-3.502,3.497-3.504
+               s3.502,1.563,3.504,3.497S123.914,136.172,121.98,136.174z M129.877,155.371c-2.417,0.003-4.378-1.954-4.38-4.371
+               c-0.003-2.417,1.954-4.378,4.371-4.38c2.417-0.003,4.378,1.954,4.38,4.371S132.294,155.368,129.877,155.371z M153.353,120.756
+               c-11.005-12.065-17.739-30.072-23.983-41.293c0.519,0.224,1.052,0.486,1.596,0.792c4.137,2.325,9.088,6.379,14.823,11.074
+               c10.453,8.558,23.462,19.208,40.745,27.237c5.994,2.785,10.51,4.793,14.138,6.407c5.331,2.371,8.548,3.802,9.865,4.825
+               c0.632,0.49,0.825,0.858,1.89,3.598c1.81,4.659,7.552,7.529,14.201,10.853c2.536,1.268,6.914,3.531,9.521,5.373
+               c0.595,0.42,0.382,1.355-0.339,1.461c-2.599,0.381-7.172,0.66-14.533,0.182C204.288,150.163,175.392,144.919,153.353,120.756z
+                M70.992,179.579c0,2.777-2.252,5.029-5.029,5.029s-5.029-2.252-5.029-5.029c0-2.777,2.252-5.029,5.029-5.029
+               S70.992,176.802,70.992,179.579z M53.12,171.698c0,2.449-1.986,4.435-4.435,4.435s-4.435-1.986-4.435-4.435s1.986-4.435,4.435-4.435
+               S53.12,169.249,53.12,171.698z M33.06,181.874c0,2.209-1.791,4-4,4s-4-1.791-4-4s1.791-4,4-4S33.06,179.665,33.06,181.874z
+                M219.25,177.749c0,2.278-1.847,4.125-4.125,4.125S211,180.027,211,177.749s1.847-4.125,4.125-4.125S219.25,175.471,219.25,177.749z
+               "/>
           </svg>
           Data Tanah
         </h2>
@@ -884,12 +1182,10 @@ window.modules.fondasi = {
         </div>
       </div>
 
-      <!-- Tambahkan jarak antara toggle dan konten -->
       <div style="margin-top: 16px;"></div>
 
       ${currentTanahMode === 'auto' ? `
         <div class="tanah-auto-content">
-          <!-- Baris 1: Df dan Gamma -->
           <div class="form-grid">
             <div class="field">
               <label>D<sub>f</sub></label>
@@ -904,16 +1200,14 @@ window.modules.fondasi = {
               </div>
             </div>
           </div>
-          
-          <!-- Baris 2: Checkbox Terzaghi -->
+
           <div class="checkbox-row">
             <div class="checkbox-container">
               <input type="checkbox" id="terzaghiCheckbox" data-key="terzaghi" ${terzaghiChecked ? 'checked' : ''}>
               <label for="terzaghiCheckbox">Terzaghi</label>
             </div>
           </div>
-          
-          <!-- Baris 3: ɸ dan c -->
+
           <div class="form-grid">
             <div class="field">
               <label>ɸ</label>
@@ -928,24 +1222,21 @@ window.modules.fondasi = {
               </div>
             </div>
           </div>
-          
-          <!-- Baris 4: Checkbox Mayerhoff -->
+
           <div class="checkbox-row">
             <div class="checkbox-container">
               <input type="checkbox" id="mayerhoffCheckbox" data-key="mayerhoff" ${mayerhoffChecked ? 'checked' : ''}>
               <label for="mayerhoffCheckbox">Mayerhoff</label>
             </div>
           </div>
-          
-          <!-- Baris 5: qc -->
+
           <div class="form-grid">
             <div class="field">
               <label>q<sub>c</sub></label>
-              <div class="input-with-unit ${mayerhoffChecked ? '' : 'disabled'}" data-unit="kg/cm²">
+              <div class="input-with-unit ${mayerhoffChecked ? '' : 'disabled'}" data-unit="MPa">
                 <input data-key="qc" placeholder="Tahanan Konus Rata-rata" value="${escapeHtml(qcValue)}" ${mayerhoffChecked ? '' : 'disabled'} class="${mayerhoffChecked ? '' : 'disabled-field'}">
               </div>
             </div>
-            <!-- Kolom kosong untuk menjaga layout -->
             <div class="field"></div>
           </div>
         </div>
@@ -959,7 +1250,6 @@ window.modules.fondasi = {
               <input data-key="qa" placeholder="Kapasitas Dukung Izin Tanah" value="${escapeHtml(qaValue)}">
             </div>
           </div>
-          <!-- TAMBAHAN: Df dan Gamma untuk mode manual -->
           <div class="field">
             <label>D<sub>f</sub></label>
             <div class="input-with-unit" data-unit="m">
@@ -979,13 +1269,8 @@ window.modules.fondasi = {
     const referenceNode = container.nextSibling;
     container.parentNode.insertBefore(tanahCard, referenceNode);
 
-    // Setup tanah mode toggle
     this.setupTanahModeToggle();
-    
-    // Setup checkbox functionality
     this.setupTanahCheckboxes();
-
-    // Setup tips button khusus untuk Data Tanah
     this.setupTanahTipsButton();
   },
 
@@ -998,21 +1283,21 @@ window.modules.fondasi = {
           <h3>Data Tanah</h3>
           <div style="line-height: 1.6;">
             <p>Atur metode perhitungan data tanah.</p>
-            
+
             <h4>Mode Auto</h4>
             <p>Isi parameter tanah:</p>
             <ul>
               <li><strong>df</strong> - Kedalaman fondasi</li>
               <li><strong>γ</strong> - Berat jenis tanah</li>
             </ul>
-            
+
             <p>Pilih metode perhitungan:</p>
             <ul>
               <li><strong>Terzaghi</strong> - Input ϕ dan c</li>
               <li><strong>Meyerhof</strong> - Input qc</li>
             </ul>
             <p>Sistem akan pilih nilai qa terkecil.</p>
-            
+
             <h4>Mode Manual</h4>
             <p>Masukkan langsung:</p>
             <ul>
@@ -1036,63 +1321,50 @@ window.modules.fondasi = {
         const mode = this.getAttribute('data-tanah-mode');
         if (!window.tanahMode[currentModuleKey]) window.tanahMode[currentModuleKey] = {};
         window.tanahMode[currentModuleKey][currentMode] = mode;
-
-        // Re-render modul untuk memperbarui konten
         renderModule();
-
         updateLog(`Tanah mode for ${currentModuleKey}.${currentMode} set to ${mode}`);
       });
     });
   },
 
-  // TAMBAHAN: Setup checkbox untuk metode Terzaghi dan Mayerhoff
   setupTanahCheckboxes: function() {
     const terzaghiCheckbox = document.querySelector('#tanahCard input[data-key="terzaghi"]');
     const mayerhoffCheckbox = document.querySelector('#tanahCard input[data-key="mayerhoff"]');
-    
+
     if (terzaghiCheckbox) {
       terzaghiCheckbox.addEventListener('change', function() {
         ensureState(currentModuleKey, currentMode);
         formState[currentModuleKey][currentMode]['terzaghi'] = this.checked;
-        
-        // Jika terzaghi tidak dicentang, hapus nilai phi dan c
         if (!this.checked) {
           const fieldsToClear = ['phi', 'c'];
           fieldsToClear.forEach(field => {
             formState[currentModuleKey][currentMode][field] = '';
           });
         }
-        
-        // Re-render modul untuk memperbarui status input fields
         renderModule();
-        
         updateLog(`Terzaghi method ${this.checked ? 'enabled' : 'disabled'} for ${currentModuleKey}.${currentMode}`);
       });
     }
-    
+
     if (mayerhoffCheckbox) {
       mayerhoffCheckbox.addEventListener('change', function() {
         ensureState(currentModuleKey, currentMode);
         formState[currentModuleKey][currentMode]['mayerhoff'] = this.checked;
-        
-        // Jika mayerhoff tidak dicentang, hapus nilai qc
         if (!this.checked) {
           formState[currentModuleKey][currentMode]['qc'] = '';
         }
-        
-        // Re-render modul untuk memperbarui status input fields
         renderModule();
-        
         updateLog(`Mayerhoff method ${this.checked ? 'enabled' : 'disabled'} for ${currentModuleKey}.${currentMode}`);
       });
     }
   },
 
+  // ==================== BEBAN CARD ====================
   renderBebanCard: function(container) {
     const bebanCard = document.createElement('div');
     bebanCard.className = 'card';
     bebanCard.id = 'bebanCard';
-    
+
     bebanCard.innerHTML = `
       <div class="card-header">
         <h2>
@@ -1107,38 +1379,36 @@ window.modules.fondasi = {
         <div class="field">
           <label>P<sub>u</sub></label>
           <div class="input-with-unit" data-unit="kN">
-            <input data-key="pu" placeholder="Beban Aksial Ultimit (wajib)" value="${escapeHtml((formState[currentModuleKey] && formState[currentModuleKey][currentMode] && formState[currentModuleKey][currentMode]['pu']) || '')}">
+            <input data-key="pu" placeholder="Beban Aksial Ultimit" value="${escapeHtml((formState[currentModuleKey] && formState[currentModuleKey][currentMode] && formState[currentModuleKey][currentMode]['pu']) || '')}">
           </div>
         </div>
         <div class="field">
           <label>M<sub>uy</sub></label>
           <div class="input-with-unit" data-unit="kNm">
-            <input data-key="muy" placeholder="Momen Ultimit Arah Y (wajib, isi 0 jika tidak ada)" value="${escapeHtml((formState[currentModuleKey] && formState[currentModuleKey][currentMode] && formState[currentModuleKey][currentMode]['muy']) || '')}">
+            <input data-key="muy" placeholder="Momen Ultimit Arah Y" value="${escapeHtml((formState[currentModuleKey] && formState[currentModuleKey][currentMode] && formState[currentModuleKey][currentMode]['muy']) || '')}">
           </div>
         </div>
         <div class="field">
           <label>M<sub>ux</sub></label>
           <div class="input-with-unit" data-unit="kNm">
-            <input data-key="mux" placeholder="Momen Ultimit Arah X (wajib, isi 0 jika tidak ada)" value="${escapeHtml((formState[currentModuleKey] && formState[currentModuleKey][currentMode] && formState[currentModuleKey][currentMode]['mux']) || '')}">
+            <input data-key="mux" placeholder="Momen Ultimit Arah X" value="${escapeHtml((formState[currentModuleKey] && formState[currentModuleKey][currentMode] && formState[currentModuleKey][currentMode]['mux']) || '')}">
           </div>
         </div>
       </div>
     `;
-    
+
     const tanahCard = document.getElementById('tanahCard');
     container.parentNode.insertBefore(bebanCard, tanahCard.nextSibling);
   },
 
-  // Render tulangan card dinamis berdasarkan jenis fondasi dan dimensi
+  // ==================== TULANGAN CARD ====================
   renderTulanganCard: function(container, fondasiMode, lx, ly) {
     const tulanganCard = document.createElement('div');
     tulanganCard.className = 'card';
     tulanganCard.id = 'tulanganCard';
 
-    // Dapatkan fields tulangan berdasarkan kondisi
     const tulanganFields = this.getTulanganFields(fondasiMode, lx, ly);
-    
-    // Buat HTML untuk fields
+
     let fieldsHTML = '';
     tulanganFields.forEach(field => {
       const value = (formState[currentModuleKey] && formState[currentModuleKey][currentMode] && formState[currentModuleKey][currentMode][field.key]) || '';
@@ -1173,11 +1443,12 @@ window.modules.fondasi = {
     container.parentNode.insertBefore(tulanganCard, bebanCard.nextSibling);
   },
 
+  // ==================== LANJUTAN CARD ====================
   renderLanjutanCard: function(container) {
     const lanjutanCard = document.createElement('div');
     lanjutanCard.className = 'card';
     lanjutanCard.id = 'lanjutanCard';
-    
+
     lanjutanCard.innerHTML = `
       <div class="card-header-with-collapse">
         <h3>Data Lanjutan</h3>
@@ -1201,14 +1472,11 @@ window.modules.fondasi = {
         </div>
       </div>
     `;
-    
+
     const referenceCard = document.getElementById('tulanganCard') || document.getElementById('bebanCard');
     container.parentNode.insertBefore(lanjutanCard, referenceCard.nextSibling);
-    
-    // Setup collapse functionality
+
     this.setupCollapseFunctionality();
-    
-    // Setup tips button khusus untuk Data Lanjutan
     this.setupLanjutanTipsButton();
   },
 
@@ -1250,7 +1518,7 @@ window.modules.fondasi = {
     }
   },
 
-  // PERBAIKAN: Setup fondasi mode toggle tanpa menghapus state
+  // ==================== FONDASI MODE TOGGLE ====================
   setupFondasiModeToggle: function(container, mode) {
     const toggleBtns = container.querySelectorAll('.toggle-btn[data-fondasi-mode]');
 
@@ -1258,35 +1526,28 @@ window.modules.fondasi = {
       btn.addEventListener('click', function() {
         const fondasiMode = this.getAttribute('data-fondasi-mode');
         if (!bebanMode[currentModuleKey]) bebanMode[currentModuleKey] = {};
-        
-        const oldMode = bebanMode[currentModuleKey][mode];
-        
-        // Update mode
-        bebanMode[currentModuleKey][mode] = fondasiMode;
-        
-        console.log(`[DEBUG] Fondasi mode changed from ${oldMode} to ${fondasiMode}`);
-        
-        // Re-render modul untuk memperbarui konten
-        renderModule();
 
+        const oldMode = bebanMode[currentModuleKey][mode];
+        bebanMode[currentModuleKey][mode] = fondasiMode;
+
+        console.log(`[DEBUG] Fondasi mode changed from ${oldMode} to ${fondasiMode}`);
+
+        renderModule();
         updateLog(`Fondasi mode for ${currentModuleKey}.${mode} set to ${fondasiMode}`);
       });
     });
   },
 
-  // PERBAIKAN: Konversi nilai alpha_s dari string ke angka
   initAlphaSDropdown: function(container, mode) {
     const dropdownSelected = container.querySelector('#alphaSDropdownSelected');
     const dropdownOptions = container.querySelector('#alphaSDropdownOptions');
 
     if (!dropdownSelected || !dropdownOptions) return;
 
-    // Toggle dropdown ketika bagian selected diklik
     dropdownSelected.addEventListener('click', function(e) {
       e.stopPropagation();
       const isOpen = dropdownSelected.classList.contains('open');
 
-      // Tutup semua dropdown yang terbuka
       document.querySelectorAll('.dropdown-selected.open').forEach(el => {
         if (el !== dropdownSelected) el.classList.remove('open');
       });
@@ -1294,25 +1555,20 @@ window.modules.fondasi = {
         if (el !== dropdownOptions) el.classList.remove('show');
       });
 
-      // Toggle dropdown ini
       dropdownSelected.classList.toggle('open');
       dropdownOptions.classList.toggle('show');
     });
 
-    // Tangani pilihan opsi
     dropdownOptions.querySelectorAll('.dropdown-option').forEach(option => {
       option.addEventListener('click', function() {
         const value = this.getAttribute('data-value');
 
         if (value === 'clear') {
-          // Kosongkan input alpha_s
           dropdownSelected.querySelector('span').textContent = 'Pilih Letak Kolom';
           formState[currentModuleKey][mode]['alpha_s_tunggal'] = '';
           updateLog('alpha_s_tunggal cleared for fondasi module');
         } else {
-          // Update tampilan dropdown
           dropdownSelected.querySelector('span').textContent = this.textContent;
-          // Update state dengan nilai string (akan dikonversi nanti saat kalkulasi)
           ensureState(currentModuleKey, mode);
           formState[currentModuleKey][mode]['alpha_s_tunggal'] = value;
           updateLog(`set ${currentModuleKey}.${mode}.alpha_s_tunggal = ${value}`);
@@ -1323,7 +1579,6 @@ window.modules.fondasi = {
       });
     });
 
-    // Tutup dropdown ketika klik di luar
     document.addEventListener('click', function(e) {
       if (!dropdownSelected.contains(e.target) && !dropdownOptions.contains(e.target)) {
         dropdownSelected.classList.remove('open');
@@ -1333,19 +1588,16 @@ window.modules.fondasi = {
   },
 
   wireInputListeners: function(container, mode) {
-    // Event delegation untuk semua input dengan data-key
     container.addEventListener('input', function(e) {
       if (e.target.matches('input[data-key], select[data-key]')) {
         const input = e.target;
         const key = input.dataset.key;
-        
+
         ensureState(currentModuleKey, mode);
         formState[currentModuleKey][mode][key] = input.value;
         updateLog(`set ${currentModuleKey}.${mode}.${key} = ${input.value}`);
-        
-        // Jika input adalah dimensi (Lx atau Ly) dan mode adalah evaluasi, update tulangan card
+
         if (mode === 'evaluasi' && (key === 'lx_tunggal' || key === 'ly_tunggal' || key === 'lx_menerus' || key === 'ly_menerus')) {
-          // Tunggu sebentar agar state terupdate, lalu update tulangan card
           setTimeout(() => {
             window.modules.fondasi.updateTulanganCard();
           }, 100);
@@ -1353,12 +1605,11 @@ window.modules.fondasi = {
       }
     });
 
-    // Event delegation untuk checkbox
     container.addEventListener('change', function(e) {
       if (e.target.matches('input[type="checkbox"][data-key]')) {
         const checkbox = e.target;
         const key = checkbox.dataset.key;
-        
+
         ensureState(currentModuleKey, mode);
         formState[currentModuleKey][mode][key] = checkbox.checked;
         updateLog(`set ${currentModuleKey}.${mode}.${key} = ${checkbox.checked}`);
@@ -1366,15 +1617,12 @@ window.modules.fondasi = {
     });
   },
 
-  // ========== FUNGSI BARU UNTUK VALIDASI DAN HITUNG ==========
-
+  // ==================== VALIDASI DAN PERHITUNGAN ====================
   setupCalculateButton: function() {
     const calculateBtn = document.getElementById('calculateBtn');
     if (calculateBtn) {
-      // Hapus event listener lama jika ada
       calculateBtn.replaceWith(calculateBtn.cloneNode(true));
-      
-      // Tambahkan event listener baru
+
       document.getElementById('calculateBtn').addEventListener('click', () => {
         this.handleCalculate();
       });
@@ -1382,18 +1630,49 @@ window.modules.fondasi = {
   },
 
   handleCalculate: function() {
-    // Tampilkan peringatan khusus jika autoDimensi aktif
+    const calculationData = this.collectData();
+
+    // Validasi input
+    const validation = this.validateFondasiInput(calculationData);
+
+    if (validation.errors.length > 0) {
+      const msg = validation.errors.join('\n');
+      if (typeof showAlert === 'function') {
+        showAlert(`Terdapat kesalahan pada input:\n\n${msg}`, '⚠️ Validasi Input Gagal');
+      } else {
+        alert(`Terdapat kesalahan pada input:\n\n${msg}`);
+      }
+      return;
+    }
+
+    if (validation.warnings.length > 0) {
+      const msg = validation.warnings.join('\n');
+      this.showConfirmAlert(
+        `Peringatan (saran):\n\n${msg}\n\nApakah Anda tetap ingin melanjutkan perhitungan?`,
+        '⚠️ Peringatan Input',
+        () => {
+          this.proceedCalculation(calculationData);
+        },
+        () => {
+          console.log('Perhitungan dibatalkan oleh pengguna.');
+        }
+      );
+    } else {
+      this.proceedCalculation(calculationData);
+    }
+  },
+
+  proceedCalculation: function(calculationData) {
     const currentFondasiMode = bebanMode[currentModuleKey] && bebanMode[currentModuleKey][currentMode] ? bebanMode[currentModuleKey][currentMode] : 'tunggal';
     const autoDimensiKey = `autoDimensi_${currentFondasiMode}`;
     const state = formState[currentModuleKey] && formState[currentModuleKey][currentMode] ? formState[currentModuleKey][currentMode] : {};
-    
+
     if (state[autoDimensiKey]) {
       showAlert(
         'Dimensi ditentukan oleh sistem. Perhitungan mungkin akan menjadi lebih lama.',
         '⚠️ Mode Dimensi Otomatis'
       );
-      
-      // Setup button untuk modal alert dengan tombol rata kanan
+
       const alertContent = document.getElementById('alertContent');
       const confirmHTML = `
         <div style="margin-top: 24px; display: flex; justify-content: flex-end; gap: 10px;">
@@ -1401,19 +1680,16 @@ window.modules.fondasi = {
           <button id="confirmProceed" class="btn" style="background: var(--color-buttons); color: var(--button-text-color, white); width: 85px; text-align: center; padding: 8px 12px; display: flex; align-items: center; justify-content: center;">Lanjutkan</button>
         </div>
       `;
-      
+
       alertContent.innerHTML += confirmHTML;
-      
-      // Setup event listeners
+
       const confirmBtn = document.getElementById('confirmProceed');
       const cancelBtn = document.getElementById('cancelProceed');
-      
+
       confirmBtn.addEventListener('click', () => {
         closeAlert();
-        
-        // Validasi field wajib
+
         const missingFields = this.validateFields();
-        
         if (missingFields.length > 0) {
           const fieldList = missingFields.map(field => `• ${field}`).join('\n');
           showAlert(
@@ -1423,25 +1699,19 @@ window.modules.fondasi = {
           return;
         }
 
-        // Kumpulkan semua data
-        const calculationData = this.collectData();
-        
-        // TAMPILKAN LOADING SPINNER HANYA JIKA autoDimensi true
+        const calculationDataFinal = this.collectData();
         this.showLoadingSpinner('Melakukan perhitungan...');
-        
-        // Kirim data ke modul perhitungan dengan sedikit delay untuk memastikan spinner muncul
+
         setTimeout(() => {
-          this.sendToCalculation(calculationData);
+          this.sendToCalculation(calculationDataFinal);
         }, 100);
       });
-      
+
       cancelBtn.addEventListener('click', () => {
         closeAlert();
       });
     } else {
-      // Validasi field wajib untuk non-auto dimensi
       const missingFields = this.validateFields();
-      
       if (missingFields.length > 0) {
         const fieldList = missingFields.map(field => `• ${field}`).join('\n');
         showAlert(
@@ -1451,11 +1721,6 @@ window.modules.fondasi = {
         return;
       }
 
-      // Kumpulkan semua data
-      const calculationData = this.collectData();
-      
-      // TIDAK TAMPILKAN LOADING SPINNER JIKA autoDimensi false
-      // Langsung kirim ke perhitungan
       this.sendToCalculation(calculationData);
     }
   },
@@ -1464,7 +1729,7 @@ window.modules.fondasi = {
     const state = formState[currentModuleKey] && formState[currentModuleKey][currentMode] ? formState[currentModuleKey][currentMode] : {};
     const missingFields = [];
 
-    // Validasi Data Material (untuk fondasi: fc, fy, gammaC)
+    // Data Material
     const quickFc = document.getElementById('quickFc').value;
     const quickFy = document.getElementById('quickFy').value;
     const quickGammaC = document.getElementById('quickGammaC').value;
@@ -1479,63 +1744,53 @@ window.modules.fondasi = {
       missingFields.push("ɣc (Berat Jenis Beton) - Data Material");
     }
 
-    // Field wajib dari Data Dimensi (berdasarkan mode fondasi)
     const currentFondasiMode = bebanMode[currentModuleKey] && bebanMode[currentModuleKey][currentMode] ? bebanMode[currentModuleKey][currentMode] : 'tunggal';
-    
-    // Untuk mode evaluasi, semua field dimensi wajib diisi manual
-    // Untuk mode desain, periksa apakah autoDimensi aktif
+
     let autoDimensi = false;
     if (currentMode !== 'evaluasi') {
       const autoDimensiKey = `autoDimensi_${currentFondasiMode}`;
       autoDimensi = state[autoDimensiKey] || false;
     }
-    
+
     if (!autoDimensi) {
-      // Jika autoDimensi tidak aktif atau mode evaluasi, validasi field dimensi manual
-      const dimensiFields = currentFondasiMode === 'tunggal' 
+      const dimensiFields = currentFondasiMode === 'tunggal'
         ? ['ly_tunggal', 'lx_tunggal', 'by_tunggal', 'bx_tunggal', 'h_tunggal']
         : ['ly_menerus', 'lx_menerus', 'by_menerus', 'bx_menerus', 'h_menerus'];
-      
+
       dimensiFields.forEach(field => {
         if (!state[field] || state[field].toString().trim() === '') {
           missingFields.push(`${this.getFieldLabel(field, currentFondasiMode)} (Data Dimensi)`);
         }
       });
     }
-    
-    // Validasi alpha_s selalu wajib untuk menerus (terlepas dari autoDimensi)
+
     if (currentFondasiMode === 'menerus') {
       if (!state['alpha_s_menerus'] || state['alpha_s_menerus'].toString().trim() === '') {
         missingFields.push("αs (Faktor Letak Fondasi) - Data Dimensi");
       }
     } else if (currentFondasiMode === 'tunggal' && !autoDimensi) {
-      // Alpha_s wajib untuk fondasi tunggal hanya jika autoDimensi tidak aktif
       if (!state['alpha_s_tunggal'] || state['alpha_s_tunggal'].toString().trim() === '') {
         missingFields.push("αs (Letak Kolom) - Data Dimensi");
       }
     }
 
-    // Field wajib dari Data Tanah berdasarkan mode
     const currentTanahMode = window.tanahMode[currentModuleKey] && window.tanahMode[currentModuleKey][currentMode] ? window.tanahMode[currentModuleKey][currentMode] : 'auto';
-    
+
     if (currentTanahMode === 'auto') {
-      // Mode Auto: df dan gamma wajib
       if (!state['df'] || state['df'].toString().trim() === '') {
         missingFields.push("Df (Kedalaman Fondasi) - Data Tanah");
       }
       if (!state['gamma'] || state['gamma'].toString().trim() === '') {
         missingFields.push("ɣ (Berat Jenis Tanah) - Data Tanah");
       }
-      
-      // Validasi metode yang dipilih
+
       const terzaghiChecked = state['terzaghi'] || false;
       const mayerhoffChecked = state['mayerhoff'] || false;
-      
+
       if (!terzaghiChecked && !mayerhoffChecked) {
         missingFields.push("Pilih minimal satu metode perhitungan (Terzaghi atau Mayerhoff) - Data Tanah");
       }
-      
-      // Jika Terzaghi dipilih, validasi phi dan c
+
       if (terzaghiChecked) {
         if (!state['phi'] || state['phi'].toString().trim() === '') {
           missingFields.push("ɸ (Sudut Gesek Dalam) - Data Tanah");
@@ -1544,13 +1799,11 @@ window.modules.fondasi = {
           missingFields.push("c (Kohesi) - Data Tanah");
         }
       }
-      
-      // Jika Mayerhoff dipilih, validasi qc
+
       if (mayerhoffChecked && (!state['qc'] || state['qc'].toString().trim() === '')) {
         missingFields.push("qc (Tahanan Konus Rata-rata) - Data Tanah");
       }
     } else {
-      // Mode Manual: qa, df, dan gamma wajib
       if (!state['qa'] || state['qa'].toString().trim() === '') {
         missingFields.push("qa (Kapasitas Dukung Izin Tanah) - Data Tanah");
       }
@@ -1562,16 +1815,13 @@ window.modules.fondasi = {
       }
     }
 
-    // Field wajib dari Data Beban: Pu, Mux, Muy (wajib diisi, bisa 0)
     const bebanFields = ['pu', 'mux', 'muy'];
     bebanFields.forEach(field => {
-      // Nilai bisa 0, jadi cek undefined atau string kosong
       if (state[field] === undefined || state[field].toString().trim() === '') {
         missingFields.push(`${this.getFieldLabel(field)} (Data Beban)`);
       }
     });
 
-    // Field wajib dari Data Tulangan (hanya untuk mode evaluasi)
     if (currentMode === 'evaluasi') {
       const currentFondasiMode = bebanMode[currentModuleKey] && bebanMode[currentModuleKey][currentMode] ? bebanMode[currentModuleKey][currentMode] : 'tunggal';
       let lx, ly;
@@ -1582,7 +1832,7 @@ window.modules.fondasi = {
         lx = state['lx_menerus'];
         ly = state['ly_menerus'];
       }
-      
+
       const tulanganFields = this.getTulanganFields(currentFondasiMode, lx, ly);
       tulanganFields.forEach(field => {
         if (!state[field.key] || state[field.key].toString().trim() === '') {
@@ -1596,36 +1846,27 @@ window.modules.fondasi = {
 
   getFieldLabel: function(key, fondasiMode = null) {
     const labels = {
-      // Data Dimensi - Tunggal
       'ly_tunggal': 'Ly (Panjang Fondasi)',
       'lx_tunggal': 'Lx (Lebar Fondasi)',
       'by_tunggal': 'by (Panjang Penampang Kolom)',
       'bx_tunggal': 'bx (Lebar Penampang Kolom)',
       'h_tunggal': 'h (Tebal Fondasi)',
       'alpha_s_tunggal': 'αs (Letak Kolom)',
-      
-      // Data Dimensi - Menerus
       'ly_menerus': 'Ly (Panjang Fondasi)',
       'lx_menerus': 'Lx (Lebar Fondasi)',
       'by_menerus': 'by (Panjang Sloof)',
       'bx_menerus': 'bx (Lebar Penampang Sloof)',
       'h_menerus': 'h (Tebal Fondasi)',
       'alpha_s_menerus': 'αs (Faktor Letak Fondasi)',
-      
-      // Data Tanah
       'df': 'Df (Kedalaman Fondasi)',
       'gamma': 'ɣ (Berat Jenis Tanah)',
       'phi': 'ɸ (Sudut Gesek Dalam)',
       'c': 'c (Kohesi)',
       'qc': 'qc (Tahanan Konus Rata-rata)',
       'qa': 'qa (Kapasitas Dukung Izin Tanah)',
-      
-      // Data Beban
       'pu': 'Pu (Beban Aksial Ultimit)',
       'mux': 'Mux (Momen Ultimit Arah X)',
       'muy': 'Muy (Momen Ultimit Arah Y)',
-      
-      // Data Tulangan
       'd': 'D (Diameter Tulangan Utama)',
       'db': 'Db (Diameter Tulangan Bagi)',
       's': 's (Jarak Tulangan Utama)',
@@ -1637,9 +1878,9 @@ window.modules.fondasi = {
   },
 
   collectData: function() {
-    const state = formState[currentModuleKey] && formState[currentModuleKey][currentMode] ? 
+    const state = formState[currentModuleKey] && formState[currentModuleKey][currentMode] ?
       {...formState[currentModuleKey][currentMode]} : {};
-    
+
     const quickInputs = {
       fc: document.getElementById('quickFc').value,
       fy: document.getElementById('quickFy').value,
@@ -1649,7 +1890,6 @@ window.modules.fondasi = {
     const currentFondasiMode = bebanMode[currentModuleKey] && bebanMode[currentModuleKey][currentMode] ? bebanMode[currentModuleKey][currentMode] : 'tunggal';
     const currentTanahMode = window.tanahMode[currentModuleKey] && window.tanahMode[currentModuleKey][currentMode] ? window.tanahMode[currentModuleKey][currentMode] : 'auto';
 
-    // PERBAIKAN: Konversi alpha_s dari string ke angka untuk mode tunggal
     let alpha_s_value = '';
     if (currentFondasiMode === 'tunggal' && state['alpha_s_tunggal']) {
       switch(state['alpha_s_tunggal']) {
@@ -1662,11 +1902,9 @@ window.modules.fondasi = {
       alpha_s_value = state['alpha_s_menerus'] || '';
     }
 
-    // PERBAIKAN: Saat autoDimensi aktif, gunakan nilai kosong untuk dimensi
     const autoDimensiKey = `autoDimensi_${currentFondasiMode}`;
     const isAutoDimensi = currentMode !== 'evaluasi' ? (state[autoDimensiKey] || false) : false;
-    
-    // Data yang akan dikirim ke calc-fondasi.js
+
     const calculationData = {
       module: currentModuleKey,
       mode: currentMode,
@@ -1674,8 +1912,6 @@ window.modules.fondasi = {
         mode: currentFondasiMode,
         autoDimensi: isAutoDimensi,
         dimensi: {
-          // Jika autoDimensi aktif, kirim nilai kosong (akan dihitung sistem)
-          // Jika tidak aktif, kirim nilai manual dari state
           ly: isAutoDimensi ? '' : (currentFondasiMode === 'tunggal' ? state['ly_tunggal'] : state['ly_menerus']),
           lx: isAutoDimensi ? '' : (currentFondasiMode === 'tunggal' ? state['lx_tunggal'] : state['lx_menerus']),
           by: currentFondasiMode === 'tunggal' ? state['by_tunggal'] : state['by_menerus'],
@@ -1712,7 +1948,6 @@ window.modules.fondasi = {
       }
     };
 
-    // Tambahkan data tulangan hanya untuk mode evaluasi
     if (currentMode === 'evaluasi') {
       let lx, ly;
       if (currentFondasiMode === 'tunggal') {
@@ -1722,7 +1957,7 @@ window.modules.fondasi = {
         lx = state['lx_menerus'];
         ly = state['ly_menerus'];
       }
-      
+
       const tulanganFields = this.getTulanganFields(currentFondasiMode, lx, ly);
       calculationData.tulangan = {};
       tulanganFields.forEach(field => {
@@ -1731,21 +1966,16 @@ window.modules.fondasi = {
     }
 
     console.log(`[CALCULATION DATA] autoDimensi: ${isAutoDimensi}, ly: ${calculationData.fondasi.dimensi.ly}, lx: ${calculationData.fondasi.dimensi.lx}, h: ${calculationData.fondasi.dimensi.h}`);
-    
+
     return calculationData;
   },
 
-  // FUNGSI REVISI: sendToCalculation dengan penanganan spinner yang lebih baik
   sendToCalculation: function(data) {
-    // PERBAIKAN: Gunakan pendekatan langsung tanpa timeout safety
     try {
-      // Panggil fungsi calculateFondasi langsung
       if (typeof window.calculateFondasi !== 'function') {
-        // Sembunyikan spinner jika autoDimensi true
         if (data.fondasi.autoDimensi) {
           this.hideLoadingSpinner();
         }
-        
         showAlert(
           "Modul perhitungan fondasi tidak ditemukan. Pastikan calc-fondasi.js sudah di-load.",
           "❌ Module Perhitungan Tidak Ditemukan"
@@ -1753,18 +1983,13 @@ window.modules.fondasi = {
         return;
       }
 
-      // Lakukan perhitungan
       const result = window.calculateFondasi(data);
-      
-      // PERBAIKAN PENTING: Sembunyikan spinner SEBELUM menangani hasil
-      // Ini akan memastikan spinner berhenti baik untuk sukses maupun error
+
       if (data.fondasi.autoDimensi) {
         this.hideLoadingSpinner();
       }
-      
-      // Handle hasil perhitungan
+
       if (result && result.status === "sukses") {
-        // Simpan ke sessionStorage dan redirect
         sessionStorage.setItem('calculationResultFondasi', JSON.stringify({
           module: data.module,
           mode: data.mode,
@@ -1776,33 +2001,27 @@ window.modules.fondasi = {
           timestamp: result.timestamp || new Date().toISOString(),
           actualFondasiMode: result.data?.actualFondasiMode || null
         }));
-        
-        // Simpan pengaturan warna
+
         if (typeof saveColorSettings === 'function') {
           saveColorSettings();
         }
-        
-        // Redirect ke report.html
+
         window.location.href = 'report.html';
       } else {
-        // Tampilkan pesan error - spinner sudah disembunyikan
         const errorMessage = result?.message || "Tidak ditemukan fondasi yang memenuhi syarat";
         showAlert(
           `Perhitungan fondasi gagal: ${errorMessage}`,
           "‼️ Alert"
         );
       }
-      
+
     } catch (error) {
-      // PERBAIKAN: Tangani error dan sembunyikan spinner
       console.error("Error dalam perhitungan fondasi:", error);
-      
-      // Sembunyikan spinner jika autoDimensi true
+
       if (data.fondasi.autoDimensi) {
         this.hideLoadingSpinner();
       }
-      
-      // Tampilkan error yang user-friendly
+
       showAlert(
         `Terjadi kesalahan dalam perhitungan: ${error.message || 'Error tidak diketahui'}`,
         "❌ Error Perhitungan"
@@ -1812,18 +2031,16 @@ window.modules.fondasi = {
 
   formatVariablesList: function(data) {
     let variablesList = [];
-    
-    // Data Material
+
     variablesList.push("=== DATA MATERIAL ===");
     variablesList.push(`fc: ${data.material.fc} MPa`);
     variablesList.push(`fy: ${data.material.fy} MPa`);
     variablesList.push(`gammaC: ${data.material.gammaC} kN/m³`);
-    
-    // Data Fondasi
+
     variablesList.push("\n=== DATA FONDASI ===");
     variablesList.push(`Mode: ${data.fondasi.mode}`);
     variablesList.push(`Auto Dimensi: ${data.fondasi.autoDimensi ? 'Ya' : 'Tidak'}`);
-    
+
     if (!data.fondasi.autoDimensi) {
       variablesList.push(`Ly: ${data.fondasi.dimensi.ly} m`);
       variablesList.push(`Lx: ${data.fondasi.dimensi.lx} m`);
@@ -1832,11 +2049,10 @@ window.modules.fondasi = {
       variablesList.push(`h: ${data.fondasi.dimensi.h} m`);
       variablesList.push(`alpha_s: ${data.fondasi.dimensi.alpha_s}`);
     }
-    
-    // Data Tanah
+
     variablesList.push("\n=== DATA TANAH ===");
     variablesList.push(`Mode: ${data.tanah.mode}`);
-    
+
     if (data.tanah.mode === 'auto') {
       variablesList.push(`Df: ${data.tanah.auto.df} m`);
       variablesList.push(`Gamma: ${data.tanah.auto.gamma} kN/m³`);
@@ -1847,32 +2063,29 @@ window.modules.fondasi = {
       }
       variablesList.push(`Mayerhoff: ${data.tanah.auto.mayerhoff ? 'Aktif' : 'Tidak aktif'}`);
       if (data.tanah.auto.mayerhoff) {
-        variablesList.push(`qc: ${data.tanah.auto.qc} kg/cm²`);
+        variablesList.push(`qc: ${data.tanah.auto.qc} MPa`);
       }
     } else {
       variablesList.push(`qa: ${data.tanah.manual.qa} kN/m²`);
       variablesList.push(`Df: ${data.tanah.manual.df} m`);
       variablesList.push(`Gamma: ${data.tanah.manual.gamma} kN/m³`);
     }
-    
-    // Data Beban
+
     variablesList.push("\n=== DATA BEBAN ===");
     variablesList.push(`Pu: ${data.beban.pu} kN`);
     variablesList.push(`Mux: ${data.beban.mux} kNm`);
     variablesList.push(`Muy: ${data.beban.muy} kNm`);
-    
-    // Data Lanjutan
+
     variablesList.push("\n=== DATA LANJUTAN ===");
     variablesList.push(`lambda: ${data.lanjutan.lambda || '1 (default)'}`);
-    
-    // Data Tulangan (hanya untuk evaluasi)
+
     if (data.mode === 'evaluasi' && data.tulangan) {
       variablesList.push("\n=== DATA TULANGAN ===");
       Object.keys(data.tulangan).forEach(key => {
         variablesList.push(`${key}: ${data.tulangan[key]}`);
       });
     }
-    
+
     return variablesList.join('\n');
   }
 };

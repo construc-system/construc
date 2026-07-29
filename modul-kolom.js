@@ -36,7 +36,7 @@ window.modules.kolom = {
       const checkNumber = (val, fieldName) => {
           const num = parseNum(val);
           if (num === null) {
-              errors.push(`"${fieldName}" harus diisi dengan angka (gunakan titik untuk desimal).`);
+              errors.push(`${fieldName} harus diisi dengan angka (gunakan titik untuk desimal).`);
               return null;
           }
           return num;
@@ -44,83 +44,108 @@ window.modules.kolom = {
 
       // 1. Material
       const fc = checkNumber(data.material.fc, "f'c");
-      if (fc !== null && fc <= 0) errors.push(`"f'c" harus lebih besar dari 0.`);
+      if (fc !== null && fc <= 0) errors.push(`f'<sub>c</sub> harus lebih besar dari 0.`);
       const fy = checkNumber(data.material.fy, "fy");
-      if (fy !== null && fy <= 0) errors.push(`"fy" harus lebih besar dari 0.`);
+      if (fy !== null && fy <= 0) errors.push(`f<sub>y</sub> harus lebih besar dari 0.`);
       const fyt = checkNumber(data.material.fyt, "fyt");
-      if (fyt !== null && fyt <= 0) errors.push(`"fyt" harus lebih besar dari 0.`);
+      if (fyt !== null && fyt <= 0) errors.push(`f<sub>yt</sub> harus lebih besar dari 0.`);
 
       // 2. Dimensi
-      const h = checkNumber(data.dimensi.h, "h");
-      if (h !== null && h <= 0) errors.push(`"h" harus lebih besar dari 0.`);
-      const b = checkNumber(data.dimensi.b, "b");
-      if (b !== null && b <= 0) errors.push(`"b" harus lebih besar dari 0.`);
-      const sb = checkNumber(data.dimensi.sb, "Sb");
-      if (sb !== null && sb <= 0) errors.push(`"Sb" harus lebih besar dari 0.`);
+      const h = checkNumber(data.dimensi.h, "Tinggi penampang kolom (h)");
+      if (h !== null && h <= 0) errors.push(`Tinggi penampang kolom (h) harus lebih besar dari 0.`);
+      const b = checkNumber(data.dimensi.b, "Lebar penampang kolom (b)");
+      if (b !== null && b <= 0) errors.push(`Lebar penampang kolom (b) harus lebih besar dari 0.`);
+      const sb = checkNumber(data.dimensi.sb, "Selimut beton (S<sub>b</sub>)");
+      if (sb !== null && sb <= 0) errors.push(`Selimut beton (S<sub>b</sub>) harus lebih besar dari 0.`);
 
       // 3. Beban (allow zero)
-      const checkLoad = (val, fieldName) => {
+      const checkLoad = (val, fieldLabel) => {
           const num = parseNum(val);
           if (num === null) {
-              errors.push(`"${fieldName}" harus diisi dengan angka (gunakan titik untuk desimal).`);
+              errors.push(`${fieldLabel} harus diisi dengan angka meskipun nilainya 0 (gunakan titik untuk desimal).`);
           } else if (num < 0) {
-              errors.push(`"${fieldName}" tidak boleh negatif.`);
+              errors.push(`${fieldLabel} tidak boleh negatif.`);
           }
           return num;
       };
+
+      const fieldMapping = {
+          'pu': 'Beban aksial ultimit (P<sub>u</sub>)',
+          'vu': 'Gaya geser ultimit (V<sub>u</sub>)',
+          'mux': 'Momen ultimit arah X (M<sub>ux</sub>)',
+          'muy': 'Momen ultimit arah Y (M<sub>uy</sub>)'
+      };
+
       const loadFields = ['pu', 'vu', 'mux', 'muy'];
       loadFields.forEach(field => {
           const val = data.beban[field];
-          checkLoad(val, field);
+          const fieldLabel = fieldMapping[field];
+          checkLoad(val, fieldLabel);
       });
 
       // 4. Tulangan (only evaluasi)
       if (data.mode === 'evaluasi') {
           const tulangan = data.tulangan || {};
-          const D = checkNumber(tulangan.d, "D");
-          if (D !== null && D <= 0) errors.push(`"D" harus lebih besar dari 0.`);
-          const phi = checkNumber(tulangan.phi, "ɸ");
-          if (phi !== null && phi <= 0) errors.push(`"ɸ" harus lebih besar dari 0.`);
+          const D = checkNumber(tulangan.d, "Diameter tulangan utama (D)");
+          if (D !== null && D <= 0) errors.push(`Diameter tulangan utama (D) harus lebih besar dari 0.`);
+          const phi = checkNumber(tulangan.phi, "Diameter sengkang (ɸ)");
+          if (phi !== null && phi <= 0) errors.push(`Diameter sengkang (ɸ) harus lebih besar dari 0.`);
           
-          const nx = checkNumber(tulangan.nx, "nx");
+          const nx = checkNumber(tulangan.nx, "Jumlah tulangan arah X (n<sub>x</sub>)");
           if (nx === null) {
-              errors.push(`"nx" harus diisi.`);
+              // Sudah di-handle oleh checkNumber
           } else if (nx < 4) {
-              errors.push(`"nx" minimal 4 (saat ini ${nx}).`);
+              errors.push(`Jumlah tulangan arah X (n<sub>x</sub>) minimum adalah 4 buah (saat ini ${nx} buah).`);
           }
-          const ny = checkNumber(tulangan.ny, "ny");
+          
+          const ny = checkNumber(tulangan.ny, "Jumlah tulangan arah Y (n<sub>y</sub>)");
           if (ny === null) {
-              errors.push(`"ny" harus diisi.`);
+              // Sama seperti nx
           } else if (ny < 4) {
-              errors.push(`"ny" minimal 4 (saat ini ${ny}).`);
+              errors.push(`Jumlah tulangan arah Y (n<sub>y</sub>) minimum adalah 4 buah (saat ini ${ny} buah).`);
           }
-          const s = checkNumber(tulangan.s, "s");
+          
+          const s = checkNumber(tulangan.s, "Jarak sengkang (s)");
           if (s !== null && s <= 0) {
-              errors.push(`"s" harus lebih besar dari 0.`);
+              errors.push(`Jarak sengkang (s) harus lebih besar dari 0.`);
           }
       }
 
       // ========== PERINGATAN (SARAN) ==========
       // Material
       if (fc !== null && (fc < 17 || fc > 60)) {
-          warnings.push(`f'c = ${fc} MPa, disarankan antara 17–60 MPa.`);
+          const kondisi = fc > 60 ? 'terlalu besar' : 'terlalu kecil';
+          warnings.push(`f'<sub>c</sub> dengan nilai ${fc} MPa ${kondisi}, nilai yang umum digunakan antara 17–60 MPa.`);
       }
+      if (fy !== null && (fy < 240 || fy > 500)) {
+          const kondisi = fy > 500 ? 'terlalu besar' : 'terlalu kecil';
+          warnings.push(`f<sub>y</sub> dengan nilai ${fy} MPa ${kondisi}, nilai yang umum digunakan antara 240–500 MPa.`);
+      }
+      if (fyt !== null && (fyt < 240 || fyt > 400)) {
+          const kondisi = fyt > 400 ? 'terlalu besar' : 'terlalu kecil';
+          warnings.push(`f<sub>yt</sub> dengan nilai ${fyt} MPa ${kondisi}, nilai yang umum digunakan antara 240–400 MPa.`);
+      }
+      
       // Dimensi
       if (b !== null && b < 150) {
-          warnings.push(`b = ${b} mm, disarankan minimal 150 mm.`);
+          warnings.push(`Lebar penampang kolom (b) dengan nilai ${b} mm terlalu kecil, disarankan minimal 150 mm.`);
       }
       if (h !== null && h < 150) {
-          warnings.push(`h = ${h} mm, disarankan minimal 150 mm.`);
+          warnings.push(`Tinggi penampang kolom (h) dengan nilai ${h} mm terlalu kecil, disarankan minimal 150 mm.`);
       }
+      
       // Beban
       const Pu = parseNum(data.beban.pu) || 0;
-      if (Pu > 5000) warnings.push(`Pu = ${Pu} kN melebihi 5000 kN, periksa kembali.`);
+      if (Pu > 5000) warnings.push(`Beban aksial ultimit (P<sub>u</sub>) sebesar ${Pu} kN tidak wajar, beban aksial pada umumnya tidak lebih dari 5000 kN.`);
+      
       const Mux = parseNum(data.beban.mux) || 0;
-      if (Mux > 600) warnings.push(`Mux = ${Mux} kNm melebihi 600 kNm, periksa kembali.`);
+      if (Mux > 600) warnings.push(`Momen ultimit arah X (M<sub>ux</sub>) sebesar ${Mux} kNm tidak wajar, momen ultimit pada umumnya tidak lebih dari 600 kNm.`);
+      
       const Muy = parseNum(data.beban.muy) || 0;
-      if (Muy > 600) warnings.push(`Muy = ${Muy} kNm melebihi 600 kNm, periksa kembali.`);
+      if (Muy > 600) warnings.push(`Momen ultimit arah Y (M<sub>uy</sub>) sebesar ${Muy} kNm tidak wajar, momen ultimit pada umumnya tidak lebih dari 600 kNm.`);
+      
       const Vu = parseNum(data.beban.vu) || 0;
-      if (Vu > 300) warnings.push(`Vu = ${Vu} kN melebihi 300 kN, periksa kembali.`);
+      if (Vu > 300) warnings.push(`Gaya geser ultimit (V<sub>u</sub>) sebesar ${Vu} kN tidak wajar, gaya geser pada umumnya tidak lebih dari 300 kN.`);
 
       // Tulangan
       if (data.mode === 'evaluasi') {
@@ -128,15 +153,17 @@ window.modules.kolom = {
           const phi = parseNum(data.tulangan.phi);
           const commonD = [10, 13, 16, 19, 22, 25, 29, 32, 36];
           const commonPhi = [6, 8, 10, 12, 14, 16, 19, 22, 25];
+          
           if (D !== null && !commonD.includes(D)) {
-              warnings.push(`Diameter tulangan utama D = ${D} mm tidak umum, disarankan: ${commonD.join(', ')}.`);
+              warnings.push(`Diameter tulangan utama (D) sebesar ${D} mm tidak umum, disarankan: ${commonD.join(', ')}.`);
           }
           if (phi !== null && !commonPhi.includes(phi)) {
-              warnings.push(`Diameter sengkang ɸ = ${phi} mm tidak umum, disarankan: ${commonPhi.join(', ')}.`);
+              warnings.push(`Diameter sengkang (ɸ) sebesar ${phi} mm tidak umum, disarankan: ${commonPhi.join(', ')}.`);
           }
+          
           const s = parseNum(data.tulangan.s);
-          if (s !== null && s > 600) {
-              warnings.push(`Jarak sengkang s = ${s} mm melebihi 600 mm.`);
+          if (s !== null && (s < 100 || s > 600)) {
+              warnings.push(`Jarak sengkang (s) sebesar ${s} mm tidak wajar, jarak yang umum digunakan antara 100–600 mm.`);
           }
       }
 

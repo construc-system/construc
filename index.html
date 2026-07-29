@@ -348,11 +348,13 @@ const autofillTemplate = {
                 "pu": "384",
                 "mux": "251",
                 "muy": "0",
-                "d": "10",
-                "db": "8",
-                "s": "95",
+                "d": "22",
+                "db": "16",
+                "s": "250",
                 "sb": "100",
-                "qa": "489.6"
+                "qa": "489.6",
+                "sp": "175",
+                "st": "450"
             },
             "desain": {
                 "terzaghi": true,
@@ -370,7 +372,7 @@ const autofillTemplate = {
                 "c": "20",
                 "qc": "95",
                 "pu": "384",
-                "mux": "254",
+                "mux": "251",
                 "muy": "0",
                 "ly_menerus": "13.5",
                 "lx_menerus": "1.6",
@@ -386,28 +388,28 @@ const autofillTemplate = {
                 "h": "400",
                 "b": "250",
                 "sb": "40",
-                "left_mu_pos": "0",
-                "left_mu_neg": "19.617",
-                "center_mu_pos": "28.534",
-                "right_mu_pos": "0",
-                "right_mu_neg": "19.617",
+                "left_mu_pos": "36.49",
+                "left_mu_neg": "94",
+                "center_mu_pos": "40.65",
+                "right_mu_pos": "65.92",
+                "right_mu_neg": "110.03",
                 "left_vu": "100",
                 "center_vu": "100",
                 "right_vu": "100",
-                "left_tu": "20.96",
-                "center_tu": "20.96",
+                "left_tu": "20",
+                "center_tu": "20",
                 "right_tu": "20.96",
                 "center_mu_neg": "0",
                 "d": "19",
                 "phi": "8",
-                "support_n": "4",
-                "support_np": "2",
+                "support_n": "6",
+                "support_np": "3",
                 "support_nt": "4",
-                "support_s": "100",
-                "field_n": "4",
+                "support_s": "120",
+                "field_n": "2",
                 "field_np": "2",
                 "field_nt": "4",
-                "field_s": "100"
+                "field_s": "120"
             },
             "desain": {
                 "h": "400",
@@ -434,7 +436,9 @@ const autofillTemplate = {
                 "sb": "40",
                 "pu": "1200",
                 "mu": "650",
-                "vu": "274.29"
+                "vu": "274.29",
+                "mux": "400",
+                "muy": "600"
             },
             "evaluasi": {
                 "h": "700",
@@ -446,7 +450,11 @@ const autofillTemplate = {
                 "d": "29",
                 "phi": "10",
                 "n": "12",
-                "s": "220"
+                "s": "220",
+                "mux": "400",
+                "muy": "600",
+                "nx": "8",
+                "ny": "12"
             }
         },
         "pelat": {
@@ -473,9 +481,9 @@ const autofillTemplate = {
                 "qu": "10",
                 "d": "10",
                 "db": "8",
-                "s": "155",
+                "s": "150",
                 "mu": "12.16",
-                "sb_tulangan": "205",
+                "sb_tulangan": "200",
                 "beban_tp_manual": "Dua Arah"
             }
         }
@@ -488,12 +496,12 @@ const autofillTemplate = {
     },
     "bebanMode": {
         "fondasi": {
-            "evaluasi": "menerus",
+            "evaluasi": "tunggal",
             "desain": "tunggal"
         },
         "pelat": {
             "desain": "auto",
-            "evaluasi": "manual"
+            "evaluasi": "auto"
         }
     }
 };

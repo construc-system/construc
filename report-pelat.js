@@ -1,22 +1,20 @@
 // report-pelat.js - Renderer laporan pelat dengan dispatcher CAD
-// Versi: mendukung tiga jenis pelat melalui satu tombol global
+// Versi: mendukung tiga jenis pelat melalui satu tombol global (Fixed SVG Render & Safe Reorder)
 
 (function() {
     'use strict';
     
     // ==================== DISPATCHER CAD ====================
-    // Fungsi global tunggal untuk semua ekspor CAD pelat
-    window.exportCADPelat = function(jenisTampak) {
-        // Ambil jenis pelat dari storage (menggunakan fungsi yang sudah ada di cut-generator.js)
+    window.exportCADPelat = function() {
         const jenisPelat = window.getJenisPelatLengkap ? window.getJenisPelatLengkap() : 'dua_arah';
         
         let cadText = '';
-        let label = `CAD Tampak ${jenisTampak} Pelat ${jenisPelat}`;
+        let label = `CAD Pelat ${jenisPelat}`;
         
         switch (jenisPelat) {
             case 'satu_arah':
                 if (typeof window.generateCADPelatSatuArah === 'function') {
-                    cadText = window.generateCADPelatSatuArah(jenisTampak);
+                    cadText = window.generateCADPelatSatuArah();
                 } else {
                     alert('Modul CAD untuk pelat satu arah tidak tersedia');
                     return;
@@ -24,7 +22,7 @@
                 break;
             case 'dua_arah':
                 if (typeof window.generateCADPelatDuaArah === 'function') {
-                    cadText = window.generateCADPelatDuaArah(jenisTampak);
+                    cadText = window.generateCADPelatDuaArah();
                 } else {
                     alert('Modul CAD untuk pelat dua arah tidak tersedia');
                     return;
@@ -32,7 +30,7 @@
                 break;
             case 'kantilever':
                 if (typeof window.generateCADPelatKantilever === 'function') {
-                    cadText = window.generateCADPelatKantilever(jenisTampak);
+                    cadText = window.generateCADPelatKantilever();
                 } else {
                     alert('Modul CAD untuk pelat kantilever tidak tersedia');
                     return;
@@ -47,7 +45,6 @@
             if (typeof window.copyToClipboard === 'function') {
                 window.copyToClipboard(cadText, label);
             } else {
-                // Fallback copy
                 navigator.clipboard.writeText(cadText).then(() => alert(`${label} berhasil disalin ke clipboard!`))
                     .catch(() => alert('Gagal menyalin ke clipboard'));
             }
@@ -68,13 +65,45 @@
             cleanupLegacyPenampang();
             updateReportTitle(result);
             renderInputDataPelat(result.inputData || {});
+            
+            // 1. Render semua komponen
             renderHasilPerhitunganPelat(result);
             renderRingkasanPelat(result);
+            renderEfisiensiTulanganPelat(result);
             renderPenampangPelat(result);
+            
+            // 2. Susun urutannya dengan metode aman (Safe Reorder)
+            safeReorderSections();
+            
             console.log("✅ Laporan pelat berhasil di-render");
         } catch (error) {
             console.error('Error rendering pelat report:', error);
             showError(`Error merender laporan pelat: ${error.message}`);
+        }
+    }
+
+    // FUNGSI PENGURUTAN AMAN
+    function safeReorderSections() {
+        const controlSec = document.getElementById('controlContainer')?.closest('.section');
+        const efisiensiSec = document.getElementById('efisiensi-section-pelat');
+        const resultSec = document.getElementById('resultContainer')?.closest('.section');
+        const penampangSec = document.querySelector('.penampang-section');
+
+        if (controlSec && controlSec.parentNode) {
+            const parent = controlSec.parentNode;
+            let currentAnchor = controlSec;
+            
+            if (efisiensiSec) {
+                parent.insertBefore(efisiensiSec, currentAnchor.nextSibling);
+                currentAnchor = efisiensiSec;
+            }
+            if (resultSec) {
+                parent.insertBefore(resultSec, currentAnchor.nextSibling);
+                currentAnchor = resultSec;
+            }
+            if (penampangSec) {
+                parent.insertBefore(penampangSec, currentAnchor.nextSibling);
+            }
         }
     }
     
@@ -224,15 +253,16 @@
         if (!kontrolLentur) return '';
         let html = '';
         const mdMax = Math.max(kontrolLentur.arahX?.detail?.Md || 0, kontrolLentur.arahY?.detail?.Md || 0);
+        
         if (kontrolLentur.arahX) {
             html += renderStepPelat(stepNumberGenerator.next().value, 'Kontrol Rasio K Arah X', `K = ${kontrolLentur.arahX.detail?.K?.toFixed(4)} ≤ K<sub>maks</sub> = ${kontrolLentur.arahX.detail?.Kmaks?.toFixed(4)}`, kontrolLentur.arahX.K_aman);
             html += renderStepPelat(stepNumberGenerator.next().value, 'Kontrol Kapasitas Lentur Arah X', `M<sub>d</sub> = ${mdMax.toFixed(3)} kNm/m ≥ M<sub>u</sub> = ${kontrolLentur.arahX.detail?.Mu?.toFixed(3)} kNm/m`, kontrolLentur.arahX.Md_aman);
-            html += renderStepPelat(stepNumberGenerator.next().value, 'Kontrol Tulangan Pokok Arah X', `A<sub>s,terpasang</sub> = ${kontrolLentur.arahX.detail?.As_terpasang?.toFixed(1)} mm²/m ≥ A<sub>s,dibutuhkan</sub> = ${kontrolLentur.arahX.detail?.As_dibutuhkan?.toFixed(1)} mm²/m`, kontrolLentur.arahX.As_terpasang_aman);
+            html += renderStepPelat(stepNumberGenerator.next().value, 'Kontrol Tulangan Pokok Arah X', `A<sub>s,d</sub> = ${kontrolLentur.arahX.detail?.As_terpasang?.toFixed(1)} mm²/m ≥ A<sub>s,u</sub> = ${kontrolLentur.arahX.detail?.As_dibutuhkan?.toFixed(1)} mm²/m`, kontrolLentur.arahX.As_terpasang_aman);
         }
         if (kontrolLentur.arahY) {
             html += renderStepPelat(stepNumberGenerator.next().value, 'Kontrol Rasio K Arah Y', `K = ${kontrolLentur.arahY.detail?.K?.toFixed(4)} ≤ K<sub>maks</sub> = ${kontrolLentur.arahY.detail?.Kmaks?.toFixed(4)}`, kontrolLentur.arahY.K_aman);
             html += renderStepPelat(stepNumberGenerator.next().value, 'Kontrol Kapasitas Lentur Arah Y', `M<sub>d</sub> = ${mdMax.toFixed(3)} kNm/m ≥ M<sub>u</sub> = ${kontrolLentur.arahY.detail?.Mu?.toFixed(3)} kNm/m`, kontrolLentur.arahY.Md_aman);
-            html += renderStepPelat(stepNumberGenerator.next().value, 'Kontrol Tulangan Pokok Arah Y', `A<sub>s,terpasang</sub> = ${kontrolLentur.arahY.detail?.As_terpasang?.toFixed(1)} mm²/m ≥ A<sub>s,dibutuhkan</sub> = ${kontrolLentur.arahY.detail?.As_dibutuhkan?.toFixed(1)} mm²/m`, kontrolLentur.arahY.As_terpasang_aman);
+            html += renderStepPelat(stepNumberGenerator.next().value, 'Kontrol Tulangan Pokok Arah Y', `A<sub>s,d</sub> = ${kontrolLentur.arahY.detail?.As_terpasang?.toFixed(1)} mm²/m ≥ A<sub>s,u</sub> = ${kontrolLentur.arahY.detail?.As_dibutuhkan?.toFixed(1)} mm²/m`, kontrolLentur.arahY.As_terpasang_aman);
         }
         return html;
     }
@@ -241,10 +271,10 @@
         if (!kontrolBagi) return '';
         let html = '';
         if (kontrolBagi.arahX) {
-            html += renderStepPelat(stepNumberGenerator.next().value, 'Kontrol Tulangan Bagi Arah X', `A<sub>s,terpasang</sub> = ${kontrolBagi.arahX.detail?.As_terpasang?.toFixed(1)} mm²/m ≥ A<sub>s,dibutuhkan</sub> = ${kontrolBagi.arahX.detail?.As_dibutuhkan?.toFixed(1)} mm²/m`, kontrolBagi.arahX.As_terpasang_aman);
+            html += renderStepPelat(stepNumberGenerator.next().value, 'Kontrol Tulangan Bagi Arah X', `A<sub>s,d</sub> = ${kontrolBagi.arahX.detail?.As_terpasang?.toFixed(1)} mm²/m ≥ A<sub>s,u</sub> = ${kontrolBagi.arahX.detail?.As_dibutuhkan?.toFixed(1)} mm²/m`, kontrolBagi.arahX.As_terpasang_aman);
         }
         if (kontrolBagi.arahY) {
-            html += renderStepPelat(stepNumberGenerator.next().value, 'Kontrol Tulangan Bagi Arah Y', `A<sub>s,terpasang</sub> = ${kontrolBagi.arahY.detail?.As_terpasang?.toFixed(1)} mm²/m ≥ A<sub>s,dibutuhkan</sub> = ${kontrolBagi.arahY.detail?.As_dibutuhkan?.toFixed(1)} mm²/m`, kontrolBagi.arahY.As_terpasang_aman);
+            html += renderStepPelat(stepNumberGenerator.next().value, 'Kontrol Tulangan Bagi Arah Y', `A<sub>s,d</sub> = ${kontrolBagi.arahY.detail?.As_terpasang?.toFixed(1)} mm²/m ≥ A<sub>s,u</sub> = ${kontrolBagi.arahY.detail?.As_dibutuhkan?.toFixed(1)} mm²/m`, kontrolBagi.arahY.As_terpasang_aman);
         }
         return html;
     }
@@ -253,13 +283,227 @@
         const statusHtml = aman !== null ? `<div class="step-result">${aman ? '<span class="status-aman">✓ AMAN</span>' : '<span class="status-tidak-aman">✗ TIDAK AMAN</span>'}</div>` : '';
         return `<div class="step-item"><div class="step-number">${number}</div><div class="step-content"><div class="step-desc">${desc}</div><div class="step-body"><div class="step-formula">${formula}</div>${statusHtml}</div></div></div>`;
     }
+
+    // ==================== FUNGSI EFISIENSI TULANGAN PELAT ====================
+    function renderEfisiensiTulanganPelat(result) {
+        let existingSection = document.getElementById('efisiensi-section-pelat');
+        if (existingSection) existingSection.remove();
+
+        const section = document.createElement('section');
+        section.className = 'section efisiensi-tulangan';
+        section.id = 'efisiensi-section-pelat';
+
+        const { kontrol } = result;
+        if (!kontrol) return;
+
+        const safeDiv = (num, den) => (den && den > 0) ? (num / den) : 0;
+
+        const getUtama = (arah) => {
+            const det = kontrol.lentur?.[arah]?.detail;
+            if (!det) return { b: 0, k: 1, e: 0, valid: false };
+            
+            const b = det.Mu || 0;
+            const mdMax = Math.max(kontrol.lentur?.arahX?.detail?.Md || 0, kontrol.lentur?.arahY?.detail?.Md || 0);
+            const k = mdMax || 1;
+            
+            return { b, k, e: safeDiv(b, k) * 100, valid: true, type: 'M', labelArah: arah === 'arahX' ? 'Arah X' : 'Arah Y' };
+        };
+
+        const getBagi = (arah) => {
+            const det = kontrol.bagi?.[arah]?.detail;
+            if (!det) return { b: 0, k: 1, e: 0, valid: false };
+            
+            const b = det.As_dibutuhkan || 0; 
+            const k = det.As_terpasang || 1;  
+            
+            return { b, k, e: safeDiv(b, k) * 100, valid: true, type: 'As', labelArah: arah === 'arahX' ? 'Arah X' : 'Arah Y' };
+        };
+
+        const utamaX = getUtama('arahX');
+        const utamaY = getUtama('arahY');
+        const bagiX = getBagi('arahX');
+        const bagiY = getBagi('arahY');
+
+        function getColorForEfficiency(pct) {
+            if (isNaN(pct)) return '#888';
+            pct = Math.max(0, Math.min(100, pct));
+            let r, g, b;
+            if (pct < 50) {
+                const factor = pct / 50;
+                r = Math.round(114 + factor * (255 - 114));
+                g = Math.round(28 + factor * (193 - 28));
+                b = Math.round(36 + factor * (7 - 36));
+            } else {
+                const factor = (pct - 50) / 50;
+                r = Math.round(255 + factor * (21 - 255));
+                g = Math.round(193 + factor * (87 - 193));
+                b = Math.round(7 + factor * (36 - 7));
+            }
+            return `rgb(${r}, ${g}, ${b})`;
+        }
+        
+        const failedColor = getColorForEfficiency(0);
+
+        const processCardData = (itemsArray) => {
+            const validItems = itemsArray.filter(i => i.val.valid);
+            if (validItems.length === 0) return { rawAvg: 0, isCardGagal: false, failedNames: [] };
+            
+            const rawAvg = Math.round(validItems.reduce((acc, curr) => acc + curr.val.e, 0) / validItems.length) || 0;
+            let failedNames = [];
+            validItems.forEach(item => {
+                if(item.val.e > 100) failedNames.push(item.val.labelArah);
+            })
+            return { rawAvg, isCardGagal: failedNames.length > 0, failedNames };
+        };
+
+        const renderCard = (title, items) => {
+            const validItems = items.filter(i => i.val.valid);
+            if (validItems.length === 0) return '';
+            
+            const cardData = processCardData(items);
+            
+            let avgDisplay = `${cardData.rawAvg}%`;
+            let col = getColorForEfficiency(cardData.rawAvg);
+            let progressWidth = Math.min(100, cardData.rawAvg);
+
+            if (cardData.isCardGagal) {
+                avgDisplay = "Gagal";
+                col = failedColor;
+            }
+
+            const renderSub = (label, val) => {
+                const isSubGagal = val.e > 100;
+                const eStr = isSubGagal ? "Gagal" : `${val.e.toFixed(1)}%`;
+                const cCol = isSubGagal ? failedColor : getColorForEfficiency(val.e);
+                
+                const isMomen = val.type === 'M';
+                const labelB = isMomen ? 'M<sub>u</sub>&nbsp; (Beban)' : 'A<sub>s,u</sub>&nbsp; (Perlu)';
+                const labelK = isMomen ? 'M<sub>d</sub>&nbsp; (Kapasitas)' : 'A<sub>s,d</sub>&nbsp; (Desain)';
+                const unit = isMomen ? 'kNm/m' : 'mm&sup2;/m';
+                const symB = isMomen ? 'M<sub>u</sub>' : 'A<sub>s,u</sub>';
+                const symK = isMomen ? 'M<sub>d</sub>' : 'A<sub>s,d</sub>';
+
+                return `
+                <div class="sub-item">
+                    <div class="sub-item-header">${label}</div>
+                    <div class="calc-details">
+                        <div class="calc-row"><span>${labelB}</span><span>${val.b.toFixed(2)} ${unit}</span></div>
+                        <div class="calc-row"><span>${labelK}</span><span>${val.k.toFixed(2)} ${unit}</span></div>
+                        <div class="calc-formula">
+                            <span>Efisiensi</span>
+                            <span style="color: ${cCol}; font-weight: 700;">${symB} / ${symK} &times; 100% = ${eStr}</span>
+                        </div>
+                    </div>
+                </div>`;
+            };
+            
+            let infoText = '';
+            if (cardData.isCardGagal) {
+                let failedText = "";
+                const failedNames = cardData.failedNames;
+                if (failedNames.length === 1) {
+                    failedText = failedNames[0];
+                } else if (failedNames.length === 2) {
+                    failedText = failedNames[0] + " dan " + failedNames[1];
+                } else if (failedNames.length > 2) {
+                    failedText = failedNames.slice(0, -1).join(', ') + ", dan " + failedNames[failedNames.length - 1];
+                }
+                infoText = `Nilai efisiensi <strong>${failedText}</strong> melebihi batas kapasitas desain (> 100%), sehingga struktur dinyatakan gagal karna struktur tidak mampu menahan beban.`;
+            } else {
+                 infoText = `Nilai&nbsp;<strong>${cardData.rawAvg}%</strong> merupakan hasil rata-rata tingkat efisiensi untuk ${title.toLowerCase()}.`;
+            }
+
+            return `
+            <div class="efisiensi-card">
+                <div class="efisiensi-header" onclick="this.parentElement.classList.toggle('active')">
+                    <div class="efisiensi-title">${title}</div>
+                    <div class="progress-track">
+                        <div class="progress-fill" style="width: ${progressWidth}%; background-color: ${col};"></div>
+                    </div>
+                    <div class="efisiensi-value" style="color: ${col}">${avgDisplay}</div>
+                    <div class="chevron">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M6 9l6 6 6-6"/>
+                        </svg>
+                    </div>
+                </div>
+                <div class="efisiensi-body">
+                    <div class="sub-efisiensi">
+                        ${validItems.map(i => renderSub(i.label, i.val)).join('')}
+                    </div>
+                    <div class="info-text-bottom">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line>
+                        </svg>
+                        <span>${infoText}</span>
+                    </div>
+                </div>
+            </div>`;
+        };
+
+        let cardsHtml = '';
+        cardsHtml += renderCard('Tulangan Utama', [
+            { label: 'Arah X', val: utamaX },
+            { label: 'Arah Y', val: utamaY }
+        ]);
+        cardsHtml += renderCard('Tulangan Bagi', [
+            { label: 'Arah X', val: bagiX },
+            { label: 'Arah Y', val: bagiY }
+        ]);
+
+        if (!cardsHtml) return;
+
+        section.innerHTML = `
+            <h2>EFISIENSI TULANGAN</h2>
+            <div class="efisiensi-container">
+                ${cardsHtml}
+            </div>
+        `;
+
+        if (!document.getElementById('efisiensi-style')) {
+            const style = document.createElement('style');
+            style.id = 'efisiensi-style';
+            style.textContent = `
+                .efisiensi-container { display: flex; flex-direction: column; gap: 0.75rem; }
+                .efisiensi-card { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; border-left: 4px solid var(--color-borders); overflow: hidden; transition: box-shadow 0.2s; }
+                .efisiensi-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+                .efisiensi-header { padding: 1rem; cursor: pointer; display: grid; grid-template-columns: 180px 1fr 60px 30px; align-items: center; gap: 1rem; transition: background-color 0.2s ease; }
+                .efisiensi-header:hover { background: #f1f3f5; }
+                .efisiensi-title { font-weight: 600; color: #333; font-size: 0.95rem; }
+                .efisiensi-value { font-family: 'JetBrains Mono', monospace; font-size: 1.1rem; font-weight: 700; text-align: right; }
+                .progress-track { background: #e9ecef; border-radius: 10px; height: 10px; width: 100%; overflow: hidden; }
+                .progress-fill { height: 100%; border-radius: 10px; transition: width 1s ease-in-out; }
+                .chevron { transition: transform 0.3s ease; color: #666; display: flex; justify-content: center; }
+                .efisiensi-card.active .chevron { transform: rotate(180deg); }
+                .efisiensi-body { display: none; padding: 1rem; background: #ffffff; border-top: 1px dashed #ddd; animation: fadeIn 0.3s ease; }
+                .efisiensi-card.active .efisiensi-body { display: block; }
+                @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+                .sub-efisiensi { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 1rem; margin-bottom: 0.5rem; }
+                .sub-item { background: #f8f9fa; border: 1px solid #eee; border-radius: 6px; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; }
+                .sub-item-header { font-size: 0.9rem; font-weight: 600; color: #222; padding-bottom: 0.25rem; border-bottom: 2px solid #e0e0e0; }
+                .calc-details { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: #555; background: #fff; padding: 0.5rem; border-radius: 4px; border: 1px solid #e0e0e0; display: flex; flex-direction: column; gap: 0.4rem; }
+                .calc-row { display: flex; justify-content: space-between; }
+                .calc-formula { margin-top: 0.2rem; padding-top: 0.4rem; border-top: 1px dashed #d0d0d0; display: flex; justify-content: space-between; align-items: center; }
+                .info-text-bottom { font-size: 0.75rem; color: #888; margin-top: 1.2rem; padding-top: 0.75rem; border-top: 1px solid #f0f0f0; display: flex; align-items: flex-start; gap: 0.5rem; }
+                .info-text-bottom svg { flex-shrink: 0; opacity: 0.7; margin-top: 0.1rem; }
+                .info-text-bottom span { line-height: 1.4; display: block; }
+                @media (max-width: 600px) {
+                    .efisiensi-header { grid-template-columns: 1fr auto auto; grid-template-areas: "title value chevron" "bar bar bar"; gap: 0.5rem; }
+                    .efisiensi-title { grid-area: title; } .efisiensi-value { grid-area: value; } .chevron { grid-area: chevron; } .progress-track { grid-area: bar; margin-top: 0.25rem; }
+                    .sub-efisiensi { grid-template-columns: 1fr; }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        document.body.appendChild(section); 
+    }
     
-    // Memisahkan string skala "1 : 4.2" menjadi ["1 :", "4.2"]
     function splitScale(scaleStr) {
         const parts = scaleStr.split(':');
         if (parts.length >= 2) {
-            const firstPart = parts[0].trim() + ' :';   // "1 :"
-            const secondPart = parts.slice(1).join(':').trim(); // "4.2" atau "1"
+            const firstPart = parts[0].trim() + ' :';
+            const secondPart = parts.slice(1).join(':').trim();
             return [firstPart, secondPart];
         }
         return [scaleStr, ''];
@@ -269,15 +513,18 @@
         cleanupLegacyPenampang();
         
         const container = document.createElement('div');
-        container.className = 'penampang-section';
-        container.innerHTML = '<h2>PENAMPANG PELAT</h2><div class="penampang-grid"></div>';
+        container.className = 'penampang-section section'; 
         
-        const controlContainer = document.getElementById('controlContainer');
-        if (controlContainer && controlContainer.parentNode) {
-            controlContainer.parentNode.insertBefore(container, controlContainer.nextSibling);
-        } else {
-            document.body.appendChild(container);
-        }
+        // Buat struktur utama penampang termasuk tombol global CAD di tengah bawah card SVG
+        container.innerHTML = `
+            <h2>PENAMPANG PELAT</h2>
+            <div class="penampang-grid"></div>
+            <div class="cad-global-action" style="display: flex; justify-content: center; margin-top: 1.5rem;">
+                <button class="btn secondary" onclick="window.exportCADPelat()">Copy ke CAD</button>
+            </div>
+        `;
+        
+        document.body.appendChild(container);
         
         const grid = container.querySelector('.penampang-grid');
         const dimensi = result.inputData?.dimensi || {};
@@ -296,6 +543,7 @@
         tampilan.forEach(t => {
             const card = document.createElement('div');
             card.className = 'penampang-card';
+            // Tombol Copy ke CAD di dalam card individu sudah dihapus
             card.innerHTML = `
                 <h3>${t.title}</h3>
                 <div id="${t.containerId}" class="svg-container" style="min-height: 250px; background: #fafafa; border-radius: 8px; margin-bottom: 0.5rem;"></div>
@@ -311,9 +559,6 @@
                         </div>
                     </div>
                     <div class="scale-info"></div>
-                </div>
-                <div class="cad-actions">
-                    <button class="btn secondary" onclick="window.exportCADPelat('${t.jenis}')">Copy ke CAD</button>
                 </div>
                 <div class="penampang-disclaimer">
                     *Penampang ini hanya ilustrasi dan tidak 100% sesuai dengan CAD
@@ -388,7 +633,6 @@
                 gap: 1.5rem;
             }
             
-            /* DESKTOP STYLES */
             .penampang-card .scale-info {
                 display: grid;
                 grid-template-columns: auto auto 1fr;
@@ -401,7 +645,6 @@
                 white-space: nowrap;
             }
             
-            /* DISCLAIMER STYLES - pojok kanan bawah */
             .penampang-disclaimer {
                 text-align: right;
                 font-size: 0.7rem;
@@ -411,7 +654,6 @@
                 padding-top: 6px;
             }
             
-            /* MOBILE STYLES */
             @media (max-width: 768px) {
                 .penampang-grid {
                     grid-template-columns: 1fr;
@@ -468,5 +710,5 @@
     }
     
     window.renderPelatReport = renderPelatReport;
-    console.log("✅ report-pelat.js loaded (dengan dispatcher CAD untuk semua jenis pelat)");
+    console.log("✅ report-pelat.js loaded (dengan Safe Reorder dan Efisiensi Mu/Md ter-fix)");
 })();

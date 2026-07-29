@@ -227,6 +227,16 @@
         const b = 1000;
         const phi = 0.9;
         const jenisPelat = getData('data.tabel.jenisPelat', 'dua_arah');
+        
+        // Hitung ulang manual s1, s2, s3 agar selalu menampilkan hasil hitungan murni
+        const s1_hitung = data?.AsDigunakan ? (0.25 * Math.PI * Math.pow(D, 2) * b) / data.AsDigunakan : data?.s1;
+        const s2_hitung = jenisPelat === 'satu_arah' ? 3 * h : 2 * h;
+        const s3_hitung = 450;
+        
+        // Tentukan nilai s yang ditampilkan berdasarkan mode (label tetap)
+        const s_input = getData('inputData.tulangan.s');
+        const s_tampil = mode === 'evaluasi' ? s_input : data?.sDigunakan;
+
         const rows = [
             { parameter: `$\\displaystyle K = \\frac{M_u}{\\phi b d^2}$`, hasil: formatNumber(data?.K), satuan: 'MPa' },
             { parameter: `$\\displaystyle a = \\left(1 - \\sqrt{1 - \\frac{2K}{0.85 f'_c}}\\right) d$`, hasil: formatNumber(data?.a), satuan: 'mm' },
@@ -234,10 +244,10 @@
             { parameter: `$\\displaystyle A_{s2} = \\frac{\\sqrt{f'_c}}{4f_y} b d$`, hasil: formatNumber(data?.As2), satuan: 'mm²/m' },
             { parameter: `$\\displaystyle A_{s3} = \\frac{1.4}{f_y} b d$`, hasil: formatNumber(data?.As3), satuan: 'mm²/m' },
             { parameter: `$A_{s,perlu} = \\max(A_{s1}, A_{s2}, A_{s3})$`, hasil: formatNumber(data?.AsDigunakan), satuan: 'mm²/m' },
-            { parameter: `$\\displaystyle s_1 = \\frac{0.25 \\pi D^2 \\times b}{A_{s,perlu}}$`, hasil: formatNumber(data?.s1), satuan: 'mm' },
-            { parameter: `$s_2 = ${jenisPelat === 'satu_arah' ? '3h' : '2h'}$`, hasil: formatNumber(data?.s2), satuan: 'mm' },
-            { parameter: `$s_3 = 450$`, hasil: formatNumber(data?.s3), satuan: 'mm' },
-            { parameter: `$s = \\min(s_1, s_2, s_3)$`, hasil: formatNumber(data?.sDigunakan, 0), satuan: 'mm' },
+            { parameter: `$\\displaystyle s_1 = \\frac{0.25 \\pi D^2 \\times b}{A_{s,perlu}}$`, hasil: formatNumber(s1_hitung), satuan: 'mm' },
+            { parameter: `$s_2 = ${jenisPelat === 'satu_arah' ? '3h' : '2h'}$`, hasil: formatNumber(s2_hitung), satuan: 'mm' },
+            { parameter: `$s_3 = 450$`, hasil: formatNumber(s3_hitung), satuan: 'mm' },
+            { parameter: `$s = \\min(s_1, s_2, s_3)$`, hasil: formatNumber(s_tampil, 0), satuan: 'mm' },
             { parameter: `$\\displaystyle A_{s} = \\frac{0.25 \\pi D^2 \\times b}{s}$`, hasil: formatNumber(data?.AsTerpasang), satuan: 'mm²/m' },
             { parameter: `$\\displaystyle M_n = A_{s} \\times f_y \\times (d - a/2)$`, hasil: formatNumber(data?.Mn), satuan: 'kNm/m' },
             { parameter: `$\\displaystyle M_d = \\phi \\times M_n$`, hasil: formatNumber(data?.Md), satuan: 'kNm/m' },
@@ -253,15 +263,25 @@
         if (fy <= 350) { Asb2Formula = '0.002'; Asb2Value = 0.002 * b * h; }
         else if (fy < 420) { Asb2Formula = `0.002 - (${formatNumber(fy)} - 350)/350000`; Asb2Value = (0.002 - (fy - 350)/350000) * b * h; }
         else { Asb2Formula = '0.0018 × (420/fy)'; Asb2Value = 0.0018 * (420/fy) * b * h; }
+        
+        // Hitung ulang manual s1, s2, s3 agar selalu menampilkan hasil hitungan murni
+        const s1_hitung = data?.AsbDigunakan ? (0.25 * Math.PI * Math.pow(Db, 2) * 1000) / data.AsbDigunakan : data?.s1;
+        const s2_hitung = 5 * h;
+        const s3_hitung = 450;
+        
+        // Tentukan nilai s bagi yang ditampilkan berdasarkan mode (label tetap)
+        const sb_input = getData('inputData.tulangan.sb');
+        const s_tampil = mode === 'evaluasi' ? sb_input : data?.sDigunakan;
+
         const rows = [
             { parameter: `$\\displaystyle A_{sb1} = \\frac{A_{s,pokok}}{5}$`, hasil: formatNumber(data?.Asb1), satuan: 'mm²/m' },
             { parameter: `$A_{sb2} = ${Asb2Formula} \\times b \\times h$`, hasil: formatNumber(Asb2Value), satuan: 'mm²/m' },
             { parameter: `$A_{sb3} = 0.0014 \\times b \\times h$`, hasil: formatNumber(data?.Asb3), satuan: 'mm²/m' },
             { parameter: `$A_{sb,perlu} = \\max(A_{sb1}, A_{sb2}, A_{sb3})$`, hasil: formatNumber(data?.AsbDigunakan), satuan: 'mm²/m' },
-            { parameter: `$\\displaystyle s_1 = \\frac{0.25 \\pi D_b^2 \\times 1000}{A_{sb,perlu}}$`, hasil: formatNumber(data?.s1), satuan: 'mm' },
-            { parameter: `$s_2 = 5h$`, hasil: formatNumber(data?.s2), satuan: 'mm' },
-            { parameter: `$s_3 = 450$`, hasil: formatNumber(data?.s3), satuan: 'mm' },
-            { parameter: `$s = \\min(s_1, s_2, s_3)$`, hasil: formatNumber(data?.sDigunakan, 0), satuan: 'mm' },
+            { parameter: `$\\displaystyle s_1 = \\frac{0.25 \\pi D_b^2 \\times 1000}{A_{sb,perlu}}$`, hasil: formatNumber(s1_hitung), satuan: 'mm' },
+            { parameter: `$s_2 = 5h$`, hasil: formatNumber(s2_hitung), satuan: 'mm' },
+            { parameter: `$s_3 = 450$`, hasil: formatNumber(s3_hitung), satuan: 'mm' },
+            { parameter: `$s = \\min(s_1, s_2, s_3)$`, hasil: formatNumber(s_tampil, 0), satuan: 'mm' },
             { parameter: `$\\displaystyle A_{sb} = \\frac{0.25 \\pi D_b^2 \\times 1000}{s}$`, hasil: formatNumber(data?.AsbTerpasang), satuan: 'mm²/m' },
             { parameter: `$A_{sb} \\ge A_{sb,perlu}$`, isStatus: true, statusHtml: `<span class="${data?.AsbTerpasang >= data?.AsbDigunakan ? 'status-aman' : 'status-tidak-aman'}">${data?.AsbTerpasang >= data?.AsbDigunakan ? 'AMAN' : 'TIDAK AMAN'}</span>` }
         ];
