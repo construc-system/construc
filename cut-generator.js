@@ -227,10 +227,20 @@ window.renderPenampangBalok = function(config, containerId = "svg-container") {
             return;
         }
     }
-    const renderConfig = config;
+    
+    // 🔥 PERBAIKAN: Tukar tulangan atas dan bawah untuk Lapangan (Momen Positif)
+    const renderConfig = { ...config };
+    if (containerId.includes('lapangan')) {
+        const temp = renderConfig.jumlahAtas;
+        renderConfig.jumlahAtas = renderConfig.jumlahBawah;
+        renderConfig.jumlahBawah = temp;
+    }
+
     if (containerId.includes('tumpuan')) window.cadConfig.tumpuan = { ...renderConfig, containerId };
     else if (containerId.includes('lapangan')) window.cadConfig.lapangan = { ...renderConfig, containerId };
+    
     const { lebar, tinggi, D, begel, jumlahAtas, jumlahBawah, selimut, m, jumlahTorsi, jarakTorsi, Snv } = renderConfig;
+    
     const r = D / 2;
     const jarakAntarBaris = Math.max(25, D);
     const svgNS = "http://www.w3.org/2000/svg";
@@ -278,6 +288,7 @@ window.renderPenampangBalok = function(config, containerId = "svg-container") {
     rectBegelDalam.setAttribute("stroke-width", 3);
     applyNonScalingStroke(rectBegelDalam);
     svg.appendChild(rectBegelDalam);
+    
     function buatLingkaranCAD(cx, cy, isTorsi = false) {
         const circle = document.createElementNS(svgNS, "circle");
         const actualCx = 30 + cx;
@@ -293,6 +304,7 @@ window.renderPenampangBalok = function(config, containerId = "svg-container") {
         else lingkaranData.push({ cx, cy, r });
         svg.appendChild(circle);
     }
+    
     function buatBaris(jumlah, cy, isAtas) {
         const barisUtuh = Math.floor(jumlah / m);
         const sisa = jumlah % m;
@@ -320,10 +332,12 @@ window.renderPenampangBalok = function(config, containerId = "svg-container") {
             }
         }
     }
+    
     const cyAtas = selimut + begel + r;
     buatBaris(jumlahAtas, cyAtas, true);
     const cyBawah = tinggi - (selimut + begel + r);
     buatBaris(jumlahBawah, cyBawah, false);
+    
     if (jumlahTorsi > 0) {
         const actualSnv = Snv || Math.max(25, D);
         const yMid = tinggi / 2;
@@ -343,6 +357,7 @@ window.renderPenampangBalok = function(config, containerId = "svg-container") {
             buatLingkaranCAD(xKiri, cy, true);
         }
     }
+    
     if (containerId.includes('tumpuan')) {
         window.cadConfig.tumpuan.lingkaranData = lingkaranData;
         window.cadConfig.tumpuan.lingkaranTorsiData = lingkaranTorsiData;
@@ -350,12 +365,14 @@ window.renderPenampangBalok = function(config, containerId = "svg-container") {
         window.cadConfig.lapangan.lingkaranData = lingkaranData;
         window.cadConfig.lapangan.lingkaranTorsiData = lingkaranTorsiData;
     }
+    
     if (containerId.includes('tumpuan') || !window.cadConfig.activeType) {
         window.config = renderConfig;
         window.lingkaranData = lingkaranData;
         window.lingkaranTorsiData = lingkaranTorsiData;
         window.cadConfig.activeType = 'tumpuan';
     }
+    
     console.log(`✅ Penampang ${containerId} berhasil di-render. Total tulangan: ${lingkaranData.length}, Tulangan torsi: ${lingkaranTorsiData.length}`);
     return { config: renderConfig, lingkaranData, lingkaranTorsiData, containerId };
 };
@@ -893,4 +910,4 @@ window.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-console.log("✅ cut-generator.js final ter-load (Trim spasi PL terakhir)");
+console.log("✅ cut-generator.js final ter-load (Trim spasi PL terakhir + Perbaikan Tulangan Lapangan)");
