@@ -214,7 +214,7 @@
             { parameter: "$\\displaystyle A_{s2} = \\frac{\\sqrt{f'_c}}{4f_y} b d$", hasil: As2, satuan: 'mm²' },
             { parameter: "$\\displaystyle A_{s3} = \\frac{1.4}{f_y} b d$", hasil: As3, satuan: 'mm²' },
             { parameter: "$A_{s,perlu} = \\max(A_{s1}, A_{s2}, A_{s3})$", hasil: formatNumber(data?.As), satuan: 'mm²' },
-            { parameter: "$\\displaystyle n = \\frac{A_{s,perlu}}{A_{D19}}$", hasil: jumlahTulangan, satuan: 'batang' },
+            { parameter: "$\\displaystyle n = \\frac{A_{s,perlu}}{0.25 \\times \\pi \\times D^2}$", hasil: jumlahTulangan, satuan: 'batang' },
             { parameter: "$A_{s,terpasang} = n \\times (0.25 \\times \\pi \\times D^2)$", hasil: formatNumber(data?.AsTerpakai), satuan: 'mm²' },
             { parameter: "$\\displaystyle \\rho = \\frac{A_{s,terpasang}}{b \\times d} \\times 100\\%$", hasil: formatNumber(data?.rho), satuan: '%' },
             { parameter: "$\\displaystyle \\rho_{min} = \\max\\left(\\frac{\\sqrt{f'_c}}{4f_y}, \\frac{1.4}{f_y}\\right) \\times 100\\%$", hasil: formatNumber(data?.pmin), satuan: '%' },
