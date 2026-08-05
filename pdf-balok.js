@@ -257,7 +257,7 @@
         if (Vu < phiVc_half) {
             rows = [
                 { parameter: "$V_u$", hasil: formatNumber(Vu), satuan: 'kN' },
-                { parameter: "$\\phi V_c$", hasil: formatNumber(phiVc), satuan: 'kN' },
+                { parameter: "$\\phi V_c = \\phi \\times 0.17 \\times \\lambda \\sqrt{f'_c} b d$", hasil: formatNumber(phiVc), satuan: 'kN' },
                 { parameter: "$\\phi V_c / 2$", hasil: formatNumber(phiVc_half), satuan: 'kN' },
                 { parameter: "$V_u < \\phi V_c / 2$", isStatus: true, statusHtml: `<span class="kondisi-text">Tidak perlu begel atau digunakan begel minimum</span>` },
                 { parameter: "$\\displaystyle s_1 = \\frac{n \\cdot 0.25 \\cdot \\pi \\cdot \\phi^2}{A_{v,u}}$", hasil: formatNumber(s1), satuan: 'mm' },
@@ -273,7 +273,7 @@
             const Av2 = parseFloat(data?.Av2) || 0;
             rows = [
                 { parameter: "$V_u$", hasil: formatNumber(Vu), satuan: 'kN' },
-                { parameter: "$\\phi V_c$", hasil: formatNumber(phiVc), satuan: 'kN' },
+                { parameter: "$\\phi V_c = \\phi \\times 0.17 \\times \\lambda \\sqrt{f'_c} b d$", hasil: formatNumber(phiVc), satuan: 'kN' },
                 { parameter: "$\\phi V_c / 2 < V_u < \\phi V_c$", isStatus: true, statusHtml: `<span class="kondisi-text">Digunakan luas begel perlu minimum</span>` },
                 { parameter: "$\\displaystyle A_{v1} = 0.062 \\sqrt{f'_c} \\frac{b \\cdot s}{f_{yt}}$", hasil: formatNumber(Av1), satuan: 'mm²/m' },
                 { parameter: "$\\displaystyle A_{v2} = 0.35 \\frac{b \\cdot s}{f_{yt}}$", hasil: formatNumber(Av2), satuan: 'mm²/m' },
@@ -293,10 +293,10 @@
             const Vs_aman = Vs <= Vs_maks;
             rows = [
                 { parameter: "$V_u$", hasil: formatNumber(Vu), satuan: 'kN' },
-                { parameter: "$\\phi V_c$", hasil: formatNumber(phiVc), satuan: 'kN' },
+                { parameter: "$\\phi V_c = \\phi \\times 0.17 \\times \\lambda \\sqrt{f'_c} b d$", hasil: formatNumber(phiVc), satuan: 'kN' },
                 { parameter: "$V_u > \\phi V_c$", isStatus: true, statusHtml: `<span class="kondisi-text">Perlu perhitungan tulangan geser</span>` },
                 { parameter: "$V_s = \\dfrac{V_u - \\phi V_c}{\\phi}$", hasil: formatNumber(Vs), satuan: 'kN' },
-                { parameter: "$V_{s,max}$", hasil: formatNumber(Vs_maks), satuan: 'kN' },
+                { parameter: "$V_{s,max} = \\frac{2}{3} \\sqrt{f'_c} b d$", hasil: formatNumber(Vs_maks), satuan: 'kN' },
                 { parameter: "$V_s \\le V_{s,max}$", isStatus: true, statusHtml: `<span class="${Vs_aman ? 'status-aman' : 'status-tidak-aman'}">${Vs_aman ? 'AMAN' : 'TIDAK AMAN'}</span>` },
                 { parameter: "$\\displaystyle A_{v1} = 0.062 \\sqrt{f'_c} \\frac{b \\cdot s}{f_{yt}}$", hasil: formatNumber(Av1), satuan: 'mm²/m' },
                 { parameter: "$\\displaystyle A_{v2} = 0.35 \\frac{b \\cdot s}{f_{yt}}$", hasil: formatNumber(Av2), satuan: 'mm²/m' },
