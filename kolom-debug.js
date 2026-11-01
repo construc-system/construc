@@ -732,7 +732,7 @@ function saveResultAndRedirectKolom(result, inputData){
       saveOptimizerDetailToStorage(kombinasi, inputData, result.data);
     }
     
-    // window check removed} catch(e){
+    } catch(e){
     console.warn('Gagal simpan result kolom:', e);
   }
 }
@@ -1121,22 +1121,6 @@ function getReportDataEnhanced() {
 }
 
 // ====== AUTO-RUN DI HALAMAN REPORT.HTML ======
-// window check removedφ${item.phi}${minInfo} | n=${item.n} | s=${item.s}mm | ρ=${item.rho?.toFixed(2) || '?'}% | Skor: ${item.skor?.toFixed(2)}`);
-                    });
-                }
-                
-                // Cek apakah D=29 φ=10 selalu ada di top
-                if (data.top10 && data.top10.top10) {
-                    const d29phi10Count = data.top10.top10.filter(item => item.D === 29 && item.phi === 10).length;
-                    if (d29phi10Count > 0) {
-                        console.log(`\n⚠️  CATATAN: D29 φ10 muncul ${d29phi10Count} kali di top 10`);
-                    }
-                }
-                
-            }, 1500);
-        }
-    });
-}
 
 // ====== EKSPOR FUNGSI KE WINDOW ======
 // window check removed// Convenience: quick synchronous wrapper
