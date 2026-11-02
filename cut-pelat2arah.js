@@ -673,14 +673,7 @@
                     for (let x of posAtasKanan) {
                         tambahPerintah(lingkaran(x, flipY(yBagiAtas, tinggiTotal), diameterTulanganBagi), true);
                     }
-                    const posBawahKiri = hitungPosisiTitikCAD1(dStart, panjangPendek - diameterTulanganBagi/2, stepBagi, diameterTulanganBagi);
-                    for (let x of posBawahKiri) {
-                        tambahPerintah(lingkaran(x, flipY(yBagiBawah, tinggiTotal), diameterTulanganBagi), true);
-                    }
-                    const posBawahKanan = hitungPosisiTitikCAD1(Lx_mm - dStart, Lx_mm - panjangPendek + dStart, stepBagi, diameterTulanganBagi);
-                    for (let x of posBawahKanan) {
-                        tambahPerintah(lingkaran(x, flipY(yBagiBawah, tinggiTotal), diameterTulanganBagi), true);
-                    }
+                    // CAD depan: lingkaran merah bawah dihapus
                     
                     const xStart = panjangPendek;
                     const xEnd = Lx_mm - panjangPendek;
@@ -700,20 +693,21 @@
 
                     const xLuar = Ly_mm - step3;
                     const xDalam = xLuar - step3*2;
-                    tambahPerintah(polyline([[xLuar, 0], [xLuar, Lx_mm]], diameterTulanganBagi));
+                    // CAD: garis merah vertikal kanan (xLuar) dihapus
                     tambahPerintah(polyline([[xDalam, 0], [xDalam, Lx_mm]], diameterTulanganBagi));
                     const ySegiMVert = Lx_mm / 4;
-                    tambahPerintah(buatSegitigaCAD(xLuar, flipY(ySegiMVert, tinggiTotal), 'left', ukuranSegitiga, diameterTulanganBagi));
-                    tambahPerintah(buatSegitigaCAD(xDalam, flipY(ySegiMVert, tinggiTotal), 'right', ukuranSegitiga, diameterTulanganBagi));
+                    // CAD: segitiga xLuar dihapus
+                    tambahPerintah(buatSegitigaCAD(xDalam, flipY(ySegiMVert, tinggiTotal) + ukuranSegitiga/2, 'right', ukuranSegitiga, diameterTulanganBagi));
+                    tambahPerintah(buatSegitigaCAD(xDalam, flipY(ySegiMVert, tinggiTotal) - ukuranSegitiga/2, 'right', ukuranSegitiga, diameterTulanganBagi));
                     
                     const yLuar = Lx_mm - step3;
                     const yDalam = yLuar - step3*2;
-                    tambahPerintah(polyline([[0, flipY(yLuar, tinggiTotal)], [Ly_mm, flipY(yLuar, tinggiTotal)]], diameterTulanganBagi));
+                    // CAD: garis merah horizontal bawah (yLuar) dihapus
                     tambahPerintah(polyline([[0, flipY(yDalam, tinggiTotal)], [Ly_mm, flipY(yDalam, tinggiTotal)]], diameterTulanganBagi));
                     const xSegiMHor = Ly_mm / 4;
-                    tambahPerintah(buatSegitigaCAD(xSegiMHor-ukuranSegitiga/2, flipY(yLuar, tinggiTotal), 'down', ukuranSegitiga, diameterTulanganBagi));
+                    // CAD: segitiga yLuar kiri dihapus
                     tambahPerintah(buatSegitigaCAD(xSegiMHor-ukuranSegitiga/2, flipY(yDalam, tinggiTotal), 'up', ukuranSegitiga, diameterTulanganBagi));
-                    tambahPerintah(buatSegitigaCAD(xSegiMHor+ukuranSegitiga/2, flipY(yLuar, tinggiTotal), 'down', ukuranSegitiga, diameterTulanganBagi));
+                    // CAD: segitiga yLuar kanan dihapus
                     tambahPerintah(buatSegitigaCAD(xSegiMHor+ukuranSegitiga/2, flipY(yDalam, tinggiTotal), 'up', ukuranSegitiga, diameterTulanganBagi));
 
                     const xHitamVert = Ly_mm/2 + Lx_mm*0.06;
@@ -818,14 +812,7 @@
                         tambahPerintah(lingkaran(x, flipY(yBagiAtas, tinggiTotal), diameterTulanganBagi), true);
                     }
                     
-                    const posBawahKiri = hitungPosisiTitikCAD1(diameterTulanganBagi/2, panjangPendek - diameterTulanganBagi/2, stepBagi, diameterTulanganBagi);
-                    for (let x of posBawahKiri) {
-                        tambahPerintah(lingkaran(x, flipY(yBagiBawah, tinggiTotal), diameterTulanganBagi), true);
-                    }
-                    const posBawahKanan = hitungPosisiTitikCAD1(Ly_mm - diameterTulanganBagi/2, Ly_mm - panjangPendek + diameterTulanganBagi/2, stepBagi, diameterTulanganBagi);
-                    for (let x of posBawahKanan) {
-                        tambahPerintah(lingkaran(x, flipY(yBagiBawah, tinggiTotal), diameterTulanganBagi), true);
-                    }
+                    // CAD samping: lingkaran merah bawah dihapus
                     
                     const xStart = step1 + step2;
                     const xEnd = Ly_mm - step1 - step2;
