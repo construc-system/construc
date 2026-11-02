@@ -240,17 +240,15 @@
             const xLuar = xDasarMerah;
             const xDalam = xLuar - jarak50;
             const ySegitigaMerahVert = offsetY + (1/4) * height_display;
-            buatGaris(xLuar, offsetY, xLuar, offsetY + height_display, warnaMerah, strokePx);
-            buatSegitigaVertikalTunggal(svg, 'left', xLuar, ySegitigaMerahVert, segitigaLebar, segitigaTinggi, warnaMerah);
+            // garis merah vertikal kanan (xLuar) dihapus, hanya xDalam yang dipakai
             buatGaris(xDalam, offsetY, xDalam, offsetY + height_display, warnaMerah, strokePx);
-            buatSegitigaVertikalTunggal(svg, 'right', xDalam, ySegitigaMerahVert, segitigaLebar, segitigaTinggi, warnaMerah);
+            buatSegitiga(svg, 'right', 2, xDalam, ySegitigaMerahVert, segitigaLebar, segitigaTinggi, warnaMerah);
             
             const yDasarMerah = offsetY + height_display - jarak25;
             const yLuar = yDasarMerah;
             const yDalam = yLuar - jarak50;
             const xSegitigaMerahHor = offsetX + (1/4) * width_display;
-            buatGaris(offsetX, yLuar, offsetX + width_display, yLuar, warnaMerah, strokePx);
-            buatSegitiga(svg, 'up', 2, xSegitigaMerahHor, yLuar, segitigaLebar, segitigaTinggi, warnaMerah);
+            // garis merah horizontal bawah (yLuar) dihapus, hanya yDalam yang dipakai
             buatGaris(offsetX, yDalam, offsetX + width_display, yDalam, warnaMerah, strokePx);
             buatSegitiga(svg, 'down', 2, xSegitigaMerahHor, yDalam, segitigaLebar, segitigaTinggi, warnaMerah);
             
@@ -360,10 +358,7 @@
             const posAtasKanan = hitungPosisiTitik(offsetX + width_display - panjangPendek, offsetX + width_display, stepBagiDisplay, radiusTitik, diameterBagiDisplay);
             for (let cx of posAtasKanan) buatLingkaran(svg, cx, y_atas + offsetTitikDariGaris, radiusTitik, warnaMerah);
             
-            const posBawahKiri = hitungPosisiTitik(offsetX, offsetX + panjangPendek, stepBagiDisplay, radiusTitik, diameterBagiDisplay);
-            for (let cx of posBawahKiri) buatLingkaran(svg, cx, y_bawah - offsetTitikDariGaris, radiusTitik, warnaMerah);
-            const posBawahKanan = hitungPosisiTitik(offsetX + width_display - panjangPendek, offsetX + width_display, stepBagiDisplay, radiusTitik, diameterBagiDisplay);
-            for (let cx of posBawahKanan) buatLingkaran(svg, cx, y_bawah - offsetTitikDariGaris, radiusTitik, warnaMerah);
+            // dot merah bawah (tampak depan) dihapus, hanya dot merah atas yang dipakai
             
             const xStartBawah = offsetX + step1 + finalStep2;
             const xEndBawah = offsetX + width_display - step1 - finalStep2;
@@ -423,10 +418,7 @@
             const posAtasKanan = hitungPosisiTitik(xKanan - panjangPendek, xKanan, stepBagiDisplay, radiusTitik, diameterBagiDisplay);
             for (let cx of posAtasKanan) buatLingkaran(svg, cx, y_atas + offsetTitikDariGaris, radiusTitik, warnaMerah);
             
-            const posBawahKiri = hitungPosisiTitik(xKiri, xKiri + panjangPendek, stepBagiDisplay, radiusTitik, diameterBagiDisplay);
-            for (let cx of posBawahKiri) buatLingkaran(svg, cx, y_bawah - offsetTitikDariGaris, radiusTitik, warnaMerah);
-            const posBawahKanan = hitungPosisiTitik(xKanan - panjangPendek, xKanan, stepBagiDisplay, radiusTitik, diameterBagiDisplay);
-            for (let cx of posBawahKanan) buatLingkaran(svg, cx, y_bawah - offsetTitikDariGaris, radiusTitik, warnaMerah);
+            // dot merah bawah (tampak samping) dihapus, hanya dot merah atas yang dipakai
             
             const xStartBawah = offsetX + step1_display + step2_display;
             const xEndBawah = offsetX + width_display - step1_display - step2_display;
