@@ -538,7 +538,10 @@
             const validItems = items.filter(i => i.val.valid);
             if (validItems.length === 0) return '';
             
-            const rawAvg = Math.round(validItems.reduce((acc, curr) => acc + curr.val.e, 0) / validItems.length) || 0;
+            const fkList = validItems.map(i => (i.val.b > 0 && i.val.k > 0) ? i.val.k / i.val.b : null).filter(v => v !== null);
+            const avgFK = fkList.length ? fkList.reduce((a, c) => a + c, 0) / fkList.length : null;
+            const pakaiFK = (title === "Dimensi Fondasi");
+            const rawAvg = pakaiFK ? (avgFK ? Math.round(100 / avgFK) : 0) : (Math.round(validItems.reduce((acc, curr) => acc + curr.val.e, 0) / validItems.length) || 0);
             
             // Tentukan mana yang gagal (melebihi 100%)
             let failedNames = [];
@@ -549,7 +552,7 @@
             const isCardGagal = failedNames.length > 0;
             
             // Set output teks dan warna
-            const avgDisplay = isCardGagal ? "Gagal" : `${rawAvg}%`;
+            const avgDisplay = isCardGagal ? "Gagal" : (pakaiFK ? (avgFK ? avgFK.toFixed(2) : "-") : `${rawAvg}%`);
             const failedColor = getColorForEfficiency(0); // Warna yang persis sama dengan 0%
             const col = isCardGagal ? failedColor : getColorForEfficiency(rawAvg);
             const progressWidth = Math.min(100, rawAvg);
@@ -565,16 +568,17 @@
                 } else if (failedNames.length > 2) {
                     failedText = failedNames.slice(0, -1).join(', ') + ", dan " + failedNames[failedNames.length - 1];
                 }
-                infoText = `Nilai efisiensi <strong>${failedText}</strong> melebihi batas kapasitas desain (> 100%), sehingga struktur dinyatakan gagal karna struktur tidak mampu menahan beban.`;
+                infoText = `${pakaiFK ? "Faktor keamanan" : "Nilai efisiensi"} <strong>${failedText}</strong> ${pakaiFK ? "di bawah 1,00 (kapasitas lebih kecil dari beban)" : "melebihi batas kapasitas desain (> 100%)"}, sehingga struktur dinyatakan gagal karna struktur tidak mampu menahan beban.`;
             } else {
-                infoText = `Nilai&nbsp;<strong>${rawAvg}%</strong> merupakan hasil rata-rata tingkat efisiensi untuk ${title.toLowerCase()}.`;
+                infoText = pakaiFK ? `Nilai&nbsp;<strong>${avgFK ? avgFK.toFixed(2) : "-"}</strong> merupakan hasil rata-rata faktor keamanan untuk ${title.toLowerCase()}.` : `Nilai&nbsp;<strong>${rawAvg}%</strong> merupakan hasil rata-rata tingkat efisiensi untuk ${title.toLowerCase()}.`;
             }
 
 
             const renderSub = (label, val) => {
                 // Logika utama untuk mengganti tulisan dan warna jika > 100
                 const isSubGagal = val.e > 100;
-                const eStr = isSubGagal ? "Gagal" : `${val.e.toFixed(1)}%`;
+                const fkSub = (val.b > 0 && val.k > 0) ? (val.k / val.b) : null;
+                const eStr = !pakaiFK ? (isSubGagal ? "Gagal" : `${val.e.toFixed(1)}%`) : (isSubGagal ? `${fkSub !== null ? fkSub.toFixed(2) : "-"} (Gagal)` : (fkSub !== null ? fkSub.toFixed(2) : "-"));
                 const cCol = isSubGagal ? failedColor : getColorForEfficiency(val.e);
                 
                 let labelB, labelK, unit, symB, symK;
@@ -595,8 +599,8 @@
                         <div class="calc-row"><span>${labelB}</span><span>${val.b.toFixed(2)} ${unit}</span></div>
                         <div class="calc-row"><span>${labelK}</span><span>${val.k.toFixed(2)} ${unit}</span></div>
                         <div class="calc-formula">
-                            <span>Efisiensi</span>
-                            <span style="color: ${cCol}; font-weight: 700;">${symB} / ${symK} &times; 100% = ${eStr}</span>
+                            <span>${pakaiFK ? "Faktor Keamanan" : "Efisiensi"}</span>
+                            <span style="color: ${cCol}; font-weight: 700;">${pakaiFK ? `${symK} / ${symB} = ${eStr}` : `${symB} / ${symK} &times; 100% = ${eStr}`}</span>
                         </div>
                     </div>
                 </div>`;
@@ -638,7 +642,7 @@
         if (!cardsHtml) return;
 
         section.innerHTML = `
-            <h2>EFISIENSI FONDASI</h2>
+            <h2>EFISIENSI DAN FAKTOR KEAMANAN FONDASI</h2>
             <div class="efisiensi-container">
                 ${cardsHtml}
             </div>
