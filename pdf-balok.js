@@ -266,7 +266,7 @@
                 { parameter: "$s = \\min(s_1, s_2, s_3)$", hasil: formatNumber(sTerkecil), satuan: 'mm' },
                 { parameter: "$\\displaystyle A_{v,terpasang} = \\frac{n \\cdot 0.25 \\cdot \\pi \\cdot \\phi^2}{s}$", hasil: formatNumber(Av_terpakai), satuan: 'mm²/m' },
                 { parameter: "$A_{v,u} \\le A_{v,terpasang}$", isStatus: true, statusHtml: `<span class="${Av_terpakai >= 0 ? 'status-aman' : 'status-tidak-aman'}">${Av_terpakai >= 0 ? 'AMAN' : 'TIDAK AMAN'}</span>` },
-                { parameter: `<strong>Digunakan Tulangan Geser ɸ${diameterSengkang}-${formatNumber(sTerkecil)}</strong>`, isFullRow: true }
+                { parameter: `<strong>Digunakan Tulangan Geser ɸ${diameterSengkang}-${formatNumber(sTerkecil)} mm</strong>`, isFullRow: true }
             ];
         } else if (Vu < phiVc) {
             const Av1 = parseFloat(data?.Av1) || 0;
@@ -284,7 +284,7 @@
                 { parameter: "$s = \\min(s_1, s_2, s_3)$", hasil: formatNumber(sTerkecil), satuan: 'mm' },
                 { parameter: "$\\displaystyle A_{v,terpasang} = \\frac{n \\cdot 0.25 \\cdot \\pi \\cdot \\phi^2}{s}$", hasil: formatNumber(Av_terpakai), satuan: 'mm²/m' },
                 { parameter: "$A_{v,u} \\le A_{v,terpasang}$", isStatus: true, statusHtml: `<span class="${Av_u_calc <= Av_terpakai ? 'status-aman' : 'status-tidak-aman'}">${Av_u_calc <= Av_terpakai ? 'AMAN' : 'TIDAK AMAN'}</span>` },
-                { parameter: `<strong>Digunakan Tulangan Geser ɸ${diameterSengkang}-${formatNumber(sTerkecil)}</strong>`, isFullRow: true }
+                { parameter: `<strong>Digunakan Tulangan Geser ɸ${diameterSengkang}-${formatNumber(sTerkecil)} mm</strong>`, isFullRow: true }
             ];
         } else {
             const Av1 = parseFloat(data?.Av1) || 0;
@@ -308,7 +308,7 @@
                 { parameter: "$s = \\min(s_1, s_2, s_3)$", hasil: formatNumber(sTerkecil), satuan: 'mm' },
                 { parameter: "$\\displaystyle A_{v,terpasang} = \\frac{n \\cdot 0.25 \\cdot \\pi \\cdot \\phi^2}{s}$", hasil: formatNumber(Av_terpakai), satuan: 'mm²/m' },
                 { parameter: "$A_{v,u} \\le A_{v,terpasang}$", isStatus: true, statusHtml: `<span class="${Av_u_calc <= Av_terpakai ? 'status-aman' : 'status-tidak-aman'}">${Av_u_calc <= Av_terpakai ? 'AMAN' : 'TIDAK AMAN'}</span>` },
-                { parameter: `<strong>Digunakan Tulangan Geser ɸ${diameterSengkang}-${formatNumber(sTerkecil)}</strong>`, isFullRow: true }
+                { parameter: `<strong>Digunakan Tulangan Geser ɸ${diameterSengkang}-${formatNumber(sTerkecil)} mm</strong>`, isFullRow: true }
             ];
         }
         return createThreeColumnTable(rows, true);
@@ -390,7 +390,7 @@
         const lapangan = rekap?.lapangan || {};
         let html = '<table class="rekap-table"><thead><tr><th class="rekap-col-tulangan" rowspan="2">Tulangan</th><th class="rekap-col-tumpuan" colspan="2">Tumpuan</th><th class="rekap-col-lapangan" colspan="2">Lapangan</th></tr><tr><th class="rekap-col-tumpuan">Atas</th><th class="rekap-col-tumpuan">Bawah</th><th class="rekap-col-lapangan">Atas</th><th class="rekap-col-lapangan">Bawah</th></tr></thead><tbody>';
         html += `<tr><td class="rekap-col-tulangan text-bold vertical-middle">Tulangan Lentur</td><td class="rekap-col-tumpuan text-center">${tumpuan.tulangan_negatif || 'N/A'}</td><td class="rekap-col-tumpuan text-center">${tumpuan.tulangan_positif || 'N/A'}</td><td class="rekap-col-lapangan text-center">${lapangan.tulangan_negatif || 'N/A'}</td><td class="rekap-col-lapangan text-center">${lapangan.tulangan_positif || 'N/A'}</td></tr>`;
-        html += `<tr><td class="rekap-col-tulangan text-bold vertical-middle">Tulangan Geser</td><td class="rekap-col-tumpuan text-center" colspan="2">${tumpuan.begel || 'N/A'}</td><td class="rekap-col-lapangan text-center" colspan="2">${lapangan.begel || 'N/A'}</td></tr>`;
+        html += `<tr><td class="rekap-col-tulangan text-bold vertical-middle">Tulangan Geser</td><td class="rekap-col-tumpuan text-center" colspan="2">${tambahMm(tumpuan.begel || 'N/A')}</td><td class="rekap-col-lapangan text-center" colspan="2">${tambahMm(lapangan.begel || 'N/A')}</td></tr>`;
         html += `<tr><td class="rekap-col-tulangan text-bold vertical-middle">Tulangan Torsi</td><td class="rekap-col-tumpuan text-center" colspan="2">${tumpuan.torsi || 'N/A'}</td><td class="rekap-col-lapangan text-center" colspan="2">${lapangan.torsi || 'N/A'}</td></tr>`;
         html += '</tbody></tr>';
         return html;
@@ -504,7 +504,7 @@
         blocks.push(`<div class="section-group"><h3>3. Data Tulangan</h3>${createTulanganTable()}</div>`);
         
         const parameterRows = [
-            { parameter: "$\\displaystyle m = \\left\\lfloor \\frac{b - 2d_{s1}}{D + s_b} \\right\\rfloor + 1$", hasil: getData('data.m'), satuan: '-' },
+            { parameter: "$\\displaystyle m = \\left\\lfloor \\frac{b - 2d_{s1}}{D + S_n} \\right\\rfloor + 1, \\quad S_n = \\max(40, 1.5D)$", hasil: getData('data.m'), satuan: '-' },
             { parameter: "$S_{nv} = \\max(25, D)$", hasil: getData('data.Snv'), satuan: 'mm' },
             { parameter: "$\\displaystyle d_{s1} = S_b + \\phi + \\frac{D}{2}$", hasil: getData('data.ds1'), satuan: 'mm' },
             { parameter: "$\\displaystyle d_{s2} = d_{s1} + \\frac{D + S_{nv}}{2}$", hasil: getData('data.ds2'), satuan: 'mm' },
@@ -626,3 +626,9 @@
         getData: getData
     };
 })();
+
+// Tampilan saja: tambah " mm" di belakang format berjarak (10D-150 -> 10D-150 mm). Data asli tidak diubah.
+window.tambahMm = window.tambahMm || function (s) {
+  var t = String(s === undefined || s === null ? '' : s);
+  return /-\s*\d+(\.\d+)?\s*$/.test(t) ? t.replace(/\s+$/, '') + ' mm' : t;
+};

@@ -190,10 +190,10 @@
     function createTulanganTerpasangTable() {
         const rekap = getData('rekap.formatted', {});
         let html = '<table class="tulangan-terpasang-table"><thead><th class="tulangan-col-tulangan">Tulangan</th><th class="tulangan-col-terpasang" style="text-align: center">Terpasang</th></thead><tbody>';
-        html += `<tr><td class="tulangan-col-tulangan"><strong>Tulangan Pokok Arah X</strong></td><td class="tulangan-col-terpasang text-center">${rekap.tulangan_pokok_x || 'N/A'}</td></tr>`;
-        html += `<tr><td class="tulangan-col-tulangan"><strong>Tulangan Pokok Arah Y</strong></td><td class="tulangan-col-terpasang text-center">${rekap.tulangan_pokok_y || 'N/A'}</td></tr>`;
-        html += `<tr><td class="tulangan-col-tulangan"><strong>Tulangan Bagi Arah X</strong></td><td class="tulangan-col-terpasang text-center">${rekap.tulangan_bagi_x || 'N/A'}</td></tr>`;
-        html += `<tr><td class="tulangan-col-tulangan"><strong>Tulangan Bagi Arah Y</strong></td><td class="tulangan-col-terpasang text-center">${rekap.tulangan_bagi_y || 'N/A'}</td></tr>`;
+        html += `<tr><td class="tulangan-col-tulangan"><strong>Tulangan Pokok Arah X</strong></td><td class="tulangan-col-terpasang text-center">${tambahMm(rekap.tulangan_pokok_x || 'N/A')}</td></tr>`;
+        html += `<tr><td class="tulangan-col-tulangan"><strong>Tulangan Pokok Arah Y</strong></td><td class="tulangan-col-terpasang text-center">${tambahMm(rekap.tulangan_pokok_y || 'N/A')}</td></tr>`;
+        html += `<tr><td class="tulangan-col-tulangan"><strong>Tulangan Bagi Arah X</strong></td><td class="tulangan-col-terpasang text-center">${tambahMm(rekap.tulangan_bagi_x || 'N/A')}</td></tr>`;
+        html += `<tr><td class="tulangan-col-tulangan"><strong>Tulangan Bagi Arah Y</strong></td><td class="tulangan-col-terpasang text-center">${tambahMm(rekap.tulangan_bagi_y || 'N/A')}</td></tr>`;
         html += '</tbody></table>';
         return html;
     }
@@ -206,7 +206,7 @@
             const manual = bebanData.manual || {};
             rows = [
                 { parameter: "<strong>Beban Manual</strong>", hasil: "", satuan: "" },
-                { parameter: "$M_u$ (Momen terfaktor)", hasil: formatNumber(manual.mu || 'N/A'), satuan: "kNm/m" },
+                { parameter: "$M_u$ (Momen terfaktor)", hasil: formatNumber(manual.mu || 'N/A'), satuan: "kNm" },
                 { parameter: "Jenis Tumpuan", hasil: manual.tumpuan_type || 'N/A', satuan: "-" }
             ];
         } else {
@@ -215,7 +215,7 @@
             const jenisPelat = tabelData.jenisPelat === 'satu_arah' ? 'Satu Arah' : 'Dua Arah';
             rows = [
                 { parameter: "<strong>Beban Auto</strong>", hasil: "", satuan: "" },
-                { parameter: "$q_u$ (Beban terfaktor)", hasil: formatNumber(auto.qu || 'N/A'), satuan: "kN/m²" },
+                { parameter: "$q_u$ (Beban terfaktor)", hasil: formatNumber(auto.qu || 'N/A'), satuan: "kN/m" },
                 { parameter: "Tipe Tumpuan", hasil: auto.tumpuan_type || 'N/A', satuan: "-" },
                 { parameter: "Jenis Pelat", hasil: jenisPelat, satuan: "-" }
             ];
@@ -240,17 +240,17 @@
         const rows = [
             { parameter: `$\\displaystyle K = \\frac{M_u}{\\phi b d^2}$`, hasil: formatNumber(data?.K), satuan: 'MPa' },
             { parameter: `$\\displaystyle a = \\left(1 - \\sqrt{1 - \\frac{2K}{0.85 f'_c}}\\right) d$`, hasil: formatNumber(data?.a), satuan: 'mm' },
-            { parameter: `$\\displaystyle A_{s1} = \\frac{0.85 f'_c a b}{f_y}$`, hasil: formatNumber(data?.As1), satuan: 'mm²/m' },
-            { parameter: `$\\displaystyle A_{s2} = \\frac{\\sqrt{f'_c}}{4f_y} b d$`, hasil: formatNumber(data?.As2), satuan: 'mm²/m' },
-            { parameter: `$\\displaystyle A_{s3} = \\frac{1.4}{f_y} b d$`, hasil: formatNumber(data?.As3), satuan: 'mm²/m' },
-            { parameter: `$A_{s,perlu} = \\max(A_{s1}, A_{s2}, A_{s3})$`, hasil: formatNumber(data?.AsDigunakan), satuan: 'mm²/m' },
+            { parameter: `$\\displaystyle A_{s1} = \\frac{0.85 f'_c a b}{f_y}$`, hasil: formatNumber(data?.As1), satuan: 'mm²' },
+            { parameter: `$\\displaystyle A_{s2} = \\frac{\\sqrt{f'_c}}{4f_y} b d$`, hasil: formatNumber(data?.As2), satuan: 'mm²' },
+            { parameter: `$\\displaystyle A_{s3} = \\frac{1.4}{f_y} b d$`, hasil: formatNumber(data?.As3), satuan: 'mm²' },
+            { parameter: `$A_{s,perlu} = \\max(A_{s1}, A_{s2}, A_{s3})$`, hasil: formatNumber(data?.AsDigunakan), satuan: 'mm²' },
             { parameter: `$\\displaystyle s_1 = \\frac{0.25 \\pi D^2 \\times b}{A_{s,perlu}}$`, hasil: formatNumber(s1_hitung), satuan: 'mm' },
             { parameter: `$s_2 = ${jenisPelat === 'satu_arah' ? '3h' : '2h'}$`, hasil: formatNumber(s2_hitung), satuan: 'mm' },
             { parameter: `$s_3 = 450$`, hasil: formatNumber(s3_hitung), satuan: 'mm' },
             { parameter: `$s = \\min(s_1, s_2, s_3)$`, hasil: formatNumber(s_tampil, 0), satuan: 'mm' },
-            { parameter: `$\\displaystyle A_{s} = \\frac{0.25 \\pi D^2 \\times b}{s}$`, hasil: formatNumber(data?.AsTerpasang), satuan: 'mm²/m' },
-            { parameter: `$\\displaystyle M_n = A_{s} \\times f_y \\times (d - a/2)$`, hasil: formatNumber(data?.Mn), satuan: 'kNm/m' },
-            { parameter: `$\\displaystyle M_d = \\phi \\times M_n$`, hasil: formatNumber(data?.Md), satuan: 'kNm/m' },
+            { parameter: `$\\displaystyle A_{s} = \\frac{0.25 \\pi D^2 \\times b}{s}$`, hasil: formatNumber(data?.AsTerpasang), satuan: 'mm²' },
+            { parameter: `$\\displaystyle M_n = A_{s} \\times f_y \\times (d - a/2)$`, hasil: formatNumber(data?.Mn), satuan: 'kNm' },
+            { parameter: `$\\displaystyle M_d = \\phi \\times M_n$`, hasil: formatNumber(data?.Md), satuan: 'kNm' },
             { parameter: `$M_d \\ge M_u$`, isStatus: true, statusHtml: `<span class="${data?.Md >= data?.Mu ? 'status-aman' : 'status-tidak-aman'}">${data?.Md >= data?.Mu ? 'AMAN' : 'TIDAK AMAN'}</span>` },
             { parameter: `$A_{s} \\ge A_{s,perlu}$`, isStatus: true, statusHtml: `<span class="${data?.AsTerpasang >= data?.AsDigunakan ? 'status-aman' : 'status-tidak-aman'}">${data?.AsTerpasang >= data?.AsDigunakan ? 'AMAN' : 'TIDAK AMAN'}</span>` }
         ];
@@ -274,15 +274,15 @@
         const s_tampil = mode === 'evaluasi' ? sb_input : data?.sDigunakan;
 
         const rows = [
-            { parameter: `$\\displaystyle A_{sb1} = \\frac{A_{s,pokok}}{5}$`, hasil: formatNumber(data?.Asb1), satuan: 'mm²/m' },
-            { parameter: `$A_{sb2} = ${Asb2Formula} \\times b \\times h$`, hasil: formatNumber(Asb2Value), satuan: 'mm²/m' },
-            { parameter: `$A_{sb3} = 0.0014 \\times b \\times h$`, hasil: formatNumber(data?.Asb3), satuan: 'mm²/m' },
-            { parameter: `$A_{sb,perlu} = \\max(A_{sb1}, A_{sb2}, A_{sb3})$`, hasil: formatNumber(data?.AsbDigunakan), satuan: 'mm²/m' },
+            { parameter: `$\\displaystyle A_{sb1} = \\frac{A_{s,pokok}}{5}$`, hasil: formatNumber(data?.Asb1), satuan: 'mm²' },
+            { parameter: `$A_{sb2} = ${Asb2Formula} \\times b \\times h$`, hasil: formatNumber(Asb2Value), satuan: 'mm²' },
+            { parameter: `$A_{sb3} = 0.0014 \\times b \\times h$`, hasil: formatNumber(data?.Asb3), satuan: 'mm²' },
+            { parameter: `$A_{sb,perlu} = \\max(A_{sb1}, A_{sb2}, A_{sb3})$`, hasil: formatNumber(data?.AsbDigunakan), satuan: 'mm²' },
             { parameter: `$\\displaystyle s_1 = \\frac{0.25 \\pi D_b^2 \\times 1000}{A_{sb,perlu}}$`, hasil: formatNumber(s1_hitung), satuan: 'mm' },
             { parameter: `$s_2 = 5h$`, hasil: formatNumber(s2_hitung), satuan: 'mm' },
             { parameter: `$s_3 = 450$`, hasil: formatNumber(s3_hitung), satuan: 'mm' },
             { parameter: `$s = \\min(s_1, s_2, s_3)$`, hasil: formatNumber(s_tampil, 0), satuan: 'mm' },
-            { parameter: `$\\displaystyle A_{sb} = \\frac{0.25 \\pi D_b^2 \\times 1000}{s}$`, hasil: formatNumber(data?.AsbTerpasang), satuan: 'mm²/m' },
+            { parameter: `$\\displaystyle A_{sb} = \\frac{0.25 \\pi D_b^2 \\times 1000}{s}$`, hasil: formatNumber(data?.AsbTerpasang), satuan: 'mm²' },
             { parameter: `$A_{sb} \\ge A_{sb,perlu}$`, isStatus: true, statusHtml: `<span class="${data?.AsbTerpasang >= data?.AsbDigunakan ? 'status-aman' : 'status-tidak-aman'}">${data?.AsbTerpasang >= data?.AsbDigunakan ? 'AMAN' : 'TIDAK AMAN'}</span>` }
         ];
         return createThreeColumnTable(rows, true);
@@ -299,14 +299,14 @@
         if (lentur.arahX) {
             const detail = lentur.arahX.detail || {};
             if (!lentur.arahX.K_aman) masalah.push(`<span class="problem-item">• Kontrol K tidak aman pada arah X (K = ${formatNumber(detail.K)} > K_maks = ${formatNumber(detail.Kmaks)})</span>`);
-            if (!lentur.arahX.Md_aman) masalah.push(`<span class="problem-item">• Kapasitas momen tidak cukup pada arah X (M_d = ${formatNumber(detail.Md)} kNm/m < M_u = ${formatNumber(detail.Mu)} kNm/m)</span>`);
-            if (!lentur.arahX.As_terpasang_aman) masalah.push(`<span class="problem-item">• Luas tulangan terpasang tidak mencukupi pada arah X (A_s = ${formatNumber(detail.As_terpasang)} mm²/m < A_s,perlu = ${formatNumber(detail.As_dibutuhkan)} mm²/m)</span>`);
+            if (!lentur.arahX.Md_aman) masalah.push(`<span class="problem-item">• Kapasitas momen tidak cukup pada arah X (M_d = ${formatNumber(detail.Md)} kNm < M_u = ${formatNumber(detail.Mu)} kNm)</span>`);
+            if (!lentur.arahX.As_terpasang_aman) masalah.push(`<span class="problem-item">• Luas tulangan terpasang tidak mencukupi pada arah X (A_s = ${formatNumber(detail.As_terpasang)} mm² < A_s,perlu = ${formatNumber(detail.As_dibutuhkan)} mm²)</span>`);
         }
         if (lentur.arahY) {
             const detail = lentur.arahY.detail || {};
             if (!lentur.arahY.K_aman) masalah.push(`<span class="problem-item">• Kontrol K tidak aman pada arah Y (K = ${formatNumber(detail.K)} > K_maks = ${formatNumber(detail.Kmaks)})</span>`);
-            if (!lentur.arahY.Md_aman) masalah.push(`<span class="problem-item">• Kapasitas momen tidak cukup pada arah Y (M_d = ${formatNumber(detail.Md)} kNm/m < M_u = ${formatNumber(detail.Mu)} kNm/m)</span>`);
-            if (!lentur.arahY.As_terpasang_aman) masalah.push(`<span class="problem-item">• Luas tulangan terpasang tidak mencukupi pada arah Y (A_s = ${formatNumber(detail.As_terpasang)} mm²/m < A_s,perlu = ${formatNumber(detail.As_dibutuhkan)} mm²/m)</span>`);
+            if (!lentur.arahY.Md_aman) masalah.push(`<span class="problem-item">• Kapasitas momen tidak cukup pada arah Y (M_d = ${formatNumber(detail.Md)} kNm < M_u = ${formatNumber(detail.Mu)} kNm)</span>`);
+            if (!lentur.arahY.As_terpasang_aman) masalah.push(`<span class="problem-item">• Luas tulangan terpasang tidak mencukupi pada arah Y (A_s = ${formatNumber(detail.As_terpasang)} mm² < A_s,perlu = ${formatNumber(detail.As_dibutuhkan)} mm²)</span>`);
         }
         if (bagi.arahX && !bagi.arahX.As_terpasang_aman) masalah.push(`<span class="problem-item">• Tulangan bagi arah X tidak memenuhi persyaratan minimum</span>`);
         if (bagi.arahY && !bagi.arahY.As_terpasang_aman) masalah.push(`<span class="problem-item">• Tulangan bagi arah Y tidak memenuhi persyaratan minimum</span>`);
@@ -396,15 +396,15 @@
         const auto = bebanData.auto || {};
         if (bebanMode === 'auto') {
             const momenRows = [
-                { parameter: "$M_{tx} = 0.001 \\times q_u \\times L_x^2 \\times C_{tx}$", hasil: formatNumber(momen.Mtx), satuan: 'kNm/m' },
-                { parameter: "$M_{lx} = 0.001 \\times q_u \\times L_x^2 \\times C_{lx}$", hasil: formatNumber(momen.Mlx), satuan: 'kNm/m' },
-                { parameter: "$M_{ty} = 0.001 \\times q_u \\times L_x^2 \\times C_{ty}$", hasil: formatNumber(momen.Mty), satuan: 'kNm/m' },
-                { parameter: "$M_{ly} = 0.001 \\times q_u \\times L_x^2 \\times C_{ly}$", hasil: formatNumber(momen.Mly), satuan: 'kNm/m' }
+                { parameter: "$M_{tx} = 0.001 \\times q_u \\times L_x^2 \\times C_{tx}$", hasil: formatNumber(momen.Mtx), satuan: 'kNm' },
+                { parameter: "$M_{lx} = 0.001 \\times q_u \\times L_x^2 \\times C_{lx}$", hasil: formatNumber(momen.Mlx), satuan: 'kNm' },
+                { parameter: "$M_{ty} = 0.001 \\times q_u \\times L_x^2 \\times C_{ty}$", hasil: formatNumber(momen.Mty), satuan: 'kNm' },
+                { parameter: "$M_{ly} = 0.001 \\times q_u \\times L_x^2 \\times C_{ly}$", hasil: formatNumber(momen.Mly), satuan: 'kNm' }
             ];
             blocks.push(`<h2>B. PERHITUNGAN MOMEN DAN TULANGAN</h2><div class="section-group"><h3>1. Momen Hasil Perhitungan</h3>${createThreeColumnTable(momenRows, false, true)}</div>`);
         } else {
             const manual = bebanData.manual || {};
-            const momenRows = [{ parameter: "$M_u$ (Momen terfaktor dari input)", hasil: formatNumber(manual.mu), satuan: 'kNm/m' }];
+            const momenRows = [{ parameter: "$M_u$ (Momen terfaktor dari input)", hasil: formatNumber(manual.mu), satuan: 'kNm' }];
             blocks.push(`<h2>B. PERHITUNGAN MOMEN DAN TULANGAN</h2><div class="section-group"><h3>1. Momen dari Input</h3>${createThreeColumnTable(momenRows, false, true)}</div>`);
         }
         
@@ -421,8 +421,8 @@
         const hVal = inputData.dimensi?.h || 120;
         const modeTulangan = getData('mode', 'desain');
         
-        blocks.push(`<div class="section-group"><h3>2. Tulangan Pokok Arah X</h3><p class="note">Direncanakan untuk momen maksimum arah X: $M_u = ${formatNumber(Math.max(momen.Mtx || 0, momen.Mlx || 0))} \\text{ kNm/m}$</p>${createTulanganPokokTable(pokokX, 'X', parameter.d, fcVal, fyVal, DVal, hVal, modeTulangan)}</div>`);
-        blocks.push(`<div class="section-group"><h3>3. Tulangan Pokok Arah Y</h3><p class="note">Direncanakan untuk momen maksimum arah Y: $M_u = ${formatNumber(Math.max(momen.Mty || 0, momen.Mly || 0))} \\text{ kNm/m}$</p>${createTulanganPokokTable(pokokY, 'Y', parameter.d2, fcVal, fyVal, DVal, hVal, modeTulangan)}</div>`);
+        blocks.push(`<div class="section-group"><h3>2. Tulangan Pokok Arah X</h3><p class="note">Direncanakan untuk momen maksimum arah X: $M_u = ${formatNumber(Math.max(momen.Mtx || 0, momen.Mlx || 0))} \\text{ kNm}$</p>${createTulanganPokokTable(pokokX, 'X', parameter.d, fcVal, fyVal, DVal, hVal, modeTulangan)}</div>`);
+        blocks.push(`<div class="section-group"><h3>3. Tulangan Pokok Arah Y</h3><p class="note">Direncanakan untuk momen maksimum arah Y: $M_u = ${formatNumber(Math.max(momen.Mty || 0, momen.Mly || 0))} \\text{ kNm}$</p>${createTulanganPokokTable(pokokY, 'Y', parameter.d2, fcVal, fyVal, DVal, hVal, modeTulangan)}</div>`);
         blocks.push(`<div class="section-group"><h3>4. Tulangan Bagi Arah X</h3>${createTulanganBagiTable(bagiX, 'X', 1000, hVal, fcVal, fyVal, DbVal, modeTulangan)}</div>`);
         blocks.push(`<div class="section-group"><h3>5. Tulangan Bagi Arah Y</h3>${createTulanganBagiTable(bagiY, 'Y', 1000, hVal, fcVal, fyVal, DbVal, modeTulangan)}</div>`);
         
@@ -458,3 +458,9 @@
         getDiameterBagi: getDiameterBagi
     };
 })();
+
+// Tampilan saja: tambah " mm" di belakang format berjarak (10D-150 -> 10D-150 mm). Data asli tidak diubah.
+window.tambahMm = window.tambahMm || function (s) {
+  var t = String(s === undefined || s === null ? '' : s);
+  return /-\s*\d+(\.\d+)?\s*$/.test(t) ? t.replace(/\s+$/, '') + ' mm' : t;
+};

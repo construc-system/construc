@@ -243,7 +243,7 @@
             for (const field of tulanganFields) {
                 if (rekap[field] && rekap[field] !== '-') {
                     const label = field.replace(/_/g, ' ').replace(/ \w/g, l => l.toUpperCase());
-                    html += `<p><strong>${label}:</strong> ${rekap[field]}</p>`;
+                    html += `<p><strong>${label}:</strong> ${tambahMm(rekap[field])}</p>`;
                 }
             }
             html += `</div>`;
@@ -355,7 +355,7 @@
             const isAman = As_terpasang >= As_perlu;
             if(!isAman) semuaLuasAman = false;
 
-            html += renderStepFondasi(stepNumberGenerator.next().value, 'Kontrol Luas Tulangan', `A<sub>s,d</sub> = ${As_terpasang.toFixed(0)} mm²/m ≥ A<sub>s,u</sub> = ${As_perlu.toFixed(0)} mm²/m`, isAman);
+            html += renderStepFondasi(stepNumberGenerator.next().value, 'Kontrol Luas Tulangan', `A<sub>s,d</sub> = ${As_terpasang.toFixed(0)} mm² ≥ A<sub>s,u</sub> = ${As_perlu.toFixed(0)} mm²`, isAman);
         }
         else if (jenis === "persegi_panjang") {
             if (detail.bujur?.K !== undefined) html += renderStepFondasi(stepNumberGenerator.next().value, 'Faktor Momen Pikul Tulangan Panjang', `K = ${detail.bujur.K?.toFixed(6)} ≤ K<sub>max</sub> = ${Kmax?.toFixed(6)}`, detail.bujur.Kontrol_K === "AMAN");
@@ -364,7 +364,7 @@
             const As_terpasang_panjang = optimasi?.as_rincian_per_meter?.asUtamaPerMeter || dataTulangan?.bujur?.As_terpasang || 0;
             const isPanjangAman = As_terpasang_panjang >= As_panjang;
             if(!isPanjangAman) semuaLuasAman = false;
-            html += renderStepFondasi(stepNumberGenerator.next().value, 'Kontrol Luas Tulangan Panjang', `A<sub>s,d</sub> = ${As_terpasang_panjang.toFixed(0)} mm²/m ≥ A<sub>s,u</sub> = ${As_panjang.toFixed(0)} mm²/m`, isPanjangAman);
+            html += renderStepFondasi(stepNumberGenerator.next().value, 'Kontrol Luas Tulangan Panjang', `A<sub>s,d</sub> = ${As_terpasang_panjang.toFixed(0)} mm² ≥ A<sub>s,u</sub> = ${As_panjang.toFixed(0)} mm²`, isPanjangAman);
 
             if (detail.persegi?.K !== undefined) html += renderStepFondasi(stepNumberGenerator.next().value, 'Faktor Momen Pikul Tulangan Pendek', `K = ${detail.persegi.K?.toFixed(6)} ≤ K<sub>max</sub> = ${Kmax?.toFixed(6)}`, detail.persegi.Kontrol_K === "AMAN");
             
@@ -372,13 +372,13 @@
             const As_terpasang_pusat = optimasi?.as_rincian_per_meter?.asPusatPerMeter || dataTulangan?.persegi?.As_terpasang_pusat || 0;
             const isPusatAman = As_terpasang_pusat >= As_pusat;
             if(!isPusatAman) semuaLuasAman = false;
-            html += renderStepFondasi(stepNumberGenerator.next().value, 'Kontrol Luas Tulangan Pendek Pusat', `A<sub>s,d</sub> = ${As_terpasang_pusat.toFixed(0)} mm²/m ≥ A<sub>s,u</sub> = ${As_pusat.toFixed(0)} mm²/m`, isPusatAman);
+            html += renderStepFondasi(stepNumberGenerator.next().value, 'Kontrol Luas Tulangan Pendek Pusat', `A<sub>s,d</sub> = ${As_terpasang_pusat.toFixed(0)} mm² ≥ A<sub>s,u</sub> = ${As_pusat.toFixed(0)} mm²`, isPusatAman);
 
             const As_tepi = detail.persegi?.Astepi || 0;
             const As_terpasang_tepi = optimasi?.as_rincian_per_meter?.asTepiPerMeter || dataTulangan?.persegi?.As_terpasang_tepi || 0;
             const isTepiAman = As_terpasang_tepi >= As_tepi;
             if(!isTepiAman) semuaLuasAman = false;
-            html += renderStepFondasi(stepNumberGenerator.next().value, 'Kontrol Luas Tulangan Pendek Tepi', `A<sub>s,d</sub> = ${As_terpasang_tepi.toFixed(0)} mm²/m ≥ A<sub>s,u</sub> = ${As_tepi.toFixed(0)} mm²/m`, isTepiAman);
+            html += renderStepFondasi(stepNumberGenerator.next().value, 'Kontrol Luas Tulangan Pendek Tepi', `A<sub>s,d</sub> = ${As_terpasang_tepi.toFixed(0)} mm² ≥ A<sub>s,u</sub> = ${As_tepi.toFixed(0)} mm²`, isTepiAman);
         }
         else if (jenis === "menerus") {
             if (detail.K !== undefined) html += renderStepFondasi(stepNumberGenerator.next().value, 'Faktor Momen Pikul Tulangan', `K = ${detail.K?.toFixed(6)} ≤ K<sub>max</sub> = ${Kmax?.toFixed(6)}`, detail.Kontrol_K === "AMAN");
@@ -387,13 +387,13 @@
             const As_terpasang_utama = optimasi?.as_rincian_per_meter?.asUtamaPerMeter || dataTulangan?.menerus?.As_terpasang || 0;
             const isUtamaAman = As_terpasang_utama >= As_utama;
             if(!isUtamaAman) semuaLuasAman = false;
-            html += renderStepFondasi(stepNumberGenerator.next().value, 'Kontrol Luas Tulangan Utama', `A<sub>s,d</sub> = ${As_terpasang_utama.toFixed(0)} mm²/m ≥ A<sub>s,u</sub> = ${As_utama.toFixed(0)} mm²/m`, isUtamaAman);
+            html += renderStepFondasi(stepNumberGenerator.next().value, 'Kontrol Luas Tulangan Utama', `A<sub>s,d</sub> = ${As_terpasang_utama.toFixed(0)} mm² ≥ A<sub>s,u</sub> = ${As_utama.toFixed(0)} mm²`, isUtamaAman);
             
             const As_bagi = detail.Asb_perlu || Math.max(detail.Asb1 || 0, detail.Asb2 || 0, detail.Asb3 || 0);
             const As_terpasang_bagi = optimasi?.as_rincian_per_meter?.asBagiPerMeter || dataTulangan?.menerus?.As_terpasang_bagi || 0;
             const isBagiAman = As_terpasang_bagi >= As_bagi;
             if(!isBagiAman) semuaLuasAman = false;
-            html += renderStepFondasi(stepNumberGenerator.next().value, 'Kontrol Luas Tulangan Bagi', `A<sub>s,d</sub> = ${As_terpasang_bagi.toFixed(0)} mm²/m ≥ A<sub>s,u</sub> = ${As_bagi.toFixed(0)} mm²/m`, isBagiAman);
+            html += renderStepFondasi(stepNumberGenerator.next().value, 'Kontrol Luas Tulangan Bagi', `A<sub>s,d</sub> = ${As_terpasang_bagi.toFixed(0)} mm² ≥ A<sub>s,u</sub> = ${As_bagi.toFixed(0)} mm²`, isBagiAman);
         }
 
         if (window.lastResultObject) {
@@ -583,7 +583,7 @@
                 } else if (val.type === 'V') {
                     labelB = 'V<sub>u</sub>&nbsp; (Beban)'; labelK = 'φV<sub>c</sub>&nbsp; (Kapasitas)'; unit = 'kN'; symB = 'V<sub>u</sub>'; symK = 'φV<sub>c</sub>';
                 } else if (val.type === 'As') {
-                    labelB = 'A<sub>s,u</sub>&nbsp; (Perlu)'; labelK = 'A<sub>s,d</sub>&nbsp; (Desain)'; unit = 'mm&sup2;/m'; symB = 'A<sub>s,u</sub>'; symK = 'A<sub>s,d</sub>';
+                    labelB = 'A<sub>s,u</sub>&nbsp; (Perlu)'; labelK = 'A<sub>s,d</sub>&nbsp; (Desain)'; unit = 'mm&sup2;'; symB = 'A<sub>s,u</sub>'; symK = 'A<sub>s,d</sub>';
                 } else if (val.type === 'P') {
                     labelB = 'P<sub>u</sub>&nbsp; (Beban)'; labelK = 'φP<sub>n</sub>&nbsp; (Kapasitas)'; unit = 'kN'; symB = 'P<sub>u</sub>'; symK = 'φP<sub>n</sub>';
                 }
@@ -841,3 +841,9 @@
 
     console.log("✅ report-fondasi.js final (Global CAD, Efisiensi 3 Parameter tanpa Daya Dukung)");
 })();
+
+// Tampilan saja: tambah " mm" di belakang format berjarak (10D-150 -> 10D-150 mm). Data asli tidak diubah.
+window.tambahMm = window.tambahMm || function (s) {
+  var t = String(s === undefined || s === null ? '' : s);
+  return /-\s*\d+(\.\d+)?\s*$/.test(t) ? t.replace(/\s+$/, '') + ' mm' : t;
+};

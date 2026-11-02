@@ -129,12 +129,12 @@ window.modules.pelat = {
       if (bebanMode === 'auto') {
           const qu = parseNum(data.beban.auto.qu) || 0;
           if (qu < 5 || qu > 60) {
-              warnings.push(`Beban ultimit (q<sub>u</sub>) sebesar ${qu} kN/m² tidak wajar, nilai yang umum digunakan antara 5–60 kN/m².`);
+              warnings.push(`Beban ultimit (q<sub>u</sub>) sebesar ${qu} kN/m tidak wajar, nilai yang umum digunakan antara 5–60 kN/m.`);
           }
       } else if (bebanMode === 'manual') {
           const mu = parseNum(data.beban.manual.mu) || 0;
           if (mu < 5 || mu > 100) {
-              warnings.push(`Momen ultimit (M<sub>u</sub>) sebesar ${mu} kNm/m tidak wajar, nilai yang umum digunakan antara 5–100 kNm/m.`);
+              warnings.push(`Momen ultimit (M<sub>u</sub>) sebesar ${mu} kNm tidak wajar, nilai yang umum digunakan antara 5–100 kNm.`);
           }
       }
       
@@ -448,7 +448,7 @@ window.modules.pelat = {
         </div>
         <div class="field">
           <label>q<sub>u</sub></label>
-          <div class="input-with-unit" data-unit="kNm">
+          <div class="input-with-unit" data-unit="kN/m">
             <input data-key="qu" placeholder="Beban Ultimit" value="${escapeHtml(quValue)}">
           </div>
         </div>

@@ -20,8 +20,8 @@ function hitungKolomDimensi({b, h, Sb, D, phi, fc}){
   const phi2 = DEFAULTS.phi2;
   const ds = ceil5(Sb + phi + (D/2));
   const d = h - ds;
-  const m = Math.floor((b - 2 * ds) / (D + Sb) + 1);
   const Sn = Math.max(40, 1.5 * D);
+  const m = Math.floor((b - 2 * ds) / (D + Sn) + 1);
   let beta1;
   if (fc <= 28) beta1 = 0.85;
   else if (fc < 55) beta1 = 0.85 - 0.05 * ((fc - 28) / 7);
@@ -31,7 +31,7 @@ function hitungKolomDimensi({b, h, Sb, D, phi, fc}){
     perhitungan: {
       ds_formula: `ds = ${Sb} + ${phi} + ${D}/2 = ${ds}`,
       d_formula: `d = ${h} - ${ds} = ${d}`,
-      m_formula: `m = floor((${b} - 2*${ds}) / (${D} + ${Sb}) + 1) = ${m}`,
+      m_formula: `m = floor((${b} - 2*${ds}) / (${D} + ${Sn}) + 1) = ${m}`,
       Sn_formula: `Sn = max(40, 1.5 * ${D}) = ${Sn}`,
       beta1_formula: fc <= 28 ? `0.85 (fc=${fc} ≤ 28)` : 
                    fc < 55 ? `0.85 - 0.05*(${fc}-28)/7 = ${beta1}` : 

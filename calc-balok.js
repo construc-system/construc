@@ -271,7 +271,8 @@ function hitungEvaluasi(data, options = {}) {
     const selimut = sb;
     const Snv = Math.max(25, D);
     const ds1 = ceil5(selimut + phi + D / 2);
-    const m = Math.max(1, Math.floor((b - 2 * ds1) / (D + sb)) + 1);
+    const Sn = Math.max(40, 1.5 * D);
+    const m = Math.max(1, Math.floor((b - 2 * ds1) / (D + Sn)) + 1);
 
     // Untuk evaluasi, ambil nilai n dan np dari input tulangan
     let n_neg_support, n_pos_support, n_neg_field, n_pos_field;
@@ -382,7 +383,8 @@ function hitungBalok(params) {
     const ds2 = ceil5(ds1 + (D + Snv) / 2);
     const ds3 = ceil5(ds1 + (D + Snv) + (D + Snv)/2);
     
-    const m = Math.max(1, Math.floor((b - 2 * ds1) / (D + sb)) + 1);
+    const Sn = Math.max(40, 1.5 * D);
+    const m = Math.max(1, Math.floor((b - 2 * ds1) / (D + Sn)) + 1);
 
     let ds, ds_;
     if (ms1 === 1) ds = ds1;

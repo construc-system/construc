@@ -244,7 +244,7 @@ function renderHasilPerhitunganKolom(result) {
             <div class="result-item" style="grid-column: 1 / -1;">
                 <h4>Rekap Tulangan</h4>
                 ${tulanganUtamaDisplay ? `<p><strong>Tulangan Utama:</strong> ${tulanganUtamaDisplay}</p>` : ''}
-                ${rekap.formatted?.begel ? `<p><strong>Begel:</strong> ${rekap.formatted.begel}</p>` : ''}
+                ${rekap.formatted?.begel ? `<p><strong>Begel:</strong> ${tambahMm(rekap.formatted.begel)}</p>` : ''}
             </div>
         `;
     }
@@ -1395,3 +1395,9 @@ function updateReportTitle(result) {
 window.renderKolomReport = renderKolomReport;
 window.exportCADKolom = exportCADKolom;
 window.updateReportTitle = updateReportTitle;
+
+// Tampilan saja: tambah " mm" di belakang format berjarak (10D-150 -> 10D-150 mm). Data asli tidak diubah.
+window.tambahMm = window.tambahMm || function (s) {
+  var t = String(s === undefined || s === null ? '' : s);
+  return /-\s*\d+(\.\d+)?\s*$/.test(t) ? t.replace(/\s+$/, '') + ' mm' : t;
+};

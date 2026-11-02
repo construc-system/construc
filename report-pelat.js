@@ -134,9 +134,9 @@
             html += `<div class="data-card"><h3>Beban</h3>`;
             if (inputData.beban.mode === "auto") {
                 html += `<div class="data-row"><span class="data-label">Jenis Tumpuan</span><span class="data-value">${inputData.beban.auto?.tumpuan_type || 'N/A'}</span></div>
-                         <div class="data-row"><span class="data-label">q<sub>u</sub></span><span class="data-value">${inputData.beban.auto?.qu || 'N/A'} kN/m²</span></div>`;
+                         <div class="data-row"><span class="data-label">q<sub>u</sub></span><span class="data-value">${inputData.beban.auto?.qu || 'N/A'} kN/m</span></div>`;
             } else {
-                html += `<div class="data-row"><span class="data-label">M<sub>u</sub></span><span class="data-value">${inputData.beban.manual?.mu || 'N/A'} kNm/m</span></div>`;
+                html += `<div class="data-row"><span class="data-label">M<sub>u</sub></span><span class="data-value">${inputData.beban.manual?.mu || 'N/A'} kNm</span></div>`;
             }
             html += `</div>`;
         }
@@ -167,8 +167,8 @@
         let html = '';
         if (rekap.formatted) {
             html += `<div class="result-item" style="grid-column: 1 / -1;"><h4>Rekap Tulangan</h4>
-                ${rekap.formatted.tulangan_pokok_x ? `<p><strong>Tulangan Utama:</strong> ${rekap.formatted.tulangan_pokok_x}</p>` : ''}
-                ${rekap.formatted.tulangan_bagi_x ? `<p><strong>Tulangan Bagi:</strong> ${rekap.formatted.tulangan_bagi_x}</p>` : ''}
+                ${rekap.formatted.tulangan_pokok_x ? `<p><strong>Tulangan Utama:</strong> ${tambahMm(rekap.formatted.tulangan_pokok_x)}</p>` : ''}
+                ${rekap.formatted.tulangan_bagi_x ? `<p><strong>Tulangan Bagi:</strong> ${tambahMm(rekap.formatted.tulangan_bagi_x)}</p>` : ''}
             </div>`;
         }
         if (kontrol) {
@@ -240,10 +240,10 @@
         }
         if (isAutoMode && rekap.tabel?.jenisPelat === "dua_arah" && rekap.tabel.Ctx !== undefined) {
             let koefHtml = '';
-            if (rekap.tabel.Ctx !== undefined && data.momen?.Mtx !== undefined) koefHtml += `C<sub>tx</sub> = ${rekap.tabel.Ctx.toFixed(1)} → M<sub>tx</sub> = ${data.momen.Mtx.toFixed(3)} kNm/m<br>`;
-            if (rekap.tabel.Clx !== undefined && data.momen?.Mlx !== undefined) koefHtml += `C<sub>lx</sub> = ${rekap.tabel.Clx.toFixed(1)} → M<sub>lx</sub> = ${data.momen.Mlx.toFixed(3)} kNm/m<br>`;
-            if (rekap.tabel.Cly !== undefined && data.momen?.Mly !== undefined) koefHtml += `C<sub>ly</sub> = ${rekap.tabel.Cly.toFixed(1)} → M<sub>ly</sub> = ${data.momen.Mly.toFixed(3)} kNm/m<br>`;
-            if (rekap.tabel.Cty !== undefined && data.momen?.Mty !== undefined) koefHtml += `C<sub>ty</sub> = ${rekap.tabel.Cty.toFixed(1)} → M<sub>ty</sub> = ${data.momen.Mty.toFixed(3)} kNm/m`;
+            if (rekap.tabel.Ctx !== undefined && data.momen?.Mtx !== undefined) koefHtml += `C<sub>tx</sub> = ${rekap.tabel.Ctx.toFixed(1)} → M<sub>tx</sub> = ${data.momen.Mtx.toFixed(3)} kNm<br>`;
+            if (rekap.tabel.Clx !== undefined && data.momen?.Mlx !== undefined) koefHtml += `C<sub>lx</sub> = ${rekap.tabel.Clx.toFixed(1)} → M<sub>lx</sub> = ${data.momen.Mlx.toFixed(3)} kNm<br>`;
+            if (rekap.tabel.Cly !== undefined && data.momen?.Mly !== undefined) koefHtml += `C<sub>ly</sub> = ${rekap.tabel.Cly.toFixed(1)} → M<sub>ly</sub> = ${data.momen.Mly.toFixed(3)} kNm<br>`;
+            if (rekap.tabel.Cty !== undefined && data.momen?.Mty !== undefined) koefHtml += `C<sub>ty</sub> = ${rekap.tabel.Cty.toFixed(1)} → M<sub>ty</sub> = ${data.momen.Mty.toFixed(3)} kNm`;
             html += renderStepPelat(stepNumberGenerator.next().value, 'Koefisien dan Momen', koefHtml);
         }
         return html;
@@ -256,13 +256,13 @@
         
         if (kontrolLentur.arahX) {
             html += renderStepPelat(stepNumberGenerator.next().value, 'Kontrol Rasio K Arah X', `K = ${kontrolLentur.arahX.detail?.K?.toFixed(4)} ≤ K<sub>maks</sub> = ${kontrolLentur.arahX.detail?.Kmaks?.toFixed(4)}`, kontrolLentur.arahX.K_aman);
-            html += renderStepPelat(stepNumberGenerator.next().value, 'Kontrol Kapasitas Lentur Arah X', `M<sub>d</sub> = ${mdMax.toFixed(3)} kNm/m ≥ M<sub>u</sub> = ${kontrolLentur.arahX.detail?.Mu?.toFixed(3)} kNm/m`, kontrolLentur.arahX.Md_aman);
-            html += renderStepPelat(stepNumberGenerator.next().value, 'Kontrol Tulangan Pokok Arah X', `A<sub>s,d</sub> = ${kontrolLentur.arahX.detail?.As_terpasang?.toFixed(1)} mm²/m ≥ A<sub>s,u</sub> = ${kontrolLentur.arahX.detail?.As_dibutuhkan?.toFixed(1)} mm²/m`, kontrolLentur.arahX.As_terpasang_aman);
+            html += renderStepPelat(stepNumberGenerator.next().value, 'Kontrol Kapasitas Lentur Arah X', `M<sub>d</sub> = ${mdMax.toFixed(3)} kNm ≥ M<sub>u</sub> = ${kontrolLentur.arahX.detail?.Mu?.toFixed(3)} kNm`, kontrolLentur.arahX.Md_aman);
+            html += renderStepPelat(stepNumberGenerator.next().value, 'Kontrol Tulangan Pokok Arah X', `A<sub>s,d</sub> = ${kontrolLentur.arahX.detail?.As_terpasang?.toFixed(1)} mm² ≥ A<sub>s,u</sub> = ${kontrolLentur.arahX.detail?.As_dibutuhkan?.toFixed(1)} mm²`, kontrolLentur.arahX.As_terpasang_aman);
         }
         if (kontrolLentur.arahY) {
             html += renderStepPelat(stepNumberGenerator.next().value, 'Kontrol Rasio K Arah Y', `K = ${kontrolLentur.arahY.detail?.K?.toFixed(4)} ≤ K<sub>maks</sub> = ${kontrolLentur.arahY.detail?.Kmaks?.toFixed(4)}`, kontrolLentur.arahY.K_aman);
-            html += renderStepPelat(stepNumberGenerator.next().value, 'Kontrol Kapasitas Lentur Arah Y', `M<sub>d</sub> = ${mdMax.toFixed(3)} kNm/m ≥ M<sub>u</sub> = ${kontrolLentur.arahY.detail?.Mu?.toFixed(3)} kNm/m`, kontrolLentur.arahY.Md_aman);
-            html += renderStepPelat(stepNumberGenerator.next().value, 'Kontrol Tulangan Pokok Arah Y', `A<sub>s,d</sub> = ${kontrolLentur.arahY.detail?.As_terpasang?.toFixed(1)} mm²/m ≥ A<sub>s,u</sub> = ${kontrolLentur.arahY.detail?.As_dibutuhkan?.toFixed(1)} mm²/m`, kontrolLentur.arahY.As_terpasang_aman);
+            html += renderStepPelat(stepNumberGenerator.next().value, 'Kontrol Kapasitas Lentur Arah Y', `M<sub>d</sub> = ${mdMax.toFixed(3)} kNm ≥ M<sub>u</sub> = ${kontrolLentur.arahY.detail?.Mu?.toFixed(3)} kNm`, kontrolLentur.arahY.Md_aman);
+            html += renderStepPelat(stepNumberGenerator.next().value, 'Kontrol Tulangan Pokok Arah Y', `A<sub>s,d</sub> = ${kontrolLentur.arahY.detail?.As_terpasang?.toFixed(1)} mm² ≥ A<sub>s,u</sub> = ${kontrolLentur.arahY.detail?.As_dibutuhkan?.toFixed(1)} mm²`, kontrolLentur.arahY.As_terpasang_aman);
         }
         return html;
     }
@@ -271,10 +271,10 @@
         if (!kontrolBagi) return '';
         let html = '';
         if (kontrolBagi.arahX) {
-            html += renderStepPelat(stepNumberGenerator.next().value, 'Kontrol Tulangan Bagi Arah X', `A<sub>s,d</sub> = ${kontrolBagi.arahX.detail?.As_terpasang?.toFixed(1)} mm²/m ≥ A<sub>s,u</sub> = ${kontrolBagi.arahX.detail?.As_dibutuhkan?.toFixed(1)} mm²/m`, kontrolBagi.arahX.As_terpasang_aman);
+            html += renderStepPelat(stepNumberGenerator.next().value, 'Kontrol Tulangan Bagi Arah X', `A<sub>s,d</sub> = ${kontrolBagi.arahX.detail?.As_terpasang?.toFixed(1)} mm² ≥ A<sub>s,u</sub> = ${kontrolBagi.arahX.detail?.As_dibutuhkan?.toFixed(1)} mm²`, kontrolBagi.arahX.As_terpasang_aman);
         }
         if (kontrolBagi.arahY) {
-            html += renderStepPelat(stepNumberGenerator.next().value, 'Kontrol Tulangan Bagi Arah Y', `A<sub>s,d</sub> = ${kontrolBagi.arahY.detail?.As_terpasang?.toFixed(1)} mm²/m ≥ A<sub>s,u</sub> = ${kontrolBagi.arahY.detail?.As_dibutuhkan?.toFixed(1)} mm²/m`, kontrolBagi.arahY.As_terpasang_aman);
+            html += renderStepPelat(stepNumberGenerator.next().value, 'Kontrol Tulangan Bagi Arah Y', `A<sub>s,d</sub> = ${kontrolBagi.arahY.detail?.As_terpasang?.toFixed(1)} mm² ≥ A<sub>s,u</sub> = ${kontrolBagi.arahY.detail?.As_dibutuhkan?.toFixed(1)} mm²`, kontrolBagi.arahY.As_terpasang_aman);
         }
         return html;
     }
@@ -379,7 +379,7 @@
                 const isMomen = val.type === 'M';
                 const labelB = isMomen ? 'M<sub>u</sub>&nbsp; (Beban)' : 'A<sub>s,u</sub>&nbsp; (Perlu)';
                 const labelK = isMomen ? 'M<sub>d</sub>&nbsp; (Kapasitas)' : 'A<sub>s,d</sub>&nbsp; (Desain)';
-                const unit = isMomen ? 'kNm/m' : 'mm&sup2;/m';
+                const unit = isMomen ? 'kNm' : 'mm&sup2;';
                 const symB = isMomen ? 'M<sub>u</sub>' : 'A<sub>s,u</sub>';
                 const symK = isMomen ? 'M<sub>d</sub>' : 'A<sub>s,d</sub>';
 
@@ -712,3 +712,9 @@
     window.renderPelatReport = renderPelatReport;
     console.log("✅ report-pelat.js loaded (dengan Safe Reorder dan Efisiensi Mu/Md ter-fix)");
 })();
+
+// Tampilan saja: tambah " mm" di belakang format berjarak (10D-150 -> 10D-150 mm). Data asli tidak diubah.
+window.tambahMm = window.tambahMm || function (s) {
+  var t = String(s === undefined || s === null ? '' : s);
+  return /-\s*\d+(\.\d+)?\s*$/.test(t) ? t.replace(/\s+$/, '') + ' mm' : t;
+};

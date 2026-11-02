@@ -176,7 +176,7 @@
     function createTulanganTerpasangTable() {
         const rekap = getData('rekap', {});
         const formatted = rekap.formatted || {};
-        let begel = formatted.begel || 'N/A';
+        let begel = tambahMm(formatted.begel || 'N/A');
         let tulanganUtama = 'N/A';
         let rhoTotal = 'N/A';
         const { totalBatang, rho_total, D } = getTotalBatangDanRasio();
@@ -188,7 +188,7 @@
             if (rhoTotal === 'N/A' && rekap.tulangan && rekap.tulangan.rho !== undefined) rhoTotal = formatNumber(rekap.tulangan.rho) + ' %';
         }
         if (tulanganUtama === 'N/A') { if (totalBatang > 0 && D) tulanganUtama = `${totalBatang}D${D}`; if (rhoTotal === 'N/A') rhoTotal = formatNumber(rho_total) + ' %'; }
-        if (begel === 'N/A' && rekap.begel && rekap.begel.s) { const phi = getData('data.parsedInput.tulangan.phi_tul', 8); begel = `φ${phi}-${rekap.begel.s}`; }
+        if (begel === 'N/A' && rekap.begel && rekap.begel.s) { const phi = getData('data.parsedInput.tulangan.phi_tul', 8); begel = `φ${phi}-${rekap.begel.s} mm`; }
         const rows = [
             { parameter: "Tulangan Utama", hasil: tulanganUtama },
             { parameter: "Sengkang/Begel", hasil: begel },
@@ -266,8 +266,8 @@
         if (fc <= 28) beta1 = 0.85;
         else if (fc < 55) beta1 = 0.85 - 0.05 * ((fc - 28) / 7);
         else beta1 = 0.65;
-        const m_X = Math.floor((b - 2 * ds) / (D + sb)) + 1;
-        const m_Y = Math.floor((h - 2 * ds) / (D + sb)) + 1;
+        const m_X = Math.floor((b - 2 * ds) / (D + Sn)) + 1;
+        const m_Y = Math.floor((h - 2 * ds) / (D + Sn)) + 1;
         const hasilX = getData('data.hasilTulangan.hasilArahX', {});
         const hasilY = getData('data.hasilTulangan.hasilArahY', {});
         const m_X_calc = hasilX.m || m_X;
@@ -278,8 +278,8 @@
             { parameter: "$\\displaystyle d_s = s_b + \\phi + \\dfrac{D}{2}$", hasil: formatNumber(ds, 1), satuan: 'mm' },
             { parameter: "$\\displaystyle d_X = h - d_s$ (untuk arah X)", hasil: formatNumber(d_X_calc, 1), satuan: 'mm' },
             { parameter: "$\\displaystyle d_Y = b - d_s$ (untuk arah Y)", hasil: formatNumber(d_Y_calc, 1), satuan: 'mm' },
-            { parameter: "$\\displaystyle m_X = \\left\\lfloor \\dfrac{b - 2d_s}{D + s_b} \\right\\rfloor + 1$", hasil: formatNumber(m_X_calc, 0), satuan: '-' },
-            { parameter: "$\\displaystyle m_Y = \\left\\lfloor \\dfrac{h - 2d_s}{D + s_b} \\right\\rfloor + 1$", hasil: formatNumber(m_Y_calc, 0), satuan: '-' },
+            { parameter: "$\\displaystyle m_X = \\left\\lfloor \\dfrac{b - 2d_s}{D + S_n} \\right\\rfloor + 1, \\quad S_n = \\max(40, 1.5D)$", hasil: formatNumber(m_X_calc, 0), satuan: '-' },
+            { parameter: "$\\displaystyle m_Y = \\left\\lfloor \\dfrac{h - 2d_s}{D + S_n} \\right\\rfloor + 1, \\quad S_n = \\max(40, 1.5D)$", hasil: formatNumber(m_Y_calc, 0), satuan: '-' },
             { parameter: "$\\displaystyle S_n = \\max(40, 1.5 \\times D)$", hasil: formatNumber(Sn, 0), satuan: 'mm' },
             { parameter: "$\\displaystyle \\beta_1 = \\begin{cases} 0.85 & f'_c \\leq 28 \\text{ MPa} \\\\ 0.85 - 0.05\\dfrac{f'_c - 28}{7} & 28 < f'_c < 55 \\text{ MPa} \\\\ 0.65 & f'_c \\geq 55 \\text{ MPa} \\end{cases}$", hasil: formatNumber(beta1, 3), satuan: '-' }
         ];
@@ -540,3 +540,9 @@
         getData: getData
     };
 })();
+
+// Tampilan saja: tambah " mm" di belakang format berjarak (10D-150 -> 10D-150 mm). Data asli tidak diubah.
+window.tambahMm = window.tambahMm || function (s) {
+  var t = String(s === undefined || s === null ? '' : s);
+  return /-\s*\d+(\.\d+)?\s*$/.test(t) ? t.replace(/\s+$/, '') + ' mm' : t;
+};

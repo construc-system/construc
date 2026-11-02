@@ -371,7 +371,7 @@
                         <h4>Tumpuan</h4>
                         ${rekap.tumpuan.tulangan_negatif ? `<p><strong>Tulangan Negatif:</strong> ${rekap.tumpuan.tulangan_negatif}</p>` : ''}
                         ${rekap.tumpuan.tulangan_positif ? `<p><strong>Tulangan Positif:</strong> ${rekap.tumpuan.tulangan_positif}</p>` : ''}
-                        ${rekap.tumpuan.begel ? `<p><strong>Begel:</strong> ${rekap.tumpuan.begel}</p>` : ''}
+                        ${rekap.tumpuan.begel ? `<p><strong>Begel:</strong> ${tambahMm(rekap.tumpuan.begel)}</p>` : ''}
                         ${rekap.tumpuan.torsi && rekap.tumpuan.torsi !== '-' ? `<p><strong>Torsi:</strong> ${rekap.tumpuan.torsi}</p>` : ''}
                     </div>
                 `;
@@ -384,7 +384,7 @@
                         <h4>Lapangan</h4>
                         ${rekap.lapangan.tulangan_negatif ? `<p><strong>Tulangan Negatif:</strong> ${rekap.lapangan.tulangan_negatif}</p>` : ''}
                         ${rekap.lapangan.tulangan_positif ? `<p><strong>Tulangan Positif:</strong> ${rekap.lapangan.tulangan_positif}</p>` : ''}
-                        ${rekap.lapangan.begel ? `<p><strong>Begel:</strong> ${rekap.lapangan.begel}</p>` : ''}
+                        ${rekap.lapangan.begel ? `<p><strong>Begel:</strong> ${tambahMm(rekap.lapangan.begel)}</p>` : ''}
                         ${rekap.lapangan.torsi && rekap.lapangan.torsi !== '-' ? `<p><strong>Torsi:</strong> ${rekap.lapangan.torsi}</p>` : ''}
                     </div>
                 `;
@@ -1296,3 +1296,9 @@
     console.log("✅ report-balok.js loaded successfully (IIFE Protected)");
     
 })(); // END IIFE
+
+// Tampilan saja: tambah " mm" di belakang format berjarak (10D-150 -> 10D-150 mm). Data asli tidak diubah.
+window.tambahMm = window.tambahMm || function (s) {
+  var t = String(s === undefined || s === null ? '' : s);
+  return /-\s*\d+(\.\d+)?\s*$/.test(t) ? t.replace(/\s+$/, '') + ' mm' : t;
+};

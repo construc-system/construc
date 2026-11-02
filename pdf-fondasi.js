@@ -294,22 +294,22 @@
         const amanAs = (As_terpasang >= As_perlu);
         return createThreeColumnTable([
             { parameter: "$\\sigma_x = \\sigma_{min} + (L_y - x_1) \\cdot \\dfrac{\\sigma_{max} - \\sigma_{min}}{L_y}$", hasil: formatNumber(t.sigma), satuan: "kPa" },
-            { parameter: "$M_u = \\dfrac{1}{2} \\cdot \\sigma_x \\cdot x_1^{2} + \\dfrac{1}{3} \\cdot (\\sigma_{max} - \\sigma_x) \\cdot x_1^{2}$", hasil: formatNumber(t.Mu), satuan: "kNm/m" },
+            { parameter: "$M_u = \\dfrac{1}{2} \\cdot \\sigma_x \\cdot x_1^{2} + \\dfrac{1}{3} \\cdot (\\sigma_{max} - \\sigma_x) \\cdot x_1^{2}$", hasil: formatNumber(t.Mu), satuan: "kNm" },
             { parameter: "$K = \\dfrac{M_u}{\\phi b d^{2}}$", hasil: formatNumber(t.K), satuan: "MPa" },
             { parameter: "$K \\le K_{max}$", isComparison: true, statusHtml: `<span class="${t.Kontrol_K === 'AMAN' ? 'status-aman' : 'status-tidak-aman'}">${t.Kontrol_K || 'N/A'}</span>` },
             { parameter: "$a = \\left(1 - \\sqrt{1 - \\dfrac{2K}{0.85 f'_c}}\\right) d$", hasil: formatNumber(t.a_val), satuan: "mm" },
-            { parameter: "$A_{s1} = \\dfrac{0.85 f'_c a b}{f_y}$", hasil: formatNumber(t.As1), satuan: "mm²/m" },
-            { parameter: "$A_{s2} = \\dfrac{\\sqrt{f'_c}}{4f_y} b d$", hasil: formatNumber(t.As2), satuan: "mm²/m" },
-            { parameter: "$A_{s3} = \\dfrac{1.4}{f_y} b d$", hasil: formatNumber(t.As3), satuan: "mm²/m" },
-            { parameter: "$A_{s,perlu} = \\max(A_{s1}, A_{s2}, A_{s3})$", hasil: formatNumber(t.As), satuan: "mm²/m" },
+            { parameter: "$A_{s1} = \\dfrac{0.85 f'_c a b}{f_y}$", hasil: formatNumber(t.As1), satuan: "mm²" },
+            { parameter: "$A_{s2} = \\dfrac{\\sqrt{f'_c}}{4f_y} b d$", hasil: formatNumber(t.As2), satuan: "mm²" },
+            { parameter: "$A_{s3} = \\dfrac{1.4}{f_y} b d$", hasil: formatNumber(t.As3), satuan: "mm²" },
+            { parameter: "$A_{s,perlu} = \\max(A_{s1}, A_{s2}, A_{s3})$", hasil: formatNumber(t.As), satuan: "mm²" },
             { parameter: "$s_1 = \\dfrac{0.25\\pi D^{2} \\times 1000}{A_{s,perlu}}$", hasil: formatNumber(t.s1), satuan: "mm" },
             { parameter: "$s_2 = 3h$", hasil: formatNumber(t.s2), satuan: "mm" },
             { parameter: "$s_3 = 450$", hasil: "450", satuan: "mm" },
             { parameter: "$s = \\min(s_1, s_2, s_3)$", hasil: formatNumber(t.s), satuan: "mm" },
             { parameter: "$s \\ge 100$", isComparison: true, statusHtml: `<span class="${sMinAman ? 'status-aman' : 'status-tidak-aman'}">${sMinAman ? 'AMAN' : 'TIDAK AMAN'}</span>` },
-            { parameter: "$A_{s,terpasang} = \\dfrac{0.25\\pi D^{2} \\times 1000}{s}$", hasil: formatNumber(As_terpasang), satuan: "mm²/m" },
+            { parameter: "$A_{s,terpasang} = \\dfrac{0.25\\pi D^{2} \\times 1000}{s}$", hasil: formatNumber(As_terpasang), satuan: "mm²" },
             { parameter: "$A_{s,perlu} \\le A_{s,terpasang}$", isComparison: true, statusHtml: `<span class="${amanAs ? 'status-aman' : 'status-tidak-aman'}">${amanAs ? 'AMAN' : 'TIDAK AMAN'}</span>` },
-            { parameter: `<strong>Digunakan: ɸ${getData('inputData.tulangan.d', getData('optimasi.kombinasi_terpilih.D', 'N/A'))}-${formatNumber(t.s)}</strong>`, isFullRow: true }
+            { parameter: `<strong>Digunakan: ɸ${getData('inputData.tulangan.d', getData('optimasi.kombinasi_terpilih.D', 'N/A'))}-${formatNumber(t.s)} mm</strong>`, isFullRow: true }
         ], true);
     }
 
@@ -322,21 +322,21 @@
         const amanAs = (As_terpasang >= As_perlu);
         return createThreeColumnTable([
             { parameter: "$\\sigma_x = \\sigma_{min} + (L_y - x_1) \\cdot \\dfrac{\\sigma_{max} - \\sigma_{min}}{L_y}$", hasil: formatNumber(bujur.sigma), satuan: "kPa" },
-            { parameter: "$M_u = \\dfrac{1}{2} \\cdot \\sigma_x \\cdot x_1^{2} + \\dfrac{1}{3} \\cdot (\\sigma_{max} - \\sigma_x) \\cdot x_1^{2}$", hasil: formatNumber(bujur.Mu), satuan: "kNm/m" },
+            { parameter: "$M_u = \\dfrac{1}{2} \\cdot \\sigma_x \\cdot x_1^{2} + \\dfrac{1}{3} \\cdot (\\sigma_{max} - \\sigma_x) \\cdot x_1^{2}$", hasil: formatNumber(bujur.Mu), satuan: "kNm" },
             { parameter: "$K = \\dfrac{M_u}{\\phi b d^{2}}$", hasil: formatNumber(bujur.K), satuan: "MPa" },
             { parameter: "$K \\le K_{max}$", isComparison: true, statusHtml: `<span class="${bujur.Kontrol_K === 'AMAN' ? 'status-aman' : 'status-tidak-aman'}">${bujur.Kontrol_K || 'N/A'}</span>` },
             { parameter: "$a = d \\cdot \\left(1 - \\sqrt{1 - \\dfrac{2K}{0.85f'_c}}\\right)$", hasil: formatNumber(bujur.a_val), satuan: "mm" },
-            { parameter: "$A_{s1} = \\dfrac{0.85 f'_c a b}{f_y}$", hasil: formatNumber(bujur.As1), satuan: "mm²/m" },
-            { parameter: "$A_{s2} = \\dfrac{\\sqrt{f'_c}}{4f_y} b d$", hasil: formatNumber(bujur.As2), satuan: "mm²/m" },
-            { parameter: "$A_{s3} = \\dfrac{1.4}{f_y} b d$", hasil: formatNumber(bujur.As3), satuan: "mm²/m" },
-            { parameter: "$A_{s,perlu} = \\max(A_{s1}, A_{s2}, A_{s3})$", hasil: formatNumber(bujur.As), satuan: "mm²/m" },
+            { parameter: "$A_{s1} = \\dfrac{0.85 f'_c a b}{f_y}$", hasil: formatNumber(bujur.As1), satuan: "mm²" },
+            { parameter: "$A_{s2} = \\dfrac{\\sqrt{f'_c}}{4f_y} b d$", hasil: formatNumber(bujur.As2), satuan: "mm²" },
+            { parameter: "$A_{s3} = \\dfrac{1.4}{f_y} b d$", hasil: formatNumber(bujur.As3), satuan: "mm²" },
+            { parameter: "$A_{s,perlu} = \\max(A_{s1}, A_{s2}, A_{s3})$", hasil: formatNumber(bujur.As), satuan: "mm²" },
             { parameter: "$s_1 = \\dfrac{0.25\\pi D^{2} \\times 1000}{A_{s,perlu}}$", hasil: formatNumber(bujur.s1), satuan: "mm" },
             { parameter: "$s_2 = 3h$", hasil: formatNumber(bujur.s2), satuan: "mm" },
             { parameter: "$s_3 = 450$", hasil: "450", satuan: "mm" },
             { parameter: "$s = \\min(s_1, s_2, s_3)$", hasil: formatNumber(bujur.s), satuan: "mm" },
-            { parameter: "$A_{s,terpasang} = \\dfrac{0.25\\pi D^{2} \\times 1000}{s}$", hasil: formatNumber(As_terpasang), satuan: "mm²/m" },
+            { parameter: "$A_{s,terpasang} = \\dfrac{0.25\\pi D^{2} \\times 1000}{s}$", hasil: formatNumber(As_terpasang), satuan: "mm²" },
             { parameter: "$A_{s,perlu} \\le A_{s,terpasang}$", isComparison: true, statusHtml: `<span class="${amanAs ? 'status-aman' : 'status-tidak-aman'}">${amanAs ? 'AMAN' : 'TIDAK AMAN'}</span>` },
-            { parameter: `<strong>Arah Panjang: ɸ${getData('inputData.tulangan.d', getData('optimasi.kombinasi_terpilih.D', 'N/A'))}-${formatNumber(bujur.s)}</strong>`, isFullRow: true }
+            { parameter: `<strong>Arah Panjang: ɸ${getData('inputData.tulangan.d', getData('optimasi.kombinasi_terpilih.D', 'N/A'))}-${formatNumber(bujur.s)} mm</strong>`, isFullRow: true }
         ], true);
     }
 
@@ -353,32 +353,32 @@
         const amanPusat = (As_terpasang_pusat >= As_pusat);
         const amanTepi = (As_terpasang_tepi >= As_tepi);
         return createThreeColumnTable([
-            { parameter: "$M_u = \\dfrac{1}{2} \\cdot \\sigma_{max} \\cdot x_2^{2}$", hasil: formatNumber(persegi.Mu), satuan: "kNm/m" },
+            { parameter: "$M_u = \\dfrac{1}{2} \\cdot \\sigma_{max} \\cdot x_2^{2}$", hasil: formatNumber(persegi.Mu), satuan: "kNm" },
             { parameter: "$K = \\dfrac{M_u}{\\phi b d^{2}}$", hasil: formatNumber(persegi.K), satuan: "MPa" },
             { parameter: "$K \\le K_{max}$", isComparison: true, statusHtml: `<span class="${persegi.Kontrol_K === 'AMAN' ? 'status-aman' : 'status-tidak-aman'}">${persegi.Kontrol_K || 'N/A'}</span>` },
             { parameter: "$a = d \\cdot \\left(1 - \\sqrt{1 - \\dfrac{2K}{0.85f'_c}}\\right)$", hasil: formatNumber(persegi.a_val), satuan: "mm" },
-            { parameter: "$A_{s1} = \\dfrac{0.85 f'_c a b}{f_y}$", hasil: formatNumber(persegi.As21), satuan: "mm²/m" },
-            { parameter: "$A_{s2} = \\dfrac{\\sqrt{f'_c}}{4f_y} b d$", hasil: formatNumber(persegi.As22), satuan: "mm²/m" },
-            { parameter: "$A_{s3} = \\dfrac{1.4}{f_y} b d$", hasil: formatNumber(persegi.As23), satuan: "mm²/m" },
-            { parameter: "$A_{s,perlu} = \\max(A_{s1}, A_{s2}, A_{s3})$", hasil: formatNumber(persegi.As), satuan: "mm²/m" },
+            { parameter: "$A_{s1} = \\dfrac{0.85 f'_c a b}{f_y}$", hasil: formatNumber(persegi.As21), satuan: "mm²" },
+            { parameter: "$A_{s2} = \\dfrac{\\sqrt{f'_c}}{4f_y} b d$", hasil: formatNumber(persegi.As22), satuan: "mm²" },
+            { parameter: "$A_{s3} = \\dfrac{1.4}{f_y} b d$", hasil: formatNumber(persegi.As23), satuan: "mm²" },
+            { parameter: "$A_{s,perlu} = \\max(A_{s1}, A_{s2}, A_{s3})$", hasil: formatNumber(persegi.As), satuan: "mm²" },
             // Tulangan pusat
-            { parameter: "$A_{s,pusat} = \\dfrac{2L_x A_s}{L_y + L_x}$", hasil: formatNumber(persegi.Aspusat), satuan: "mm²/m" },
+            { parameter: "$A_{s,pusat} = \\dfrac{2L_x A_s}{L_y + L_x}$", hasil: formatNumber(persegi.Aspusat), satuan: "mm²" },
             { parameter: "$s_{1,pusat} = \\dfrac{0.25\\pi D_b^{2}}{A_{s,pusat}}$", hasil: formatNumber(persegi.s1_pusat), satuan: "mm" },
             { parameter: "$s_{2,pusat} = 3h$", hasil: formatNumber(persegi.s2_pusat), satuan: "mm" },
             { parameter: "$s_{3,pusat} = 450$", hasil: "450", satuan: "mm" },
             { parameter: "$s_{pusat} = \\min(s_{1,pusat}, s_{2,pusat}, s_{3,pusat})$", hasil: formatNumber(persegi.s_pusat), satuan: "mm" },
-            { parameter: "$A_{s,terpasang} = \\dfrac{0.25\\pi D_b^{2}}{s_{pusat}}$", hasil: formatNumber(As_terpasang_pusat), satuan: "mm²/m" },
+            { parameter: "$A_{s,terpasang} = \\dfrac{0.25\\pi D_b^{2}}{s_{pusat}}$", hasil: formatNumber(As_terpasang_pusat), satuan: "mm²" },
             { parameter: "$A_{s,pusat} \\le A_{s,terpasang}$", isComparison: true, statusHtml: `<span class="${amanPusat ? 'status-aman' : 'status-tidak-aman'}">${amanPusat ? 'AMAN' : 'TIDAK AMAN'}</span>` },
             // Tulangan tepi
-            { parameter: "$A_{s,tepi} = A_{s,perlu} - A_{s,pusat}$", hasil: formatNumber(persegi.Astepi), satuan: "mm²/m" },
+            { parameter: "$A_{s,tepi} = A_{s,perlu} - A_{s,pusat}$", hasil: formatNumber(persegi.Astepi), satuan: "mm²" },
             { parameter: "$s_{1,tepi} = \\dfrac{0.25\\pi D_b^{2}}{A_{s,tepi}}$", hasil: formatNumber(persegi.s1_tepi), satuan: "mm" },
             { parameter: "$s_{2,tepi} = 3h$", hasil: formatNumber(persegi.s2_tepi), satuan: "mm" },
             { parameter: "$s_{3,tepi} = 450$", hasil: "450", satuan: "mm" },
             { parameter: "$s_{tepi} = \\min(s_{1,tepi}, s_{2,tepi}, s_{3,tepi})$", hasil: formatNumber(persegi.s_tepi), satuan: "mm" },
-            { parameter: "$A_{s,terpasang} = \\dfrac{0.25\\pi D_b^{2}}{s_{tepi}}$", hasil: formatNumber(As_terpasang_tepi), satuan: "mm²/m" },
+            { parameter: "$A_{s,terpasang} = \\dfrac{0.25\\pi D_b^{2}}{s_{tepi}}$", hasil: formatNumber(As_terpasang_tepi), satuan: "mm²" },
             { parameter: "$A_{s,tepi} \\le A_{s,terpasang}$", isComparison: true, statusHtml: `<span class="${amanTepi ? 'status-aman' : 'status-tidak-aman'}">${amanTepi ? 'AMAN' : 'TIDAK AMAN'}</span>` },
-            { parameter: `<strong>Arah Pendek Pusat: ɸ${getData('inputData.tulangan.db', getData('optimasi.kombinasi_terpilih.Db', 'N/A'))}-${formatNumber(persegi.s_pusat)}</strong>`, isFullRow: true },
-            { parameter: `<strong>Arah Pendek Tepi: ɸ${getData('inputData.tulangan.db', getData('optimasi.kombinasi_terpilih.Db', 'N/A'))}-${formatNumber(persegi.s_tepi)}</strong>`, isFullRow: true }
+            { parameter: `<strong>Arah Pendek Pusat: ɸ${getData('inputData.tulangan.db', getData('optimasi.kombinasi_terpilih.Db', 'N/A'))}-${formatNumber(persegi.s_pusat)} mm</strong>`, isFullRow: true },
+            { parameter: `<strong>Arah Pendek Tepi: ɸ${getData('inputData.tulangan.db', getData('optimasi.kombinasi_terpilih.Db', 'N/A'))}-${formatNumber(persegi.s_tepi)} mm</strong>`, isFullRow: true }
         ], true);
     }
 
@@ -394,30 +394,30 @@
         const amanBagi = (As_terpasang_bagi >= As_perlu_bagi);
         
         const utama = createThreeColumnTable([
-            { parameter: "$M_u = 0.5 \\cdot \\sigma_{max} \\cdot x_2^{2}$", hasil: formatNumber(t.Mu), satuan: "kNm/m" },
+            { parameter: "$M_u = 0.5 \\cdot \\sigma_{max} \\cdot x_2^{2}$", hasil: formatNumber(t.Mu), satuan: "kNm" },
             { parameter: "$K = \\dfrac{M_u}{\\phi b d^{2}}$", hasil: formatNumber(t.K), satuan: "MPa" },
             { parameter: "$K \\le K_{max}$", isComparison: true, statusHtml: `<span class="${t.Kontrol_K === 'AMAN' ? 'status-aman' : 'status-tidak-aman'}">${t.Kontrol_K || 'N/A'}</span>` },
-            { parameter: "$A_{s1} = \\dfrac{0.85 f'_c a b}{f_y}$", hasil: formatNumber(t.As1), satuan: "mm²/m" },
-            { parameter: "$A_{s2} = \\dfrac{\\sqrt{f'_c}}{4f_y} b d$", hasil: formatNumber(t.As2), satuan: "mm²/m" },
-            { parameter: "$A_{s3} = \\dfrac{1.4}{f_y} b d$", hasil: formatNumber(t.As3), satuan: "mm²/m" },
-            { parameter: "$A_{s,perlu} = \\max(A_{s1}, A_{s2}, A_{s3})$", hasil: formatNumber(t.As), satuan: "mm²/m" },
+            { parameter: "$A_{s1} = \\dfrac{0.85 f'_c a b}{f_y}$", hasil: formatNumber(t.As1), satuan: "mm²" },
+            { parameter: "$A_{s2} = \\dfrac{\\sqrt{f'_c}}{4f_y} b d$", hasil: formatNumber(t.As2), satuan: "mm²" },
+            { parameter: "$A_{s3} = \\dfrac{1.4}{f_y} b d$", hasil: formatNumber(t.As3), satuan: "mm²" },
+            { parameter: "$A_{s,perlu} = \\max(A_{s1}, A_{s2}, A_{s3})$", hasil: formatNumber(t.As), satuan: "mm²" },
             { parameter: "$s_1 = \\dfrac{0.25\\pi D^{2} \\times 1000}{A_{s,perlu}}$", hasil: formatNumber(t.s1_utama), satuan: "mm" },
             { parameter: "$s_2 = 3h$", hasil: formatNumber(t.s2_utama), satuan: "mm" },
             { parameter: "$s_3 = 450$", hasil: "450", satuan: "mm" },
             { parameter: "$s_{utama} = \\min(s_1, s_2, s_3)$", hasil: formatNumber(t.s_utama), satuan: "mm" },
-            { parameter: "$A_{s,terpasang} = \\dfrac{0.25\\pi D^{2} \\times 1000}{s_{utama}}$", hasil: formatNumber(As_terpasang_utama), satuan: "mm²/m" },
+            { parameter: "$A_{s,terpasang} = \\dfrac{0.25\\pi D^{2} \\times 1000}{s_{utama}}$", hasil: formatNumber(As_terpasang_utama), satuan: "mm²" },
             { parameter: "$A_{s,perlu} \\le A_{s,terpasang}$", isComparison: true, statusHtml: `<span class="${amanUtama ? 'status-aman' : 'status-tidak-aman'}">${amanUtama ? 'AMAN' : 'TIDAK AMAN'}</span>` },
-            { parameter: `<strong>Tulangan Utama: ɸ${getData('inputData.tulangan.d', getData('optimasi.kombinasi_terpilih.D', 'N/A'))}-${formatNumber(t.s_utama)}</strong>`, isFullRow: true }
+            { parameter: `<strong>Tulangan Utama: ɸ${getData('inputData.tulangan.d', getData('optimasi.kombinasi_terpilih.D', 'N/A'))}-${formatNumber(t.s_utama)} mm</strong>`, isFullRow: true }
         ], true);
         const bagi = createThreeColumnTable([
-            { parameter: "$A_{sb1} = 0.20\\% \\cdot b \\cdot h$", hasil: formatNumber(t.Asb1), satuan: "mm²/m" },
-            { parameter: "$A_{sb2} = \\rho_{min} \\cdot b \\cdot h$", hasil: formatNumber(t.Asb2), satuan: "mm²/m" },
-            { parameter: "$A_{sb3} = 0.0014 \\cdot b \\cdot h$", hasil: formatNumber(t.Asb3), satuan: "mm²/m" },
-            { parameter: "$A_{sb,perlu} = \\max(A_{sb1}, A_{sb2}, A_{sb3})$", hasil: formatNumber(t.Asb), satuan: "mm²/m" },
+            { parameter: "$A_{sb1} = 0.20\\% \\cdot b \\cdot h$", hasil: formatNumber(t.Asb1), satuan: "mm²" },
+            { parameter: "$A_{sb2} = \\rho_{min} \\cdot b \\cdot h$", hasil: formatNumber(t.Asb2), satuan: "mm²" },
+            { parameter: "$A_{sb3} = 0.0014 \\cdot b \\cdot h$", hasil: formatNumber(t.Asb3), satuan: "mm²" },
+            { parameter: "$A_{sb,perlu} = \\max(A_{sb1}, A_{sb2}, A_{sb3})$", hasil: formatNumber(t.Asb), satuan: "mm²" },
             { parameter: "$s_{bagi} = \\dfrac{0.25\\pi D_b^{2} \\times 1000}{A_{sb,perlu}}$", hasil: formatNumber(t.s_bagi), satuan: "mm" },
-            { parameter: "$A_{s,terpasang,bagi} = \\dfrac{0.25\\pi D_b^{2} \\times 1000}{s_{bagi}}$", hasil: formatNumber(As_terpasang_bagi), satuan: "mm²/m" },
+            { parameter: "$A_{s,terpasang,bagi} = \\dfrac{0.25\\pi D_b^{2} \\times 1000}{s_{bagi}}$", hasil: formatNumber(As_terpasang_bagi), satuan: "mm²" },
             { parameter: "$A_{sb,perlu} \\le A_{s,terpasang,bagi}$", isComparison: true, statusHtml: `<span class="${amanBagi ? 'status-aman' : 'status-tidak-aman'}">${amanBagi ? 'AMAN' : 'TIDAK AMAN'}</span>` },
-            { parameter: `<strong>Tulangan Bagi: ɸ${getData('inputData.tulangan.db', getData('optimasi.kombinasi_terpilih.Db', 'N/A'))}-${formatNumber(t.s_bagi)}</strong>`, isFullRow: true }
+            { parameter: `<strong>Tulangan Bagi: ɸ${getData('inputData.tulangan.db', getData('optimasi.kombinasi_terpilih.Db', 'N/A'))}-${formatNumber(t.s_bagi)} mm</strong>`, isFullRow: true }
         ], true);
         return `<div class="section-subgroup"><h4>1. Tulangan Utama</h4>${utama}</div><div class="section-subgroup"><h4>2. Tulangan Bagi</h4>${bagi}</div>`;
     }
@@ -428,21 +428,21 @@
     const As_terpasang_utama = t.AsTerpasangUtama;
     const amanUtama = (As_terpasang_utama >= As_perlu_utama);
     return createThreeColumnTable([
-        { parameter: "$M_u = 0.5 \\cdot \\sigma_{max} \\cdot x_2^{2}$", hasil: formatNumber(t.Mu), satuan: "kNm/m" },
+        { parameter: "$M_u = 0.5 \\cdot \\sigma_{max} \\cdot x_2^{2}$", hasil: formatNumber(t.Mu), satuan: "kNm" },
         { parameter: "$K = \\dfrac{M_u}{\\phi b d^{2}}$", hasil: formatNumber(t.K), satuan: "MPa" },
         { parameter: "$K \\le K_{max}$", isComparison: true, statusHtml: `<span class="${t.Kontrol_K === 'AMAN' ? 'status-aman' : 'status-tidak-aman'}">${t.Kontrol_K || 'N/A'}</span>` },
         { parameter: "$a = d \\cdot \\left(1 - \\sqrt{1 - \\dfrac{2K}{0.85f'_c}}\\right)$", hasil: formatNumber(t.a_val), satuan: "mm" },
-        { parameter: "$A_{s1} = \\dfrac{0.85 f'_c a b}{f_y}$", hasil: formatNumber(t.As1), satuan: "mm²/m" },
-        { parameter: "$A_{s2} = \\dfrac{\\sqrt{f'_c}}{4f_y} b d$", hasil: formatNumber(t.As2), satuan: "mm²/m" },
-        { parameter: "$A_{s3} = \\dfrac{1.4}{f_y} b d$", hasil: formatNumber(t.As3), satuan: "mm²/m" },
-        { parameter: "$A_{s,perlu} = \\max(A_{s1}, A_{s2}, A_{s3})$", hasil: formatNumber(t.As), satuan: "mm²/m" },
+        { parameter: "$A_{s1} = \\dfrac{0.85 f'_c a b}{f_y}$", hasil: formatNumber(t.As1), satuan: "mm²" },
+        { parameter: "$A_{s2} = \\dfrac{\\sqrt{f'_c}}{4f_y} b d$", hasil: formatNumber(t.As2), satuan: "mm²" },
+        { parameter: "$A_{s3} = \\dfrac{1.4}{f_y} b d$", hasil: formatNumber(t.As3), satuan: "mm²" },
+        { parameter: "$A_{s,perlu} = \\max(A_{s1}, A_{s2}, A_{s3})$", hasil: formatNumber(t.As), satuan: "mm²" },
         { parameter: "$s_1 = \\dfrac{0.25\\pi D^{2} \\times 1000}{A_{s,perlu}}$", hasil: formatNumber(t.s1_utama), satuan: "mm" },
         { parameter: "$s_2 = 3h$", hasil: formatNumber(t.s2_utama), satuan: "mm" },
         { parameter: "$s_3 = 450$", hasil: "450", satuan: "mm" },
         { parameter: "$s_{utama} = \\min(s_1, s_2, s_3)$", hasil: formatNumber(t.s_utama), satuan: "mm" },
-        { parameter: "$A_{s,terpasang} = \\dfrac{0.25\\pi D^{2} \\times 1000}{s_{utama}}$", hasil: formatNumber(As_terpasang_utama), satuan: "mm²/m" },
+        { parameter: "$A_{s,terpasang} = \\dfrac{0.25\\pi D^{2} \\times 1000}{s_{utama}}$", hasil: formatNumber(As_terpasang_utama), satuan: "mm²" },
         { parameter: "$A_{s,perlu} \\le A_{s,terpasang}$", isComparison: true, statusHtml: `<span class="${amanUtama ? 'status-aman' : 'status-tidak-aman'}">${amanUtama ? 'AMAN' : 'TIDAK AMAN'}</span>` },
-        { parameter: `<strong>Tulangan Utama: ɸ${getData('inputData.tulangan.d', getData('optimasi.kombinasi_terpilih.D', 'N/A'))}-${formatNumber(t.s_utama)}</strong>`, isFullRow: true }
+        { parameter: `<strong>Tulangan Utama: ɸ${getData('inputData.tulangan.d', getData('optimasi.kombinasi_terpilih.D', 'N/A'))}-${formatNumber(t.s_utama)} mm</strong>`, isFullRow: true }
     ], true);
     }
 
@@ -454,7 +454,7 @@
         const As_terpasang_bagi = t.AsTerpasangBagi;
         const amanBagi = (As_terpasang_bagi >= As_perlu_bagi);
         return createThreeColumnTable([
-            { parameter: "$A_{sb1} = 0.20\\% \\cdot A_{s}$", hasil: formatNumber(t.Asb1), satuan: "mm²/m" },
+            { parameter: "$A_{sb1} = 0.20\\% \\cdot A_{s}$", hasil: formatNumber(t.Asb1), satuan: "mm²" },
             { 
                 parameter: fy <= 350 
                     ? "$A_{sb2} = 0{,}0020 \\cdot b \\cdot h$" 
@@ -462,17 +462,17 @@
                         ? `$A_{sb2} = \\left(0{,}0020 - \\frac{fy - 350}{350.000}\\right) \\cdot b \\cdot h$` 
                         : `$A_{sb2} = 0{,}0018 \\cdot b \\cdot h \\cdot \\left(\\frac{420}{fy}\\right)$`, 
                 hasil: formatNumber(t.Asb2), 
-                satuan: "mm²/m" 
+                satuan: "mm²" 
             },
-            { parameter: "$A_{sb3} = 0.0014 \\cdot b \\cdot h$", hasil: formatNumber(t.Asb3), satuan: "mm²/m" },
-            { parameter: "$A_{sb,perlu} = \\max(A_{sb1}, A_{sb2}, A_{sb3})$", hasil: formatNumber(t.Asb), satuan: "mm²/m" },
+            { parameter: "$A_{sb3} = 0.0014 \\cdot b \\cdot h$", hasil: formatNumber(t.Asb3), satuan: "mm²" },
+            { parameter: "$A_{sb,perlu} = \\max(A_{sb1}, A_{sb2}, A_{sb3})$", hasil: formatNumber(t.Asb), satuan: "mm²" },
             { parameter: "$s_{1,bagi} = \\dfrac{0.25 \\cdot \\pi \\cdot D_b^2}{A_{sb,perlu}}$", hasil: formatNumber(t.s1_bagi), satuan: "mm" },
             { parameter: "$s_{2,bagi} = 5 \\cdot h$", hasil: formatNumber(t.s2_bagi), satuan: "mm" },
             { parameter: "$s_{3,bagi} = 450$", hasil: formatNumber(t.s3_bagi), satuan: "mm" },
             { parameter: "$s_{bagi} = \\max(s_{1}, s_{2}, s_{3})$", hasil: formatNumber(t.s_bagi), satuan: "mm" },            
-            { parameter: "$A_{s,terpasang} = \\dfrac{0.25\\pi D_b^{2}}{s_{bagi}}$", hasil: formatNumber(As_terpasang_bagi), satuan: "mm²/m" },
+            { parameter: "$A_{s,terpasang} = \\dfrac{0.25\\pi D_b^{2}}{s_{bagi}}$", hasil: formatNumber(As_terpasang_bagi), satuan: "mm²" },
             { parameter: "$A_{sb,perlu} \\le A_{s,terpasang}$", isComparison: true, statusHtml: `<span class="${amanBagi ? 'status-aman' : 'status-tidak-aman'}">${amanBagi ? 'AMAN' : 'TIDAK AMAN'}</span>` },
-            { parameter: `<strong>Tulangan Bagi: ɸ${getData('inputData.tulangan.db', getData('optimasi.kombinasi_terpilih.Db', 'N/A'))}-${formatNumber(t.s_bagi)}</strong>`, isFullRow: true }
+            { parameter: `<strong>Tulangan Bagi: ɸ${getData('inputData.tulangan.db', getData('optimasi.kombinasi_terpilih.Db', 'N/A'))}-${formatNumber(t.s_bagi)} mm</strong>`, isFullRow: true }
         ], true);
     }
 
@@ -524,17 +524,17 @@
         const centerTh = (content) => `<th style="text-align: center;">${content}</th>`;
         if (mode === 'persegi_panjang') {
             return `<table class="tulangan-terpasang-table" style="width:100%; border-collapse:collapse;"><thead><tr>${centerTh('Tulangan')}${centerTh('Terpasang')}</tr></thead><tbody>
-                      <tr><td style="text-align: center;">Arah Panjang</td>${centerTd(rekap.tulangan_panjang || 'N/A')}</tr>
-                      <tr><td style="text-align: center;">Arah Pendek - Pusat</td>${centerTd(rekap.tulangan_pendek_pusat || 'N/A')}</tr>
-                      <tr><td style="text-align: center;">Arah Pendek - Tepi</td>${centerTd(rekap.tulangan_pendek_tepi || 'N/A')}</tr>
+                      <tr><td style="text-align: center;">Arah Panjang</td>${centerTd(tambahMm(rekap.tulangan_panjang || 'N/A'))}</tr>
+                      <tr><td style="text-align: center;">Arah Pendek - Pusat</td>${centerTd(tambahMm(rekap.tulangan_pendek_pusat || 'N/A'))}</tr>
+                      <tr><td style="text-align: center;">Arah Pendek - Tepi</td>${centerTd(tambahMm(rekap.tulangan_pendek_tepi || 'N/A'))}</tr>
                     </tbody></table>`;
         }
         let html = '<table class="tulangan-terpasang-table" style="width:100%; border-collapse:collapse;"><thead><tr><th style="text-align: center;">Tulangan</th><th style="text-align: center;">Terpasang</th></tr></thead><tbody>';
         if (mode === 'bujur_sangkar') {
-            html += `<tr><td style="text-align: center;">Tulangan Utama</td>${centerTd(rekap.tulangan_utama || 'N/A')}</tr>`;
+            html += `<tr><td style="text-align: center;">Tulangan Utama</td>${centerTd(tambahMm(rekap.tulangan_utama || 'N/A'))}</tr>`;
         } else if (mode === 'menerus') {
-            html += `<tr><td style="text-align: center;">Tulangan Utama</td>${centerTd(rekap.tulangan_utama || 'N/A')}</tr>
-                      <tr><td style="text-align: center;">Tulangan Bagi</td>${centerTd(rekap.tulangan_bagi || 'N/A')}</tr>`;
+            html += `<tr><td style="text-align: center;">Tulangan Utama</td>${centerTd(tambahMm(rekap.tulangan_utama || 'N/A'))}</tr>
+                      <tr><td style="text-align: center;">Tulangan Bagi</td>${centerTd(tambahMm(rekap.tulangan_bagi || 'N/A'))}</tr>`;
         }
         html += '</tbody></table>';
         return html;
@@ -638,3 +638,9 @@
         setData, generateContentBlocks, cekStatusFondasi, formatNumber, getData
     };
 })();
+
+// Tampilan saja: tambah " mm" di belakang format berjarak (10D-150 -> 10D-150 mm). Data asli tidak diubah.
+window.tambahMm = window.tambahMm || function (s) {
+  var t = String(s === undefined || s === null ? '' : s);
+  return /-\s*\d+(\.\d+)?\s*$/.test(t) ? t.replace(/\s+$/, '') + ' mm' : t;
+};
